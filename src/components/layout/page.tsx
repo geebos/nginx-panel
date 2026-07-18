@@ -28,7 +28,7 @@ export function Page({
     <div
       data-slot="page"
       className={cn(
-        "flex flex-1 flex-col bg-secondary px-4 pb-16",
+        "flex flex-1 flex-col bg-background px-4 pb-16",
         className,
       )}
       {...props}
@@ -39,7 +39,7 @@ export function Page({
 
   const body =
     isMobile && onRefresh ? (
-      <PullToRefresh className="bg-secondary" onRefresh={onRefresh}>
+      <PullToRefresh className="bg-background" onRefresh={onRefresh}>
         {page}
       </PullToRefresh>
     ) : (

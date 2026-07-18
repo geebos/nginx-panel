@@ -5,63 +5,90 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Apple design tokens — see DESIGN.md */
+  /* Cursor design tokens — see DESIGN.md */
 
-  --background: #ffffff; /* canvas */
-  --foreground: #1d1d1f; /* ink */
+  /* Surface — warm cream canvas, not white. Ink is warm near-black, not pure black. */
+  --background: #f7f7f4; /* canvas — warm cream page floor */
+  --foreground: #26251e; /* ink */
 
-  --card: #ffffff; /* canvas — store-utility-card */
-  --card-foreground: #1d1d1f;
+  --card: #ffffff; /* surface-card — pure white, slight contrast on cream */
+  --card-foreground: #26251e;
 
   --popover: #ffffff;
-  --popover-foreground: #1d1d1f;
+  --popover-foreground: #26251e;
 
-  /* Action Blue — the single accent for every interactive element */
-  --primary: #0066cc;
-  --primary-foreground: #ffffff;
+  /* Cursor Orange — the single brand voltage. Reserved for primary CTAs and wordmark. Used scarcely. */
+  --primary: #f54e00;
+  --primary-foreground: #ffffff; /* on-primary */
+  --primary-active: #d04200; /* press state */
 
-  --secondary: #f5f5f7; /* canvas-parchment */
-  --secondary-foreground: #1d1d1f;
+  --secondary: #ffffff; /* surface-card — secondary buttons are white per DESIGN.md */
+  --secondary-foreground: #26251e;
 
-  --muted: #f5f5f7; /* canvas-parchment */
-  --muted-foreground: #7a7a7a; /* ink-muted-48 */
+  --muted: #fafaf7; /* canvas-soft — muted surface */
+  --muted-foreground: #807d72; /* muted */
 
-  --accent: #f5f5f7; /* canvas-parchment — hover surface */
-  --accent-foreground: #1d1d1f;
+  --accent: #fafaf7; /* canvas-soft — hover surface */
+  --accent-foreground: #26251e;
 
-  --destructive: #d70015; /* Apple system red */
+  --destructive: #cf2d56; /* semantic-error */
+  --success: #1f8a65; /* semantic-success */
 
-  --border: #e0e0e0; /* hairline */
-  --input: #e0e0e0;
-  --ring: #0071e3; /* primary-focus */
+  /* Hairlines — the only depth mechanism. No drop shadows. */
+  --border: #e6e5e0; /* hairline */
+  --input: #e6e5e0;
+  --ring: #f54e00; /* Cursor Orange focus ring */
 
-  --chart-1: #0066cc;
-  --chart-2: #2997ff;
-  --chart-3: #0071e3;
-  --chart-4: #7a7a7a;
-  --chart-5: #1d1d1f;
+  /* Cursor design — extended tokens */
+  --canvas: #f7f7f4;
+  --canvas-soft: #fafaf7;
+  --ink: #26251e;
+  --body: #5a5852;
+  --body-strong: #26251e;
+  --muted-soft: #a09c92;
+  --hairline: #e6e5e0;
+  --hairline-soft: #efeee8;
+  --hairline-strong: #cfcdc4;
+  --surface-card: #ffffff;
+  --surface-strong: #e6e5e0; /* badges, tag pills */
+  --on-primary: #ffffff;
 
-  --radius: 11px; /* Apple md anchor */
+  /* AI timeline signature — pastel pills, only inside in-product agent visualizations */
+  --timeline-thinking: #dfa88f; /* peach */
+  --timeline-grep: #9fc9a2; /* mint */
+  --timeline-read: #9fbbe0; /* pastel blue */
+  --timeline-edit: #c0a8dd; /* lavender */
+  --timeline-done: #c08532; /* warm gold */
 
-  /* Sidebar — parchment + ink for a frosted sub-nav feel */
-  --sidebar: #f5f5f7; /* canvas-parchment */
-  --sidebar-foreground: #1d1d1f;
-  --sidebar-primary: #0066cc;
+  /* Charts borrow the timeline pastels — they are the brand's chromatic depth */
+  --chart-1: #dfa88f;
+  --chart-2: #9fc9a2;
+  --chart-3: #9fbbe0;
+  --chart-4: #c0a8dd;
+  --chart-5: #c08532;
+
+  --radius: 8px; /* rounded.md — CTA radius, developer dialect */
+
+  /* Sidebar — canvas-soft floor + ink for an editorial sub-nav feel */
+  --sidebar: #fafaf7; /* canvas-soft */
+  --sidebar-foreground: #26251e;
+  --sidebar-primary: #f54e00;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e0e0e0; /* hairline as hover tint */
-  --sidebar-accent-foreground: #1d1d1f;
-  --sidebar-border: #e0e0e0;
-  --sidebar-ring: #0071e3;
+  --sidebar-accent: #efeee8; /* hairline-soft as hover tint */
+  --sidebar-accent-foreground: #26251e;
+  --sidebar-border: #e6e5e0;
+  --sidebar-ring: #f54e00;
   --sidebar-width-icon: 4rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "SF Pro Display", "SF Pro Text", system-ui, -apple-system,
-    BlinkMacSystemFont, "Helvetica Neue", "Helvetica", "Arial", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Menlo", "Monaco", "Consolas",
-    monospace;
+  /* CursorGothic licensed — Inter is the open-source substitute. JetBrains Mono on every code surface. */
+  --font-sans: var(--font-inter), "CursorGothic", system-ui, "Helvetica Neue",
+    Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", "Menlo",
+    "Monaco", "Consolas", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -80,6 +107,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -88,62 +116,102 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-active: var(--primary-active);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-xs: 5px; /* Apple xs */
-  --radius-sm: 8px; /* Apple sm */
-  --radius-md: 11px; /* Apple md */
-  --radius-lg: 18px; /* Apple lg — store-utility-card */
-  --radius-xl: 18px; /* Apple lg — Card uses rounded-xl */
-  --radius-2xl: 18px;
-  --radius-3xl: 9999px; /* pill */
-  --radius-4xl: 9999px; /* pill */
+  /* Cursor design — extended tokens */
+  --color-canvas: var(--canvas);
+  --color-canvas-soft: var(--canvas-soft);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-body-strong: var(--body-strong);
+  --color-muted-soft: var(--muted-soft);
+  --color-hairline: var(--hairline);
+  --color-hairline-soft: var(--hairline-soft);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-surface-card: var(--surface-card);
+  --color-surface-strong: var(--surface-strong);
+  --color-on-primary: var(--on-primary);
+  --color-timeline-thinking: var(--timeline-thinking);
+  --color-timeline-grep: var(--timeline-grep);
+  --color-timeline-read: var(--timeline-read);
+  --color-timeline-edit: var(--timeline-edit);
+  --color-timeline-done: var(--timeline-done);
+  --radius-xs: 4px; /* rounded.xs — inline tags */
+  --radius-sm: 6px; /* rounded.sm — compact rows */
+  --radius-md: 8px; /* rounded.md — CTA buttons, form inputs */
+  --radius-lg: 12px; /* rounded.lg — cards, IDE panes */
+  --radius-xl: 16px; /* rounded.xl — larger feature cards */
+  --radius-2xl: 16px;
+  --radius-3xl: 9999px; /* pill — timeline pills, badges */
+  --radius-4xl: 9999px; /* pill — avatars */
 }
 
 .dark {
-  --background: #1d1d1f; /* ink */
-  --foreground: #ffffff; /* body-on-dark */
+  /* Cursor editor-inspired dark inversion — warm-dark, not pure black */
+  --background: #1a1916; /* warm-dark canvas */
+  --foreground: #f7f7f4; /* canvas-cream text */
 
-  --card: #272729; /* surface-tile-1 */
-  --card-foreground: #ffffff;
+  --card: #26251e; /* ink as card surface */
+  --card-foreground: #f7f7f4;
 
-  --popover: #272729;
-  --popover-foreground: #ffffff;
+  --popover: #26251e;
+  --popover-foreground: #f7f7f4;
 
-  --primary: #2997ff; /* primary-on-dark — Sky Link Blue */
-  --primary-foreground: #1d1d1f;
+  --primary: #f54e00; /* Cursor Orange unchanged */
+  --primary-foreground: #ffffff;
+  --primary-active: #d04200;
 
-  --secondary: #2a2a2c; /* surface-tile-2 */
-  --secondary-foreground: #ffffff;
+  --secondary: #26251e; /* ink as secondary surface on dark */
+  --secondary-foreground: #f7f7f4;
 
-  --muted: #2a2a2c;
-  --muted-foreground: #cccccc; /* body-muted */
+  --muted: #2a2922; /* warm-dark muted */
+  --muted-foreground: #a09c92; /* muted-soft */
 
-  --accent: #2a2a2c;
-  --accent-foreground: #ffffff;
+  --accent: #2a2922;
+  --accent-foreground: #f7f7f4;
 
-  --destructive: #d70015;
+  --destructive: #cf2d56;
+  --success: #1f8a65;
 
-  --border: #2a2a2c;
-  --input: #2a2a2c;
-  --ring: #2997ff;
+  --border: #3a3933; /* warm hairline on dark */
+  --input: #3a3933;
+  --ring: #f54e00;
 
-  --chart-1: #2997ff;
-  --chart-2: #0066cc;
-  --chart-3: #0071e3;
-  --chart-4: #cccccc;
-  --chart-5: #ffffff;
+  --canvas: #1a1916;
+  --canvas-soft: #26251e;
+  --ink: #f7f7f4;
+  --body: #a09c92;
+  --body-strong: #f7f7f4;
+  --muted-soft: #807d72;
+  --hairline: #3a3933;
+  --hairline-soft: #2a2922;
+  --hairline-strong: #4a4940;
+  --surface-card: #26251e;
+  --surface-strong: #3a3933;
+  --on-primary: #ffffff;
+  --timeline-thinking: #dfa88f;
+  --timeline-grep: #9fc9a2;
+  --timeline-read: #9fbbe0;
+  --timeline-edit: #c0a8dd;
+  --timeline-done: #c08532;
 
-  --sidebar: #272729;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #2997ff;
-  --sidebar-primary-foreground: #1d1d1f;
-  --sidebar-accent: #2a2a2c;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2a2a2c;
-  --sidebar-ring: #2997ff;
+  --chart-1: #dfa88f;
+  --chart-2: #9fc9a2;
+  --chart-3: #9fbbe0;
+  --chart-4: #c0a8dd;
+  --chart-5: #c08532;
+
+  --sidebar: #1a1916;
+  --sidebar-foreground: #f7f7f4;
+  --sidebar-primary: #f54e00;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a2922;
+  --sidebar-accent-foreground: #f7f7f4;
+  --sidebar-border: #3a3933;
+  --sidebar-ring: #f54e00;
 }
 
 @layer base {
@@ -152,20 +220,14 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Apple body typography — 17px, line-height 1.47, -0.374px tracking */
-    font-size: 17px;
-    line-height: 1.47;
-    letter-spacing: -0.374px;
+    /* Cursor body typography — body-md: 16px / 1.5 / 0 */
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: 0;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
-  }
-  /* Apple system-wide micro-interaction: scale(0.95) on press */
-  button:not(:disabled):active,
-  [role="button"]:not(:disabled):active {
-    transform: scale(0.95);
-    transition: transform 120ms ease-out;
   }
   html {
     @apply font-sans;

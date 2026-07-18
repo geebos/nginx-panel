@@ -1,12 +1,6 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { fetch as adapterFetch } from "@/lib/adapter/fetch";
 
-import type {
-  Todo,
-  CreateTodoInput,
-  UpdateTodoInput,
-} from "@/shared/schemas";
-
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
 const DEFAULT_TAURI_BASE_URL = "https://template.geebosblog.com";
 
@@ -52,52 +46,4 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.code = code;
   }
-}
-
-async function parseError(res: Response): Promise<ApiError> {
-  try {
-    const body = (await res.json()) as {
-      code?: number;
-      message?: string;
-      data?: unknown;
-    };
-    return new ApiError(body.message ?? "请求失败", body.code ?? res.status);
-  } catch {
-    return new ApiError("请求失败", res.status);
-  }
-}
-
-export async function listTodos(): Promise<Todo[]> {
-  const res = await apiFetch("/api/todos");
-  if (!res.ok) throw await parseError(res);
-  return (await res.json()) as Todo[];
-}
-
-export async function createTodo(input: CreateTodoInput): Promise<Todo> {
-  const res = await apiFetch("/api/todos", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw await parseError(res);
-  return (await res.json()) as Todo;
-}
-
-export async function updateTodo(
-  id: string,
-  input: UpdateTodoInput,
-): Promise<Todo> {
-  const res = await apiFetch(`/api/todos/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw await parseError(res);
-  return (await res.json()) as Todo;
-}
-
-export async function deleteTodo(id: string): Promise<void> {
-  const res = await apiFetch(`/api/todos/${id}`, { method: "DELETE" });
-  if (!res.ok) throw await parseError(res);
-  // 204 no body
 }

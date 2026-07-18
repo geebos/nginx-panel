@@ -41,7 +41,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.wrangler
-
-# sqlite data dir (DB_ENGINE=sqlite local backend)
+# sqlite local backend data dir
 /.sqlite

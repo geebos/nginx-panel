@@ -3,12 +3,6 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use tauri_plugin_http::reqwest;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ProxyArgs {
@@ -91,7 +85,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, proxy])
+        .invoke_handler(tauri::generate_handler![proxy])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

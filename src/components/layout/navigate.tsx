@@ -13,12 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import {
-  SparklesIcon,
-  ListTodoIcon,
-  FlaskConicalIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { HomeIcon, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -27,9 +22,7 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { title: "Demo", href: "/", icon: SparklesIcon },
-  { title: "Todo", href: "/todo/", icon: ListTodoIcon },
-  { title: "Test", href: "/test/", icon: FlaskConicalIcon },
+  { title: "Home", href: "/", icon: HomeIcon },
 ];
 
 // `useRouter().pathname` returns the route without a trailing slash (e.g. "/buttons"),
@@ -82,7 +75,7 @@ export function Sidebar() {
             collapsed ? "text-sm" : "text-lg",
           )}
         >
-          Apple
+          Nginx Panel
         </span>
       </SidebarHeader>
       <SidebarContent>

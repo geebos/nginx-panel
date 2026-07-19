@@ -1,12 +1,12 @@
 import * as React from "react";
-import { ArrowDownIcon, ArrowUpIcon, Columns3Icon, FileTextIcon, GripVerticalIcon, PauseIcon, PlayIcon, SearchIcon, Trash2Icon, XIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Columns3Icon, FileTextIcon, GripVerticalIcon, PauseIcon, PlayIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
@@ -230,9 +230,9 @@ export function LogViewer({ domainId: fixedDomainId }: { domainId?: string }) {
     <div className="flex flex-col gap-4">
       <form className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-4" onSubmit={submitHistory}>
         {!fixedDomainId ? <Field className="w-64"><FieldLabel>Domain</FieldLabel><Select options={domains.map((domain) => ({ label: domain.hostname, value: domain.id }))} placeholder="选择 Domain" value={domainId} onChange={(value) => { const next = value ?? ""; setDomainId(next); if (next) void load(next, types, historyFilters); }} /></Field> : null}
-        <Field className="w-52"><FieldLabel>日志类型</FieldLabel><Select multiple options={[{ label: "Access", value: "access" }, { label: "Error", value: "error" }]} value={types} onChange={(value) => { const next = value as LogType[]; if (!next.length) { toast.error("至少选择一种日志类型"); return; } setTypes(next); if (!live) void load(domainId, next, historyFilters); }} /></Field>
-        <Field className="w-44"><FieldLabel>Method</FieldLabel><div className="flex gap-1"><Select className="min-w-0 flex-1" options={["GET", "POST", "PUT", "PATCH", "DELETE"].map((value) => ({ label: value, value }))} placeholder="全部" value={filterInputs.method} onChange={(value) => setFilterInputs((current) => ({ ...current, method: value ?? "" }))} /><Button type="button" size="icon" variant="outline" aria-label="清除 Method 筛选" disabled={!filterInputs.method} onClick={() => setFilterInputs((current) => ({ ...current, method: "" }))}><XIcon /></Button></div></Field>
-        <Field className="w-36" data-invalid={Boolean(statusError)}><FieldLabel htmlFor="log-status">Status</FieldLabel><Input id="log-status" aria-invalid={Boolean(statusError)} inputMode="numeric" max="599" min="100" placeholder="全部" value={filterInputs.statusText} onChange={(event) => { setStatusError(undefined); setFilterInputs((current) => ({ ...current, statusText: event.target.value })); }} />{statusError ? <FieldError>{statusError}</FieldError> : <FieldDescription>100-599</FieldDescription>}</Field>
+        <Field className="w-48"><FieldLabel>日志类型</FieldLabel><Select className="min-w-0" multiple options={[{ label: "Access", value: "access" }, { label: "Error", value: "error" }]} value={types} onChange={(value) => { const next = value as LogType[]; if (!next.length) { toast.error("至少选择一种日志类型"); return; } setTypes(next); if (!live) void load(domainId, next, historyFilters); }} /></Field>
+        <Field className="w-44"><FieldLabel>Method</FieldLabel><Select showClear options={["GET", "POST", "PUT", "PATCH", "DELETE"].map((value) => ({ label: value, value }))} placeholder="全部" value={filterInputs.method || null} onChange={(value) => setFilterInputs((current) => ({ ...current, method: value ?? "" }))} /></Field>
+        <Field className="w-36" data-invalid={Boolean(statusError)}><FieldLabel htmlFor="log-status">Status</FieldLabel><Input id="log-status" aria-invalid={Boolean(statusError)} inputMode="numeric" max="599" min="100" placeholder="全部" value={filterInputs.statusText} onChange={(event) => { setStatusError(undefined); setFilterInputs((current) => ({ ...current, statusText: event.target.value })); }} />{statusError ? <FieldError>{statusError}</FieldError> : null}</Field>
         <Field className="min-w-56 flex-1"><FieldLabel htmlFor="log-keyword">Path / 关键字</FieldLabel><Input id="log-keyword" maxLength={256} placeholder="普通文本匹配" value={filterInputs.keyword} onChange={(event) => setFilterInputs((current) => ({ ...current, keyword: event.target.value }))} /></Field>
         <Button type="submit" disabled={!domainId || loading}><SearchIcon data-icon="inline-start" />{live ? "刷新历史" : "查询"}</Button>
       </form>

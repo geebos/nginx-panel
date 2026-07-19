@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TextDiff } from "@/components/pages/shared/text-diff";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDomainVersion, getDomainVersionDiff } from "@/lib/api";
 
@@ -49,7 +50,7 @@ export function DomainVersion() {
         ) : diff ? (
           <>
             <Card className="border border-border"><CardHeader><CardTitle>Semantic changes</CardTitle><CardDescription>按业务对象归类，不依赖文本行号。</CardDescription></CardHeader><CardContent className="flex flex-col gap-3">{diff.changes.length ? diff.changes.map((change, index) => <div className="flex items-start gap-3 rounded-lg border border-border p-3" key={`${change.section}-${change.label}-${index}`}><Badge variant={change.kind === "removed" ? "destructive" : "outline"}>{change.kind}</Badge><div><p className="font-medium">{change.label}</p><p className="text-xs text-muted-foreground capitalize">{change.section}</p></div></div>) : <p className="text-sm text-muted-foreground">两个版本没有业务差异。</p>}</CardContent></Card>
-            <Tabs defaultValue="nginx"><TabsList><TabsTrigger value="nginx">Nginx</TabsTrigger><TabsTrigger value="json">JSON</TabsTrigger></TabsList><TabsContent value="nginx"><div className="grid gap-4 lg:grid-cols-2"><CodePanel value={diff.baseNginx} /><CodePanel value={diff.targetNginx} /></div></TabsContent><TabsContent value="json"><div className="grid gap-4 lg:grid-cols-2"><CodePanel value={diff.baseJson} /><CodePanel value={diff.targetJson} /></div></TabsContent></Tabs>
+            <Tabs defaultValue="nginx"><TabsList><TabsTrigger value="nginx">Nginx</TabsTrigger><TabsTrigger value="json">JSON</TabsTrigger></TabsList><TabsContent value="nginx"><TextDiff oldText={diff.baseNginx} newText={diff.targetNginx} className="max-h-[60dvh]" /></TabsContent><TabsContent value="json"><div className="grid gap-4 lg:grid-cols-2"><CodePanel value={diff.baseJson} /><CodePanel value={diff.targetJson} /></div></TabsContent></Tabs>
           </>
         ) : null}
       </div>

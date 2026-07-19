@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { TextDiff } from "@/components/pages/shared/text-diff";
 import {
   ApiError,
   deployDomainVersion,
@@ -197,7 +198,7 @@ export function PublishDomainDialog({
             <TabsList><TabsTrigger value="semantic">语义 Diff</TabsTrigger><TabsTrigger value="json">JSON</TabsTrigger><TabsTrigger value="nginx">Nginx</TabsTrigger></TabsList>
             <TabsContent value="semantic"><SemanticChanges preview={preview} /></TabsContent>
             <TabsContent value="json"><div className="grid gap-4 md:grid-cols-2"><CodePanel value={preview.baseJson ?? "# 当前无活跃配置"} /><CodePanel value={preview.targetJson} /></div></TabsContent>
-            <TabsContent value="nginx"><div className="grid gap-4 md:grid-cols-2"><CodePanel value={preview.baseNginx ?? "# 当前无活跃配置"} /><CodePanel value={preview.targetNginx} /></div></TabsContent>
+            <TabsContent value="nginx"><TextDiff oldText={preview.baseNginx ?? ""} newText={preview.targetNginx} className="max-h-[48dvh]" /></TabsContent>
           </Tabs>
         ) : null}
         {step === "test" && deployment ? (

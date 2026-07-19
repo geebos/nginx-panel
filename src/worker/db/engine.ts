@@ -2,6 +2,8 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "@/shared/schemas";
+import { recoverInterruptedDeployments } from "@/worker/lib/deployment-recovery";
+import { assertNoDuplicateDrafts } from "./migration-safety";
 
 // better-sqlite3 本地文件库（Node 运行时，@hono/node-server）。
 // 用于 Tauri/桌面后端 / 自托管。
@@ -26,10 +28,16 @@ export async function getSqliteDb(): Promise<BetterSQLite3Database<typeof schema
 
   const Database = (await import("better-sqlite3")).default;
   const conn = new Database(path.join(dir, SQLITE_FILE));
+  conn.pragma("journal_mode = WAL");
+  conn.pragma("foreign_keys = ON");
+  conn.pragma("busy_timeout = 5000");
+  conn.pragma("synchronous = NORMAL");
 
   const db = drizzle(conn, { schema });
+  assertNoDuplicateDrafts(conn);
   // 启动时从 ./drizzle 应用迁移；单写者进程启动期执行，无并发迁移问题。
   migrate(db, { migrationsFolder: "./drizzle" });
+  recoverInterruptedDeployments(db);
   sqliteDb = db;
   return db;
 }

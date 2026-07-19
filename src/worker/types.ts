@@ -1,5 +1,6 @@
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type * as schema from "@/shared/schemas";
+import type { User } from "@/shared/schemas";
 
 // Hono 环境类型（Node 运行时，@hono/node-server + better-sqlite3）。
 // - Variables：中间件往上下文里写入的运行时值。
@@ -8,6 +9,7 @@ import type * as schema from "@/shared/schemas";
 export type AppEnv = {
   Variables: {
     db: BetterSQLite3Database<typeof schema>;
-    user?: unknown;
+    user?: Pick<User, "id" | "username">;
+    sessionIdHash?: string;
   };
 };

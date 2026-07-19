@@ -233,3 +233,16 @@
     @apply font-sans;
   }
 }
+
+/* Product controls follow DESIGN.md: 8px actions, 12px cards, hairline depth. */
+[data-slot="button"] {
+  border-radius: var(--radius-md);
+}
+
+[data-slot="button"]:not(:focus-visible) {
+  box-shadow: none;
+}
+
+[data-slot="button"]:active:not(:disabled) {
+  transform: translateY(1px);
+}

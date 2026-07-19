@@ -1,10 +1,11 @@
 import "@/styles/globals.css";
-import * as React from "react";
 import Head from "next/head";
 import type { AppProps } from "next/app";
+import { useRouter } from "next/router";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Layout } from "@/components/layout/layout";
-import { warmupNetworkPermission } from "@/lib/api";
+import { AuthGate } from "@/components/layout/auth-gate";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // CursorGothic is licensed — Inter is the open-source substitute per DESIGN.md.
 // JetBrains Mono is the in-product/code surface family.
@@ -21,9 +22,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export default function App({ Component, pageProps }: AppProps) {
-  React.useEffect(() => {
-    void warmupNetworkPermission();
-  }, []);
+  const router = useRouter();
+  const page = <Component {...pageProps} />;
 
   return (
     <div className={`${inter.variable} ${jetbrainsMono.variable}`}>
@@ -33,9 +33,9 @@ export default function App({ Component, pageProps }: AppProps) {
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
       </Head>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
+      <TooltipProvider>
+        {router.pathname === "/login" ? page : <AuthGate><Layout>{page}</Layout></AuthGate>}
+      </TooltipProvider>
     </div>
   );
 }

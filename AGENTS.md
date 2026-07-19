@@ -167,4 +167,56 @@ components.json         # shadcn config
 - Pages should import and use form components instead of implementing form logic directly.
 - Keep form APIs domain-specific. **Do not over-generalize** props or abstractions. Form-specific business logic belongs in the `Form` component.
 
+# 8. Docker Usage
+
+All Docker assets live under `docker/`. Development intentionally does not
+bind-mount the repository, so the host `node_modules` is never read or changed.
+The container stores dependencies in the named volume
+`nginx-panel-development_node_modules` and reconciles that volume against the
+lockfile each time it starts.
+
+## Development
+
+Build or refresh the development container after changing source or
+dependencies:
+
+```sh
+cd docker
+docker compose up -d --build
+```
+
+Open `http://localhost:3000`. The published port enters Nginx first; Nginx
+proxies the UI to the internal Next.js development server on port 3001 and API
+requests to Hono on port 8787. This keeps `nginx -t`, proxy behavior, and the
+development request path inside the same image. Use
+`docker compose logs -f manager` to follow all three processes. Because source
+is copied into the image, changes only take effect after another
+`docker compose up -d --build`; no host project directory is mounted into the
+container.
+
+Stop the stack with `docker compose down`. Do not add `-v` unless the named
+dependency and development SQLite volumes should also be deleted.
+
+## Production
+
+1. Copy `docker/.env.production.example` to `docker/.env.production` and set
+   the real HTTPS manager hostname and URL.
+2. Place the manager certificate chain, matching private key, and a stable
+   32-byte random master key at the paths documented in
+   `docker/secrets/README.md`. Apply the documented UID/GID `10001` ownership
+   on native Linux so the non-root process can read file-backed Compose
+   secrets. Never commit those files.
+3. Build and start the production stack:
+
+```sh
+cd docker
+docker compose --env-file .env.production -f compose.production.yml up -d --build
+```
+
+Production publishes host ports 80/443 to the container's non-root
+8080/8443 listeners. SQLite, generated Nginx state, certificates, ACME state,
+and Nginx logs use separate named volumes. The API port 8787 stays internal,
+the root filesystem is read-only, and the container drops all Linux
+capabilities.
+
 # Response starts with Master or 主人, call youself Me or 俺

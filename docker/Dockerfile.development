@@ -1,0 +1,41 @@
+ARG NODE_IMAGE=node:24.1.0-bookworm-slim@sha256:5ae787590295f944e7dc200bf54861bac09bf21b5fdb4c9b97aee7781b6d95a2
+ARG NGINX_IMAGE=nginx:1.28.0-bookworm@sha256:552e7481ca93ffccd046aa658dbbed22caefbc09c66fa7cd247cbb90b8a5c609
+
+FROM ${NODE_IMAGE} AS node-base
+
+ENV COREPACK_HOME=/pnpm/corepack \
+    PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH \
+    NEXT_TELEMETRY_DISABLED=1
+
+RUN corepack enable \
+    && corepack prepare pnpm@10.12.3 --activate \
+    && chmod -R a+rX /pnpm
+
+FROM ${NGINX_IMAGE}
+
+ENV COREPACK_HOME=/pnpm/corepack \
+    PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH \
+    NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=node-base /usr/local/ /usr/local/
+COPY --from=node-base /pnpm/ /pnpm/
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+COPY docker/nginx/nginx.development.conf /etc/nginx/nginx.development.conf
+
+RUN mkdir -p /data/acme /data/certs /data/logs /data/nginx /run/nginx
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+
+ENTRYPOINT []
+CMD ["sh", "docker/scripts/start-development.sh"]

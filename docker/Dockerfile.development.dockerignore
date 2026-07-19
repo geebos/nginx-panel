@@ -1,0 +1,8 @@
+.git
+.next
+.sqlite
+.pnpm-store
+dist
+node_modules
+out
+src-tauri/target

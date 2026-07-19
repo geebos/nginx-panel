@@ -2,13 +2,16 @@
   "name": "cf-next-pages-routes",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.12.3",
   "scripts": {
     "dev": "concurrently -k -n web,worker \"pnpm dev:web\" \"pnpm dev:worker\"",
     "dev:web": "next dev",
     "dev:worker": "DB_SQLITE_DIR=./.sqlite tsx src/worker/serve.ts",
     "lint": "eslint",
     "build": "next build",
+    "build:worker": "esbuild src/worker/serve.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/worker.mjs",
     "start": "next start",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate"
   },
@@ -20,8 +23,10 @@
     "@tauri-apps/api": "~2.6.0",
     "@tauri-apps/plugin-dialog": "~2.7.1",
     "@tauri-apps/plugin-http": "~2.5.9",
+    "acme-client": "5.4.0",
     "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.1",
+    "cloudflare": "^7.0.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
@@ -55,6 +60,7 @@
     "@types/react-dom": "^19",
     "concurrently": "^10.0.3",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "0.25.12",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
@@ -62,6 +68,8 @@
     "typescript": "^5"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

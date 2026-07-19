@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
-const distDir = process.env.NEXT_DIST_DIR || '.next'
+const distDir = process.env.NEXT_DIST_DIR || ".next";
+const isDevelopment = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -9,16 +10,30 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   distDir,
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: "/api/:path*",
-          destination: "http://localhost:8787/api/:path*",
+  ...(isDevelopment
+    ? {
+        async rewrites() {
+          return [
+            {
+              source: "/api/:path*",
+              destination: "http://localhost:8787/api/:path*",
+            },
+            {
+              source: "/domains/:id/:path+",
+              destination: "/domains/detail",
+            },
+            {
+              source: "/deployments/:id",
+              destination: "/deployments/detail",
+            },
+            {
+              source: "/settings/:tab",
+              destination: "/settings",
+            },
+          ];
         },
-      ],
-    };
-  },
+      }
+    : {}),
 };
 
 export default nextConfig;

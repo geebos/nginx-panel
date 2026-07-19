@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, readlink, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
@@ -23,6 +24,7 @@ import { checksum, createRuntimeManifest } from "./runtime-manifest";
 import { assertRuntimeMutable, getRuntimeState, setRuntimeDegraded, setRuntimeHealthy } from "./runtime-state";
 import { createSnapshot } from "./snapshot";
 import { BusinessError } from "./errors";
+import { validateManagerTlsEnvironment } from "./manager-tls";
 
 const execFileAsync = promisify(execFile);
 const stepNames = ["Generate candidate config", "Validate files and targets", "Run nginx -t", "Activate revision", "Reload Nginx", "Run health checks", "Commit active version"];
@@ -201,6 +203,27 @@ export async function createRebuildActiveDeployment(db: AppEnv["Variables"]["db"
   return (await db.query.deployments.findFirst({ where: eq(deployments.id, id) }))!;
 }
 
+const managerTlsStepNames = [
+  "Validate mounted certificate",
+  "Run active nginx -t",
+  "Reload Nginx",
+  "Verify manager HTTPS",
+  "Finalize",
+];
+
+export async function createReloadManagerTlsDeployment(db: AppEnv["Variables"]["db"], input: { requestedBy: string; idempotencyKey: string }) {
+  const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
+  if (existing) return existing;
+  const id = randomUUID();
+  db.transaction((tx) => {
+    tx.insert(deployments).values({ id, type: "reload_manager_tls", status: "queued", idempotencyKey: input.idempotencyKey, requestedBy: input.requestedBy, createdAt: Date.now() }).run();
+    for (const [sequence, name] of managerTlsStepNames.entries()) {
+      tx.insert(deploymentSteps).values({ id: randomUUID(), deploymentId: id, sequence, name, status: "pending" }).run();
+    }
+  });
+  return (await db.query.deployments.findFirst({ where: eq(deployments.id, id) }))!;
+}
+
 export function enqueueRuntimeOperation(label: string, operation: () => Promise<void>) {
   const running = runnerTail.then(operation);
   runnerTail = running.catch((error) => console.error(`[${label}] unhandled runtime failure`, error));
@@ -217,6 +240,66 @@ export function enqueueLogSettings(db: AppEnv["Variables"]["db"], deploymentId: 
 
 export function enqueueRebuildActive(db: AppEnv["Variables"]["db"], deploymentId: string) {
   return enqueueRuntimeOperation("rebuild-active", () => runPublish(db, deploymentId));
+}
+
+export function enqueueReloadManagerTls(db: AppEnv["Variables"]["db"], deploymentId: string) {
+  return enqueueRuntimeOperation("reload-manager-tls", () => runReloadManagerTls(db, deploymentId));
+}
+
+function verifyManagerHttps(hostname: string) {
+  return new Promise<void>((resolve, reject) => {
+    const request = httpsRequest({
+      hostname: "127.0.0.1",
+      port: 8443,
+      path: "/api/health",
+      method: "GET",
+      servername: hostname,
+      headers: { host: hostname },
+      timeout: 5_000,
+    }, (response) => {
+      response.resume();
+      if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) resolve();
+      else reject(new Error(`管理端 HTTPS 验证返回 ${response.statusCode ?? "未知状态"}`));
+    });
+    request.on("timeout", () => request.destroy(new Error("管理端 HTTPS 验证超时")));
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+async function runReloadManagerTls(db: AppEnv["Variables"]["db"], deploymentId: string) {
+  try {
+    const deployment = await db.query.deployments.findFirst({ where: eq(deployments.id, deploymentId) });
+    if (!deployment || deployment.status !== "queued" || deployment.type !== "reload_manager_tls") return;
+    const paths = runtimePaths();
+    const nginx = process.env.NGINX_BIN || "/usr/sbin/nginx";
+    await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
+
+    await updateStep(db, deploymentId, 0, "running");
+    const certificate = validateManagerTlsEnvironment();
+    await updateStep(db, deploymentId, 0, "succeeded", `证书有效，截止 ${new Date(certificate.validTo).toISOString()}`);
+
+    await updateStep(db, deploymentId, 1, "running");
+    await execFileAsync(nginx, ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
+    await updateStep(db, deploymentId, 1, "succeeded", "Active 配置测试通过");
+
+    await updateStep(db, deploymentId, 2, "running");
+    await execFileAsync(nginx, ["-p", `${paths.active}/`, "-s", "reload", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
+    await updateStep(db, deploymentId, 2, "succeeded", "Nginx graceful reload 已完成");
+
+    await updateStep(db, deploymentId, 3, "running");
+    await verifyManagerHttps(certificate.hostname);
+    await updateStep(db, deploymentId, 3, "succeeded", "管理端 HTTPS 验证通过");
+
+    await updateStep(db, deploymentId, 4, "running");
+    await updateStep(db, deploymentId, 4, "succeeded", "管理端 TLS 已重新加载");
+    await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "管理端 TLS 重新加载失败";
+    const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), inArray(deploymentSteps.status, ["pending", "running"])) });
+    if (pending) await updateStep(db, deploymentId, pending.sequence, "failed", message, message.slice(0, 8_000));
+    await db.update(deployments).set({ status: "failed", errorCode: "MANAGER_TLS_INVALID", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
+  }
 }
 
 async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {

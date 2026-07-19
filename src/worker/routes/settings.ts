@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { acmeOrders, changePasswordSchema, cloudflareCredentialInputSchema, cloudflareCredentials, deployments, nginxLogSettingsInputSchema, rebuildActiveSchema, replaceCloudflareCredentialTokenSchema, sessionPolicySchema, sessions, settings, users } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
-import { createLogSettingsDeployment, createRebuildActiveDeployment, enqueueLogSettings, enqueueRebuildActive } from "@/worker/lib/deployment-runner";
+import { createLogSettingsDeployment, createRebuildActiveDeployment, createReloadManagerTlsDeployment, enqueueLogSettings, enqueueRebuildActive, enqueueReloadManagerTls } from "@/worker/lib/deployment-runner";
 import { getActiveLogSettings } from "@/worker/lib/log-settings";
 import { renderAccessLogFormat } from "@/worker/lib/nginx-config";
 import { jsonValidator } from "@/worker/lib/validator";
@@ -13,6 +13,7 @@ import { getRuntimeState } from "@/worker/lib/runtime-state";
 import { getSessionPolicy } from "@/worker/lib/session-policy";
 import { encryptCloudflareToken } from "@/worker/cloudflare/credentials";
 import { getCloudflareDnsProvider } from "@/worker/cloudflare/dns";
+import { validateManagerTlsEnvironment } from "@/worker/lib/manager-tls";
 
 export const settingsRoute = new Hono<AppEnv>();
 
@@ -195,15 +196,43 @@ settingsRoute.put("/settings/logs", jsonValidator(nginxLogSettingsInputSchema), 
 
 settingsRoute.get("/settings/diagnostics", (c) => {
   const runtime = getRuntimeState();
+  let managerTls: { status: "valid" | "invalid" | "unavailable"; certificate?: ReturnType<typeof validateManagerTlsEnvironment>; error?: string };
+  if (process.env.RUNTIME_MODE !== "nginx-manager") {
+    managerTls = { status: "unavailable" };
+  } else {
+    try {
+      managerTls = { status: "valid", certificate: validateManagerTlsEnvironment() };
+    } catch {
+      managerTls = { status: "invalid", error: "挂载的管理端证书无效，请检查有效期、SAN 和私钥" };
+    }
+  }
   return c.json({
     runtime,
     rebuildAvailable: runtime.status === "degraded",
+    managerTls,
     paths: {
       sqliteConfigured: Boolean(process.env.DB_SQLITE_DIR),
       runtimeConfigured: Boolean(process.env.NGINX_RUNTIME_ROOT),
       logsConfigured: Boolean(process.env.NGINX_LOG_DIR),
     },
   });
+});
+
+settingsRoute.post("/settings/diagnostics/reload-manager-tls", async (c) => {
+  if (process.env.RUNTIME_MODE !== "nginx-manager") {
+    throw new BusinessError("管理端 TLS 只允许在 Nginx runtime 中重新加载", 409, "DEPLOYMENT_UNAVAILABLE");
+  }
+  const db = c.get("db");
+  const pending = await db.query.deployments.findFirst({
+    where: and(eq(deployments.type, "reload_manager_tls"), inArray(deployments.status, ["queued", "running"])),
+  });
+  if (pending) return c.json({ deploymentId: pending.id, statusUrl: `/api/deployments/${pending.id}` }, 202);
+  const deployment = await createReloadManagerTlsDeployment(db, {
+    requestedBy: c.get("user")!.id,
+    idempotencyKey: c.req.header("Idempotency-Key") || randomUUID(),
+  });
+  if (deployment.status === "queued") void enqueueReloadManagerTls(db, deployment.id);
+  return c.json({ deploymentId: deployment.id, statusUrl: `/api/deployments/${deployment.id}` }, 202);
 });
 
 settingsRoute.post("/settings/diagnostics/rebuild-active", jsonValidator(rebuildActiveSchema), async (c) => {

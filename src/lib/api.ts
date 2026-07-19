@@ -468,6 +468,19 @@ export type RuntimeDiagnostics = {
     issues: Array<{ code: string; message: string }>;
   };
   rebuildAvailable: boolean;
+  managerTls: {
+    status: "valid" | "invalid" | "unavailable";
+    certificate?: {
+      hostname: string;
+      subject: string;
+      issuer: string;
+      subjectAltName: string;
+      validFrom: number;
+      validTo: number;
+      fingerprint256: string;
+    };
+    error?: string;
+  };
   paths: { sqliteConfigured: boolean; runtimeConfigured: boolean; logsConfigured: boolean };
 };
 
@@ -480,6 +493,13 @@ export function rebuildActiveRuntime(currentPassword: string) {
     method: "POST",
     headers: { "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify({ currentPassword }),
+  });
+}
+
+export function reloadManagerTls() {
+  return requestJson<{ deploymentId: string; statusUrl: string }>("/api/settings/diagnostics/reload-manager-tls", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
   });
 }
 

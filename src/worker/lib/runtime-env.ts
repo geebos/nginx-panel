@@ -1,3 +1,5 @@
+import { validateManagerTlsEnvironment } from "./manager-tls";
+
 let cached: { key: string; url?: URL; error?: Error } | undefined;
 
 export function managerUrl() {
@@ -36,5 +38,11 @@ export function managerUrl() {
 }
 
 export function validateRuntimeEnv() {
-  managerUrl();
+  const url = managerUrl();
+  if (process.env.APP_ENV === "development") return;
+  if (url?.protocol !== "https:") throw new Error("MANAGER_URL must use HTTPS outside development");
+  if (!process.env.MANAGER_HOST || url.hostname !== process.env.MANAGER_HOST) {
+    throw new Error("MANAGER_URL hostname must match MANAGER_HOST");
+  }
+  validateManagerTlsEnvironment();
 }

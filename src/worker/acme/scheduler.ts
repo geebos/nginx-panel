@@ -12,6 +12,13 @@ import { recordRenewalOrderFailure } from "./renewal";
 
 const running = new Set<string>();
 let scheduler: ReturnType<typeof setInterval> | null = null;
+let schedulerTail = Promise.resolve();
+
+function scheduleAcmeRun(db: AppEnv["Variables"]["db"]) {
+  const run = schedulerTail.then(() => runAcmeSchedulerOnce(db));
+  schedulerTail = run.catch((error) => console.error("[acme] scheduler failed", error instanceof Error ? error.name : "unknown"));
+  return run;
+}
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "ACME 订单处理失败";
@@ -344,11 +351,23 @@ export async function runAcmeSchedulerOnce(
 
 export function startAcmeScheduler(db: AppEnv["Variables"]["db"]) {
   if (scheduler) return () => undefined;
-  void runAcmeSchedulerOnce(db);
-  scheduler = setInterval(() => void runAcmeSchedulerOnce(db), 5_000);
+  void scheduleAcmeRun(db);
+  scheduler = setInterval(() => void scheduleAcmeRun(db), 5_000);
   scheduler.unref?.();
   return () => {
     if (scheduler) clearInterval(scheduler);
     scheduler = null;
   };
+}
+
+export function waitForAcmeScheduler() {
+  return schedulerTail;
+}
+
+export async function persistAcmeShutdownState(db: AppEnv["Variables"]["db"]) {
+  const now = Date.now();
+  await db.update(acmeOrders).set({ nextPollAt: now, updatedAt: now }).where(inArray(
+    acmeOrders.status,
+    ["preparing", "waiting_http", "waiting_dns", "validating", "validated", "downloading"],
+  ));
 }

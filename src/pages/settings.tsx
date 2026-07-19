@@ -6,13 +6,14 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LogSettingsForm } from "@/components/pages/settings/forms/log-settings-form";
 import { RuntimeDiagnosticsForm } from "@/components/pages/settings/forms/runtime-diagnostics-form";
 import { SecuritySettingsForm } from "@/components/pages/settings/forms/security-settings-form";
+import { NginxSettingsForm } from "@/components/pages/settings/forms/nginx-settings-form";
 import { CloudflareCredentialCard, CreateCloudflareCredentialForm } from "@/components/pages/settings/forms/cloudflare-credential-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { createCloudflareCredential, deleteCloudflareCredential, getCloudflareCredentials, getLogSettings, getRuntimeDiagnostics, replaceCloudflareCredentialToken } from "@/lib/api";
+import { createCloudflareCredential, deleteCloudflareCredential, getCloudflareCredentials, getLogSettings, getNginxSettings, getRuntimeDiagnostics, replaceCloudflareCredentialToken } from "@/lib/api";
 import { toast } from "sonner";
 
 function LogSettingsPage() {
@@ -73,6 +74,19 @@ function SecuritySettingsPage() {
   );
 }
 
+function NginxSettingsPage() {
+  const query = useApiQuery(getNginxSettings);
+  return (
+    <Page className="px-0 pb-16">
+      <PageHeader title="Nginx" description="查看运行路径、健康状态并管理 runtime artifacts 容量。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }, { label: "Nginx" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
+      <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
+        {query.error ? <Alert variant="destructive"><AlertTitle>Nginx 设置加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
+        {query.loading && !query.data ? <Skeleton className="h-[620px]" /> : query.data ? <NginxSettingsForm settings={query.data} onSaved={query.refresh} /> : null}
+      </div>
+    </Page>
+  );
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const path = router.asPath.split("?")[0].replace(/\/$/, "");
@@ -80,11 +94,12 @@ export default function SettingsPage() {
   if (path === "/settings/diagnostics") return <DiagnosticsPage />;
   if (path === "/settings/cloudflare") return <CloudflareSettingsPage />;
   if (path === "/settings/security") return <SecuritySettingsPage />;
+  if (path === "/settings/nginx") return <NginxSettingsPage />;
   return (
     <Page className="px-0 pb-16">
       <PageHeader title="Settings" description="该设置分类将在后续阶段接入。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }]} />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
-        <Empty><EmptyHeader><EmptyTitle>选择设置分类</EmptyTitle><EmptyDescription>配置安全策略、Cloudflare DNS、日志或运行时诊断。</EmptyDescription></EmptyHeader><EmptyContent className="flex flex-wrap gap-2"><Button asChild><Link href="/settings/security">Security</Link></Button><Button asChild variant="outline"><Link href="/settings/cloudflare">Cloudflare DNS</Link></Button><Button asChild variant="outline"><Link href="/settings/logs">Log Settings</Link></Button></EmptyContent></Empty>
+        <Empty><EmptyHeader><EmptyTitle>选择设置分类</EmptyTitle><EmptyDescription>配置 Nginx、Cloudflare DNS、日志、安全策略或运行时诊断。</EmptyDescription></EmptyHeader><EmptyContent className="flex flex-wrap gap-2"><Button asChild><Link href="/settings/nginx">Nginx</Link></Button><Button asChild variant="outline"><Link href="/settings/security">Security</Link></Button><Button asChild variant="outline"><Link href="/settings/cloudflare">Cloudflare DNS</Link></Button><Button asChild variant="outline"><Link href="/settings/logs">Log Settings</Link></Button></EmptyContent></Empty>
       </div>
     </Page>
   );

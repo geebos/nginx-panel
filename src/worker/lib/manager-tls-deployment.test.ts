@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "@/shared/schemas";
-import { createReloadManagerTlsDeployment } from "./deployment-runner";
+import { createDiagnosticNginxTestDeployment, createReloadManagerTlsDeployment } from "./deployment-runner";
 
 test("manager TLS reload creates one auditable idempotent deployment", async () => {
   const connection = new Database(":memory:");
@@ -24,5 +24,23 @@ test("manager TLS reload creates one auditable idempotent deployment", async () 
     db.select().from(schema.deploymentSteps).all().map((step) => step.name),
     ["Validate mounted certificate", "Run active nginx -t", "Reload Nginx", "Verify manager HTTPS", "Finalize"],
   );
+  connection.close();
+});
+
+test("diagnostic nginx test creates an auditable idempotent deployment", async () => {
+  const connection = new Database(":memory:");
+  connection.pragma("foreign_keys = ON");
+  const db = drizzle(connection, { schema });
+  migrate(db, { migrationsFolder: "./drizzle" });
+  const now = Date.now();
+  db.insert(schema.users).values({ id: "user-1", username: "admin", passwordHash: "unused", createdAt: now, updatedAt: now }).run();
+
+  const first = await createDiagnosticNginxTestDeployment(db, { requestedBy: "user-1", idempotencyKey: "diagnostic-nginx-test-1" });
+  const repeated = await createDiagnosticNginxTestDeployment(db, { requestedBy: "user-1", idempotencyKey: "diagnostic-nginx-test-1" });
+  assert.equal(first.id, repeated.id);
+  assert.equal(first.type, "diagnostic_test");
+  assert.equal(first.status, "queued");
+  assert.equal(db.select().from(schema.deployments).all().length, 1);
+  assert.deepEqual(db.select().from(schema.deploymentSteps).all().map((step) => step.name), ["Run active nginx -t"]);
   connection.close();
 });

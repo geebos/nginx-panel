@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdir, rm, symlink, truncate, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -10,6 +13,68 @@ import { setCloudflareDnsProvider } from "@/worker/cloudflare/dns";
 import { createErrorHandler } from "@/worker/middleware/error";
 import { assertLoginAllowed, assertRebuildAllowed, createSession, hashPassword, verifyPassword } from "@/worker/lib/auth";
 import { settingsRoute } from "./settings";
+
+test("Nginx settings expose runtime capacity and reject a limit below protected revisions", async (t) => {
+  const runtimeRoot = join(tmpdir(), `nginx-settings-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(join(runtimeRoot, "revisions", "rev-1"), { recursive: true });
+  await mkdir(join(runtimeRoot, "revisions", "rev-2"), { recursive: true });
+  await writeFile(join(runtimeRoot, "revisions", "rev-1", "artifact.bin"), "");
+  await writeFile(join(runtimeRoot, "revisions", "rev-2", "artifact.bin"), "");
+  await truncate(join(runtimeRoot, "revisions", "rev-1", "artifact.bin"), 300 * 1024 * 1024);
+  await truncate(join(runtimeRoot, "revisions", "rev-2", "artifact.bin"), 300 * 1024 * 1024);
+  await symlink("revisions/rev-2", join(runtimeRoot, "active"));
+  t.after(() => rm(runtimeRoot, { recursive: true, force: true }));
+  const previousRoot = process.env.NGINX_RUNTIME_ROOT;
+  process.env.NGINX_RUNTIME_ROOT = runtimeRoot;
+  t.after(() => {
+    if (previousRoot === undefined) delete process.env.NGINX_RUNTIME_ROOT;
+    else process.env.NGINX_RUNTIME_ROOT = previousRoot;
+  });
+
+  const connection = new Database(":memory:");
+  t.after(() => connection.close());
+  const db = drizzle(connection, { schema });
+  migrate(db, { migrationsFolder: "./drizzle" });
+  db.insert(schema.deployments).values([
+    { id: "rev-1", type: "deploy", status: "succeeded", idempotencyKey: "rev-1", createdAt: 1, finishedAt: 1 },
+    { id: "rev-2", type: "deploy", status: "succeeded", idempotencyKey: "rev-2", createdAt: 2, finishedAt: 2 },
+  ]).run();
+  const app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => { c.set("db", db); c.set("user", { id: "user-1", username: "admin" }); await next(); });
+  app.route("/api", settingsRoute);
+  app.onError(createErrorHandler<AppEnv>());
+
+  const loaded = await app.request("/api/settings/nginx");
+  assert.equal(loaded.status, 200);
+  const loadedBody = await loaded.json() as { storage: { maxBytes: number; minimumAllowedBytes: number }; paths: { configRoot: string; staticAllowedRoots: string[] } };
+  assert.equal(loadedBody.storage.maxBytes, 2 * 1024 * 1024 * 1024);
+  assert.equal(loadedBody.storage.minimumAllowedBytes, 600 * 1024 * 1024);
+  assert.equal(loadedBody.paths.configRoot, runtimeRoot);
+  assert.deepEqual(loadedBody.paths.staticAllowedRoots, ["/srv/sites"]);
+
+  const rejected = await app.request("/api/settings/nginx", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ revisionMaxBytes: 512 * 1024 * 1024 }),
+  });
+  assert.equal(rejected.status, 409);
+  const rejectedBody = await rejected.json() as { code: string; minimumBytes: number };
+  assert.equal(rejectedBody.code, "REVISION_STORAGE_LIMIT_TOO_LOW");
+  assert.equal(rejectedBody.minimumBytes, 600 * 1024 * 1024);
+  assert.equal(db.select().from(schema.settings).all().length, 0);
+
+  const accepted = await app.request("/api/settings/nginx", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ revisionMaxBytes: 900 * 1024 * 1024 }),
+  });
+  assert.equal(accepted.status, 200);
+  const acceptedBody = await accepted.json() as { storage: { maxBytes: number; usedBytes: number; locked: boolean } };
+  assert.equal(acceptedBody.storage.maxBytes, 900 * 1024 * 1024);
+  assert.equal(acceptedBody.storage.usedBytes, 600 * 1024 * 1024);
+  assert.equal(acceptedBody.storage.locked, false);
+  assert.deepEqual(JSON.parse(db.select().from(schema.settings).get()!.valueJson), { revisionMaxBytes: 900 * 1024 * 1024 });
+});
 
 test("Cloudflare credential APIs verify and encrypt tokens without returning them", async () => {
   const previous = process.env.APP_ENV;

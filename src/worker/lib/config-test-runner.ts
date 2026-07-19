@@ -17,6 +17,7 @@ import { BusinessError } from "./errors";
 import { renderDomainConfig, renderRootConfig } from "./nginx-config";
 
 const execFileAsync = promisify(execFile);
+const activeConfigTests = new Set<Promise<void>>();
 
 const stepNames = ["Generate candidate config", "Validate files and targets", "Run nginx -t"];
 
@@ -94,7 +95,7 @@ export async function createConfigTestDeployment(
   return (await db.query.deployments.findFirst({ where: eq(deployments.id, id) }))!;
 }
 
-export async function runConfigTest(db: AppEnv["Variables"]["db"], deploymentId: string) {
+async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: string) {
   let candidateRoot: string | undefined;
   try {
     const deployment = await db.query.deployments.findFirst({ where: eq(deployments.id, deploymentId) });
@@ -181,4 +182,18 @@ export async function runConfigTest(db: AppEnv["Variables"]["db"], deploymentId:
       });
     }
   }
+}
+
+export function runConfigTest(db: AppEnv["Variables"]["db"], deploymentId: string) {
+  const running = executeConfigTest(db, deploymentId);
+  activeConfigTests.add(running);
+  void running.then(
+    () => activeConfigTests.delete(running),
+    () => activeConfigTests.delete(running),
+  );
+  return running;
+}
+
+export function waitForConfigTests() {
+  return Promise.allSettled([...activeConfigTests]);
 }

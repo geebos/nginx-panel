@@ -1,6 +1,7 @@
 export type ErrorInfo = {
   cause?: Error;
   context?: Record<string, unknown>;
+  details?: Record<string, unknown>;
   fieldErrors?: Record<string, string[]>;
   retryAfterSeconds?: number;
 };

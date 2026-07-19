@@ -7,6 +7,13 @@ import type { AppEnv } from "@/worker/types";
 
 const running = new Set<string>();
 let coordinator: ReturnType<typeof setInterval> | null = null;
+let coordinatorTail = Promise.resolve();
+
+function scheduleActivationRun(db: AppEnv["Variables"]["db"]) {
+  const run = coordinatorTail.then(() => runCertificateActivationOnce(db));
+  coordinatorTail = run.catch((error) => console.error("[certificate-activation] coordinator failed", error instanceof Error ? error.name : "unknown"));
+  return run;
+}
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "证书激活创建失败";
@@ -133,11 +140,15 @@ export async function retryCertificateActivation(db: AppEnv["Variables"]["db"], 
 
 export function startCertificateActivationCoordinator(db: AppEnv["Variables"]["db"]) {
   if (coordinator) return () => undefined;
-  void runCertificateActivationOnce(db);
-  coordinator = setInterval(() => void runCertificateActivationOnce(db), 5_000);
+  void scheduleActivationRun(db);
+  coordinator = setInterval(() => void scheduleActivationRun(db), 5_000);
   coordinator.unref?.();
   return () => {
     if (coordinator) clearInterval(coordinator);
     coordinator = null;
   };
+}
+
+export function waitForCertificateActivationCoordinator() {
+  return coordinatorTail;
 }

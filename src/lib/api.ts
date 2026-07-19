@@ -6,6 +6,7 @@ export type ApiErrorPayload = {
   message: string;
   fieldErrors?: Record<string, string[]>;
   retryAfterSeconds?: number;
+  minimumBytes?: number;
 };
 
 export class ApiError extends Error {
@@ -452,6 +453,41 @@ export function updateSessionPolicy(policy: SessionPolicy) {
   });
 }
 
+export type RuntimeStorageSummary = {
+  usedBytes: number;
+  maxBytes: number;
+  minimumAllowedBytes: number;
+  projectedBytes: number;
+  candidateRequiredBytes: number;
+  filesystemAvailableBytes: number | null;
+  locked: boolean;
+  retainedRevisionCount: number;
+  protectedRevisionIds: string[];
+};
+
+export type NginxSettingsResponse = {
+  nginx: { version: string | null };
+  paths: { configRoot: string; staticAllowedRoots: string[] };
+  storage: RuntimeStorageSummary;
+  health: {
+    status: "checking" | "healthy" | "degraded";
+    checkedAt: number | null;
+    activeRevision: string | null;
+    issues: Array<{ code: string; message: string }>;
+  };
+};
+
+export function getNginxSettings() {
+  return requestJson<NginxSettingsResponse>("/api/settings/nginx");
+}
+
+export function updateNginxSettings(revisionMaxBytes: number) {
+  return requestJson<{ storage: RuntimeStorageSummary }>("/api/settings/nginx", {
+    method: "PATCH",
+    body: JSON.stringify({ revisionMaxBytes }),
+  });
+}
+
 export function rotateLogs(domainId?: string) {
   return requestJson<{ deploymentId: string; statusUrl: string }>("/api/logs/rotate", {
     method: "POST",
@@ -481,11 +517,54 @@ export type RuntimeDiagnostics = {
     };
     error?: string;
   };
-  paths: { sqliteConfigured: boolean; runtimeConfigured: boolean; logsConfigured: boolean };
+  storage: Array<{
+    key: "sqlite" | "runtime" | "certificates" | "logs" | "revisions";
+    label: string;
+    path: string;
+    status: "available" | "missing" | "unconfigured" | "unreadable";
+    itemBytes: number | null;
+    filesystem: { totalBytes: number; freeBytes: number; availableBytes: number } | null;
+  }>;
+  logRoots: {
+    current: { path: string; readable: boolean } | null;
+    historical: Array<{ path: string; readable: boolean }>;
+  };
+  worker: { status: "running"; uptimeSeconds: number; pid: number };
+};
+
+export type ActiveRuntimeConfig = {
+  domain: { id: string; hostname: string };
+  revision: string;
+  file: string;
+  config: string;
+  checksums: { source: string; config: string; actualConfig: string };
+  inputs: {
+    sourceVersionId: string;
+    enabled: boolean;
+    certificateId: string | null;
+    hostname: string;
+    aliases: string[];
+    routes: number;
+    headers: number;
+    advanced: boolean;
+    logSettingsRevision: number;
+    logSettingsChecksum: string;
+  };
 };
 
 export function getRuntimeDiagnostics() {
   return requestJson<RuntimeDiagnostics>("/api/settings/diagnostics");
+}
+
+export function getActiveRuntimeConfig(domainId: string) {
+  return requestJson<ActiveRuntimeConfig>(`/api/settings/diagnostics/runtime-config?domainId=${encodeURIComponent(domainId)}`);
+}
+
+export function runDiagnosticNginxTest() {
+  return requestJson<{ deploymentId: string; statusUrl: string }>("/api/settings/diagnostics/nginx-test", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+  });
 }
 
 export function rebuildActiveRuntime(currentPassword: string) {

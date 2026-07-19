@@ -25,6 +25,8 @@ import { assertRuntimeMutable, getRuntimeState, setRuntimeDegraded, setRuntimeHe
 import { createSnapshot } from "./snapshot";
 import { BusinessError } from "./errors";
 import { validateManagerTlsEnvironment } from "./manager-tls";
+import { assertRuntimeStorageCapacity, cleanupRuntimeStorage } from "./runtime-storage";
+import { touchJobRunnerHeartbeat } from "./service-lifecycle";
 
 const execFileAsync = promisify(execFile);
 const stepNames = ["Generate candidate config", "Validate files and targets", "Run nginx -t", "Activate revision", "Reload Nginx", "Run health checks", "Commit active version"];
@@ -65,6 +67,7 @@ export async function createPublishDeployment(db: AppEnv["Variables"]["db"], inp
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
   if (existing) return existing;
   assertRuntimeMutable();
+  await assertRuntimeStorageCapacity(db);
   const id = randomUUID();
   const now = Date.now();
   db.transaction((tx) => {
@@ -94,6 +97,7 @@ export async function createCertificateDeployment(db: AppEnv["Variables"]["db"],
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, idempotencyKey) });
   if (existing) return existing;
   assertRuntimeMutable();
+  await assertRuntimeStorageCapacity(db);
   const id = randomUUID();
   const now = Date.now();
   db.transaction((tx) => {
@@ -121,6 +125,7 @@ export async function createRollbackDeployment(db: AppEnv["Variables"]["db"], in
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
   if (existing) return { deployment: existing, version: null };
   assertRuntimeMutable();
+  await assertRuntimeStorageCapacity(db);
   const deploymentId = randomUUID();
   const versionId = randomUUID();
   const now = Date.now();
@@ -176,6 +181,7 @@ export async function createLogSettingsDeployment(db: AppEnv["Variables"]["db"],
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
   if (existing) return existing;
   assertRuntimeMutable();
+  await assertRuntimeStorageCapacity(db);
   const active = await getActiveLogSettings(db);
   const candidate = nginxLogSettingsSchema.parse({ ...input.settings, revision: active.revision + 1, updatedAt: Date.now() });
   const id = randomUUID();
@@ -192,6 +198,7 @@ export async function createRebuildActiveDeployment(db: AppEnv["Variables"]["db"
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
   if (existing) return existing;
   if (getRuntimeState().status !== "degraded") throw new Error("运行配置当前不需要重建");
+  await assertRuntimeStorageCapacity(db);
   const id = randomUUID();
   const names = [...stepNames];
   names[0] = "Validate SQLite sources";
@@ -224,10 +231,32 @@ export async function createReloadManagerTlsDeployment(db: AppEnv["Variables"]["
   return (await db.query.deployments.findFirst({ where: eq(deployments.id, id) }))!;
 }
 
+export async function createDiagnosticNginxTestDeployment(db: AppEnv["Variables"]["db"], input: { requestedBy: string; idempotencyKey: string }) {
+  const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
+  if (existing) return existing;
+  const id = randomUUID();
+  db.transaction((tx) => {
+    tx.insert(deployments).values({ id, type: "diagnostic_test", status: "queued", idempotencyKey: input.idempotencyKey, requestedBy: input.requestedBy, createdAt: Date.now() }).run();
+    tx.insert(deploymentSteps).values({ id: randomUUID(), deploymentId: id, sequence: 0, name: "Run active nginx -t", status: "pending" }).run();
+  });
+  return (await db.query.deployments.findFirst({ where: eq(deployments.id, id) }))!;
+}
+
 export function enqueueRuntimeOperation(label: string, operation: () => Promise<void>) {
-  const running = runnerTail.then(operation);
+  const running = runnerTail.then(async () => {
+    touchJobRunnerHeartbeat();
+    try {
+      await operation();
+    } finally {
+      touchJobRunnerHeartbeat();
+    }
+  });
   runnerTail = running.catch((error) => console.error(`[${label}] unhandled runtime failure`, error));
   return running;
+}
+
+export function waitForRuntimeOperations() {
+  return runnerTail;
 }
 
 export function enqueuePublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
@@ -244,6 +273,45 @@ export function enqueueRebuildActive(db: AppEnv["Variables"]["db"], deploymentId
 
 export function enqueueReloadManagerTls(db: AppEnv["Variables"]["db"], deploymentId: string) {
   return enqueueRuntimeOperation("reload-manager-tls", () => runReloadManagerTls(db, deploymentId));
+}
+
+export function enqueueDiagnosticNginxTest(db: AppEnv["Variables"]["db"], deploymentId: string) {
+  return enqueueRuntimeOperation("diagnostic-nginx-test", () => runDiagnosticNginxTest(db, deploymentId));
+}
+
+function redactDiagnosticOutput(value: string, paths: ReturnType<typeof runtimePaths>) {
+  const replacements = [
+    [paths.active, "<runtime>/active"],
+    [paths.root, "<runtime>"],
+    [paths.logsRoot, "<logs>"],
+    [process.env.CERTIFICATE_DATA_ROOT || "/data/certs", "<certificates>"],
+    [process.env.DB_SQLITE_DIR, "<sqlite>"],
+    [process.env.MANAGER_TLS_CERT_FILE, "<manager-certificate>"],
+    [process.env.MANAGER_TLS_KEY_FILE, "<manager-private-key>"],
+  ].filter((item): item is [string, string] => Boolean(item[0])).sort((left, right) => right[0].length - left[0].length);
+  let redacted = value;
+  for (const [path, placeholder] of replacements) redacted = redacted.split(path).join(placeholder);
+  return redacted.replace(/(^|[\s'"(])\/(?!\/)[^\s'"),;]+/gm, "$1<absolute-path>").slice(0, 8_000);
+}
+
+async function runDiagnosticNginxTest(db: AppEnv["Variables"]["db"], deploymentId: string) {
+  let paths: ReturnType<typeof runtimePaths> | undefined;
+  try {
+    const deployment = await db.query.deployments.findFirst({ where: eq(deployments.id, deploymentId) });
+    if (!deployment || deployment.status !== "queued" || deployment.type !== "diagnostic_test") return;
+    paths = runtimePaths();
+    await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
+    await updateStep(db, deploymentId, 0, "running");
+    const result = await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
+    const output = redactDiagnosticOutput(`${result.stdout}\n${result.stderr}`.trim(), paths);
+    await updateStep(db, deploymentId, 0, "succeeded", "Active 配置测试通过", output);
+    await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : "Active 配置测试失败";
+    const message = paths ? redactDiagnosticOutput(raw, paths) : "Active 配置测试失败";
+    await updateStep(db, deploymentId, 0, "failed", message, message);
+    await db.update(deployments).set({ status: "failed", errorCode: "NGINX_TEST_FAILED", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
+  }
 }
 
 function verifyManagerHttps(hostname: string) {
@@ -318,6 +386,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     if (!rebuildActive && !appliesLogSettings && (!["deploy", "rollback"].includes(deployment.type) || !deployment.domainId || !deployment.configVersionId)) return;
     if (!rebuildActive) assertRuntimeMutable();
     else if (getRuntimeState().status !== "degraded") throw new Error("运行配置当前不需要重建");
+    await assertRuntimeStorageCapacity(db);
     const publishInput = deployment.type === "deploy"
       ? JSON.parse(deployment.inputJson ?? "null") as { expectedSnapshotChecksum?: string; sourceCertificateId?: string } | null
       : null;
@@ -433,6 +502,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     });
     if (rebuildActive) setRuntimeHealthy(deploymentId);
     await updateStep(db, deploymentId, 6, "succeeded", rebuildActive ? "Runtime 已按 SQLite 重建并恢复健康" : appliesLogSettings ? `日志设置 revision ${logSettings.revision} 已提交` : "Active Version 已提交");
+    void cleanupRuntimeStorage(db).catch((error) => console.error("[runtime-storage] post-deployment cleanup failed", error));
     completed = true;
   } catch (error) {
     const message = error instanceof Error ? error.message : "发布失败";

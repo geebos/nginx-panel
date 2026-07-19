@@ -12,6 +12,7 @@ export function createErrorHandler<E extends Env>(): ErrorHandler<E> {
           message: err.message,
           fieldErrors: err.info.fieldErrors,
           retryAfterSeconds: err.info.retryAfterSeconds,
+          ...err.info.details,
         },
         err.status as ContentfulStatusCode,
       );

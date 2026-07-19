@@ -13,6 +13,7 @@ import { matchesLogFilters, parseLogLine } from "@/worker/logs/parser";
 import { controlledLogPath } from "@/worker/logs/path";
 import { readLastLines } from "@/worker/logs/reader";
 import { createLogRotationDeployment, enqueueLogRotation } from "@/worker/logs/rotator";
+import { assertAcceptingLogStreams, registerLogStream } from "@/worker/lib/service-lifecycle";
 
 export const logsRoute = new Hono<AppEnv>();
 
@@ -50,6 +51,7 @@ logsRoute.get("/logs/history", queryValidator(logQuerySchema), async (c) => {
 });
 
 logsRoute.get("/logs/follow", queryValidator(logStreamQuerySchema), async (c) => {
+  assertAcceptingLogStreams();
   const query = c.req.valid("query");
   const domain = await c.get("db").query.domains.findFirst({ where: and(eq(domains.id, query.domainId), isNull(domains.deletedAt)) });
   if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
@@ -85,6 +87,14 @@ logsRoute.get("/logs/follow", queryValidator(logStreamQuerySchema), async (c) =>
       await write({ type: "dropped", count: dropped, reason: "rate_limit" });
       dropped = 0;
     };
+    const unregister = registerLogStream(async () => {
+      try {
+        await flushDropped();
+        await write({ type: "end", reason: "server_shutdown", ...(lastCursor ? { cursor: lastCursor } : {}) });
+      } finally {
+        controller.abort();
+      }
+    });
 
     try {
       await write({ type: "heartbeat", at: new Date().toISOString() });
@@ -140,6 +150,7 @@ logsRoute.get("/logs/follow", queryValidator(logStreamQuerySchema), async (c) =>
         await write({ type: "error", code: "file_unavailable", recoverable: true });
       }
     } finally {
+      unregister();
       release();
     }
   });

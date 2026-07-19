@@ -50,6 +50,10 @@ export const sessionPolicySchema = z.object({
   rememberDays: z.number().int().min(7).max(90),
 });
 
+export const runtimeStorageSettingsSchema = z.object({
+  revisionMaxBytes: z.number().int().min(512 * 1024 * 1024).max(20 * 1024 * 1024 * 1024),
+});
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   valueJson: text("value_json").notNull(),
@@ -61,3 +65,4 @@ export type NginxLogSettingsInput = z.infer<typeof nginxLogSettingsInputSchema>;
 export type NginxLogSettings = z.infer<typeof nginxLogSettingsSchema>;
 export type RebuildActiveInput = z.infer<typeof rebuildActiveSchema>;
 export type SessionPolicy = z.infer<typeof sessionPolicySchema>;
+export type RuntimeStorageSettings = z.infer<typeof runtimeStorageSettingsSchema>;

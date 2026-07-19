@@ -11,6 +11,13 @@ const retryDelays = [60 * 60 * 1000, 6 * 60 * 60 * 1000, 24 * 60 * 60 * 1000];
 const running = new Set<string>();
 let scheduler: ReturnType<typeof setInterval> | null = null;
 let retryScheduler: ReturnType<typeof setInterval> | null = null;
+let schedulerTail = Promise.resolve();
+
+function scheduleRenewalRun(operation: () => Promise<void>) {
+  const run = schedulerTail.then(operation);
+  schedulerTail = run.catch((error) => console.error("[renewal] scheduler failed", error instanceof Error ? error.name : "unknown"));
+  return run;
+}
 
 function normalized(values: string[]) {
   return [...new Set(values.map((value) => value.toLowerCase().replace(/\.$/, "")))].sort();
@@ -177,10 +184,10 @@ export async function runRenewalRetryOnce(
 
 export function startRenewalScheduler(db: AppEnv["Variables"]["db"]) {
   if (scheduler) return () => undefined;
-  void runRenewalSchedulerOnce(db);
-  void runRenewalRetryOnce(db);
-  scheduler = setInterval(() => void runRenewalSchedulerOnce(db), 24 * 60 * 60 * 1000);
-  retryScheduler = setInterval(() => void runRenewalRetryOnce(db), 60 * 60 * 1000);
+  void scheduleRenewalRun(() => runRenewalSchedulerOnce(db));
+  void scheduleRenewalRun(() => runRenewalRetryOnce(db));
+  scheduler = setInterval(() => void scheduleRenewalRun(() => runRenewalSchedulerOnce(db)), 24 * 60 * 60 * 1000);
+  retryScheduler = setInterval(() => void scheduleRenewalRun(() => runRenewalRetryOnce(db)), 60 * 60 * 1000);
   scheduler.unref?.();
   retryScheduler.unref?.();
   return () => {
@@ -189,6 +196,10 @@ export function startRenewalScheduler(db: AppEnv["Variables"]["db"]) {
     scheduler = null;
     retryScheduler = null;
   };
+}
+
+export function waitForRenewalScheduler() {
+  return schedulerTail;
 }
 
 export const certificateRenewalWindowMs = renewalWindow;

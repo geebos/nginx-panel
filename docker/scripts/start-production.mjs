@@ -95,31 +95,48 @@ const nginx = spawn(
 );
 
 let shuttingDown = false;
+let workerExited = false;
+let nginxExited = false;
+let nginxQuitSent = false;
+
+function stopNginx() {
+  if (nginxExited || nginxQuitSent) return;
+  nginxQuitSent = true;
+  nginx.kill("SIGQUIT");
+}
 
 function shutdown(exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
   process.exitCode = exitCode;
-  worker.kill("SIGTERM");
-  nginx.kill("SIGQUIT");
+  if (workerExited) stopNginx();
+  else worker.kill("SIGTERM");
 
   setTimeout(() => {
-    worker.kill("SIGKILL");
-    nginx.kill("SIGKILL");
-  }, 25_000).unref();
+    if (!workerExited) worker.kill("SIGKILL");
+    stopNginx();
+  }, 20_000).unref();
+  setTimeout(() => {
+    if (!workerExited) worker.kill("SIGKILL");
+    if (!nginxExited) nginx.kill("SIGKILL");
+  }, 30_000).unref();
 }
 
 process.on("SIGTERM", () => shutdown(0));
 process.on("SIGINT", () => shutdown(0));
 
 worker.on("exit", (code, signal) => {
+  workerExited = true;
   if (!shuttingDown) {
     console.error(`[supervisor] worker exited unexpectedly (${code ?? signal})`);
     shutdown(code ?? 1);
+  } else {
+    stopNginx();
   }
 });
 
 nginx.on("exit", (code, signal) => {
+  nginxExited = true;
   if (!shuttingDown) {
     console.error(`[supervisor] nginx exited unexpectedly (${code ?? signal})`);
     shutdown(code ?? 1);

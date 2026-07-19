@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
-import { acmeOrders, changePasswordSchema, cloudflareCredentialInputSchema, cloudflareCredentials, deployments, nginxLogSettingsInputSchema, rebuildActiveSchema, replaceCloudflareCredentialTokenSchema, sessionPolicySchema, sessions, settings, users } from "@/shared/schemas";
+import { acmeOrders, changePasswordSchema, cloudflareCredentialInputSchema, cloudflareCredentials, deployments, nginxLogSettingsInputSchema, rebuildActiveSchema, replaceCloudflareCredentialTokenSchema, runtimeStorageSettingsSchema, sessionPolicySchema, sessions, settings, users } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
-import { createLogSettingsDeployment, createRebuildActiveDeployment, createReloadManagerTlsDeployment, enqueueLogSettings, enqueueRebuildActive, enqueueReloadManagerTls } from "@/worker/lib/deployment-runner";
+import { createDiagnosticNginxTestDeployment, createLogSettingsDeployment, createRebuildActiveDeployment, createReloadManagerTlsDeployment, enqueueDiagnosticNginxTest, enqueueLogSettings, enqueueRebuildActive, enqueueReloadManagerTls } from "@/worker/lib/deployment-runner";
 import { getActiveLogSettings } from "@/worker/lib/log-settings";
 import { renderAccessLogFormat } from "@/worker/lib/nginx-config";
 import { jsonValidator } from "@/worker/lib/validator";
@@ -14,8 +16,22 @@ import { getSessionPolicy } from "@/worker/lib/session-policy";
 import { encryptCloudflareToken } from "@/worker/cloudflare/credentials";
 import { getCloudflareDnsProvider } from "@/worker/cloudflare/dns";
 import { validateManagerTlsEnvironment } from "@/worker/lib/manager-tls";
+import { collectRuntimeDiagnostics, getActiveRuntimeConfig } from "@/worker/lib/runtime-diagnostics";
+import { cleanupRuntimeStorage, getRuntimeStorageSnapshot } from "@/worker/lib/runtime-storage";
 
 export const settingsRoute = new Hono<AppEnv>();
+const execFileAsync = promisify(execFile);
+
+async function getNginxVersion() {
+  try {
+    const result = await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-v"], { timeout: 5_000 });
+    const output = `${result.stdout}\n${result.stderr}`;
+    return output.match(/nginx version:\s*nginx\/([^\s]+)/)?.[1] ?? null;
+  } catch (error) {
+    const output = error && typeof error === "object" && "stderr" in error ? String(error.stderr) : "";
+    return output.match(/nginx version:\s*nginx\/([^\s]+)/)?.[1] ?? null;
+  }
+}
 
 function publicCloudflareCredential(credential: typeof cloudflareCredentials.$inferSelect) {
   const { tokenCiphertext: _ciphertext, tokenIv: _iv, tokenAuthTag: _tag, ...safe } = credential;
@@ -109,6 +125,50 @@ settingsRoute.get("/settings/security/session-policy", async (c) => {
   return c.json({ policy: await getSessionPolicy(c.get("db")) });
 });
 
+settingsRoute.get("/settings/nginx", async (c) => {
+  const [version, storage] = await Promise.all([
+    getNginxVersion(),
+    getRuntimeStorageSnapshot(c.get("db")),
+  ]);
+  return c.json({
+    nginx: { version },
+    paths: {
+      configRoot: process.env.NGINX_RUNTIME_ROOT || "/data/nginx",
+      staticAllowedRoots: ["/srv/sites"],
+    },
+    storage,
+    health: getRuntimeState(),
+  });
+});
+
+settingsRoute.patch("/settings/nginx", jsonValidator(runtimeStorageSettingsSchema), async (c) => {
+  const db = c.get("db");
+  const input = c.req.valid("json");
+  const current = await getRuntimeStorageSnapshot(db, { maxBytes: input.revisionMaxBytes });
+  if (input.revisionMaxBytes < current.minimumAllowedBytes) {
+    throw new BusinessError(
+      `容量上限不能低于受保护 revision 的实际用量（${current.minimumAllowedBytes} bytes）`,
+      409,
+      "REVISION_STORAGE_LIMIT_TOO_LOW",
+      {
+        context: { minimumAllowedBytes: current.minimumAllowedBytes },
+        details: { minimumBytes: current.minimumAllowedBytes },
+      },
+    );
+  }
+  const now = Date.now();
+  await db.insert(settings).values({
+    key: "runtime_storage",
+    valueJson: JSON.stringify(input),
+    updatedAt: now,
+  }).onConflictDoUpdate({
+    target: settings.key,
+    set: { valueJson: JSON.stringify(input), updatedAt: now },
+  });
+  const storage = await cleanupRuntimeStorage(db);
+  return c.json({ storage });
+});
+
 settingsRoute.patch("/settings/security/session-policy", jsonValidator(sessionPolicySchema), async (c) => {
   const db = c.get("db");
   const policy = c.req.valid("json");
@@ -194,7 +254,7 @@ settingsRoute.put("/settings/logs", jsonValidator(nginxLogSettingsInputSchema), 
   return c.json({ deploymentId: deployment.id, statusUrl: `/api/deployments/${deployment.id}` }, 202);
 });
 
-settingsRoute.get("/settings/diagnostics", (c) => {
+settingsRoute.get("/settings/diagnostics", async (c) => {
   const runtime = getRuntimeState();
   let managerTls: { status: "valid" | "invalid" | "unavailable"; certificate?: ReturnType<typeof validateManagerTlsEnvironment>; error?: string };
   if (process.env.RUNTIME_MODE !== "nginx-manager") {
@@ -210,12 +270,26 @@ settingsRoute.get("/settings/diagnostics", (c) => {
     runtime,
     rebuildAvailable: runtime.status === "degraded",
     managerTls,
-    paths: {
-      sqliteConfigured: Boolean(process.env.DB_SQLITE_DIR),
-      runtimeConfigured: Boolean(process.env.NGINX_RUNTIME_ROOT),
-      logsConfigured: Boolean(process.env.NGINX_LOG_DIR),
-    },
+    ...await collectRuntimeDiagnostics(),
   });
+});
+
+settingsRoute.get("/settings/diagnostics/runtime-config", async (c) => {
+  const domainId = c.req.query("domainId")?.trim();
+  if (!domainId) throw new BusinessError("请选择 Domain", 400, "DOMAIN_ID_REQUIRED");
+  return c.json(await getActiveRuntimeConfig(c.get("db"), domainId));
+});
+
+settingsRoute.post("/settings/diagnostics/nginx-test", async (c) => {
+  if (process.env.RUNTIME_MODE !== "nginx-manager") {
+    throw new BusinessError("Nginx 配置测试只允许在 Nginx runtime 中执行", 409, "DEPLOYMENT_UNAVAILABLE");
+  }
+  const deployment = await createDiagnosticNginxTestDeployment(c.get("db"), {
+    requestedBy: c.get("user")!.id,
+    idempotencyKey: c.req.header("Idempotency-Key") || randomUUID(),
+  });
+  if (deployment.status === "queued") void enqueueDiagnosticNginxTest(c.get("db"), deployment.id);
+  return c.json({ deploymentId: deployment.id, statusUrl: `/api/deployments/${deployment.id}` }, 202);
 });
 
 settingsRoute.post("/settings/diagnostics/reload-manager-tls", async (c) => {

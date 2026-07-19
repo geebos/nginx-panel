@@ -2,7 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { deploymentSteps, deployments } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { runConfigTest } from "./config-test-runner";
-import { enqueueLogSettings, enqueuePublish, enqueueRebuildActive, enqueueReloadManagerTls } from "./deployment-runner";
+import { enqueueDiagnosticNginxTest, enqueueLogSettings, enqueuePublish, enqueueRebuildActive, enqueueReloadManagerTls } from "./deployment-runner";
 import { enqueueLogRotation } from "@/worker/logs/rotator";
 import type { RuntimeState } from "./runtime-state";
 
@@ -35,6 +35,8 @@ export async function resumeQueuedDeployments(db: AppEnv["Variables"]["db"], run
       void enqueueRebuildActive(db, deployment.id);
     } else if (deployment.type === "reload_manager_tls") {
       void enqueueReloadManagerTls(db, deployment.id);
+    } else if (deployment.type === "diagnostic_test") {
+      void enqueueDiagnosticNginxTest(db, deployment.id);
     } else {
       const degraded = runtime.status === "degraded";
       await rejectQueued(

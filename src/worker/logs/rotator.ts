@@ -155,10 +155,12 @@ export function enqueueLogRotation(db: AppEnv["Variables"]["db"], deploymentId: 
 
 export function startLogRotationScheduler(db: AppEnv["Variables"]["db"]) {
   let checking = false;
+  let stopped = false;
+  let schedulerTail = Promise.resolve();
   const interval = setInterval(() => {
-    if (checking || process.env.RUNTIME_MODE !== "nginx-manager" || getRuntimeState().status !== "healthy") return;
+    if (stopped || checking || process.env.RUNTIME_MODE !== "nginx-manager" || getRuntimeState().status !== "healthy") return;
     checking = true;
-    void (async () => {
+    schedulerTail = (async () => {
       const pending = await db.query.deployments.findFirst({
         where: and(eq(deployments.type, "rotate_logs"), inArray(deployments.status, ["queued", "running"])),
       });
@@ -169,11 +171,13 @@ export function startLogRotationScheduler(db: AppEnv["Variables"]["db"]) {
         idempotencyKey: `automatic-log-rotation-${Math.floor(Date.now() / 30_000)}`,
         force: false,
       });
-      if (deployment.status === "queued") void enqueueLogRotation(db, deployment.id);
+      if (!stopped && deployment.status === "queued") void enqueueLogRotation(db, deployment.id);
     })().catch((error) => console.error("[log-rotation] scheduled check failed", error instanceof Error ? error.name : "unknown")).finally(() => {
       checking = false;
     });
   }, 30_000);
   interval.unref();
-  return () => clearInterval(interval);
+  const stop = () => { stopped = true; clearInterval(interval); };
+  Object.assign(stop, { wait: () => schedulerTail });
+  return stop as typeof stop & { wait: () => Promise<void> };
 }

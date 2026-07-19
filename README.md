@@ -78,6 +78,7 @@ curl http://localhost:8787/api/health   # {"ok":true}
 pnpm build          # 静态导出到 out/
 pnpm typecheck      # tsc --noEmit
 pnpm lint           # eslint
+pnpm test:e2e:docker # 构建隔离的生产镜像并验证 TLS、深链、安全边界和数据卷恢复
 pnpm db:generate    # 生成 Drizzle 迁移（drizzle-kit generate）
 ```
 

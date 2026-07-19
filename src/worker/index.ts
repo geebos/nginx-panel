@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import type { AppEnv } from "@/worker/types";
-import { healthRoute } from "./routes/health";
+import { healthRoute, internalHealthRoute } from "./routes/health";
 import { dashboardRoute } from "./routes/dashboard";
 import { domainsRoute } from "./routes/domains";
 import { authRoute } from "./routes/auth";
@@ -13,6 +13,7 @@ import { acmeChallengeRoute, certificatesRoute } from "./routes/certificates";
 import { requireAuth, requireSameOrigin } from "./middleware/auth";
 import { createErrorHandler } from "./middleware/error";
 import { createDbMiddleware } from "./middleware/db";
+import { assertAcceptingWrites } from "./lib/service-lifecycle";
 
 // 构建 Hono app。Node 入口（serve.ts）复用此构造，
 // 保证中间件/路由挂载一致。
@@ -21,7 +22,12 @@ export function createApp() {
 
   app.use("/api/*", logger());
   app.use("*", createDbMiddleware());
+  app.use("/api/*", async (c, next) => {
+    if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) assertAcceptingWrites();
+    await next();
+  });
   app.route("/", acmeChallengeRoute);
+  app.route("/", internalHealthRoute);
 
   app.route("/api", healthRoute);
   app.route("/api", authRoute);

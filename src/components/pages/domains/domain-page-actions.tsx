@@ -43,7 +43,7 @@ function SemanticChanges({ preview }: { preview: PublishPreviewResponse }) {
         const added = change.kind === "added";
         const removed = change.kind === "removed";
         return (
-          <div className="rounded-lg border border-border bg-card p-4" key={`${change.section}-${change.label}-${index}`}>
+          <div className="rounded-md border border-border bg-card p-4" key={`${change.section}-${change.label}-${index}`}>
             <div className="flex items-center gap-2">
               {added ? <PlusIcon className="text-success" /> : removed ? <MinusIcon className="text-destructive" /> : <CircleAlertIcon className="text-muted-foreground" />}
               <Badge variant={removed ? "destructive" : "outline"}>{change.kind === "changed" ? "Changed" : added ? "Added" : "Removed"}</Badge>
@@ -211,7 +211,7 @@ export function PublishDomainDialog({
           </div>
         ) : null}
         {step === "publish" && preview && deployment ? (
-          <div className="grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-2">
+          <div className="grid gap-4 rounded-md border border-border bg-card p-5 sm:grid-cols-2">
             <div><p className="text-xs text-muted-foreground">Domain</p><p className="mt-1 font-medium">{data.domain.primaryHostname}</p></div>
             <div><p className="text-xs text-muted-foreground">目标版本</p><p className="mt-1 font-mono">v{preview.targetVersion.versionNumber}</p></div>
             <div><p className="text-xs text-muted-foreground">Checksum</p><p className="mt-1 font-mono text-sm">{preview.targetSnapshotChecksum.slice(0, 12)}</p></div>

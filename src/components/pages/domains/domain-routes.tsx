@@ -85,7 +85,7 @@ export function DomainRoutes() {
         {error || query.error ? <Alert variant="destructive"><AlertTitle>Routes 操作失败</AlertTitle><AlertDescription>{error ?? query.error?.message}</AlertDescription></Alert> : null}
         {query.loading && !data ? <Skeleton className="h-80" /> : config ? (
           config.routes.length ? (
-            <div className="rounded-xl border border-border bg-card">
+            <div className="rounded-md border border-border bg-card">
               <Table>
                 <TableHeader><TableRow><TableHead>Path</TableHead><TableHead>Type</TableHead><TableHead>Target</TableHead><TableHead>Options</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>

@@ -228,7 +228,7 @@ export function LogViewer({ domainId: fixedDomainId }: { domainId?: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <form className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" onSubmit={submitHistory}>
+      <form className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-4" onSubmit={submitHistory}>
         {!fixedDomainId ? <Field className="w-64"><FieldLabel>Domain</FieldLabel><Select options={domains.map((domain) => ({ label: domain.hostname, value: domain.id }))} placeholder="选择 Domain" value={domainId} onChange={(value) => { const next = value ?? ""; setDomainId(next); if (next) void load(next, types, historyFilters); }} /></Field> : null}
         <Field className="w-52"><FieldLabel>日志类型</FieldLabel><Select multiple options={[{ label: "Access", value: "access" }, { label: "Error", value: "error" }]} value={types} onChange={(value) => { const next = value as LogType[]; if (!next.length) { toast.error("至少选择一种日志类型"); return; } setTypes(next); if (!live) void load(domainId, next, historyFilters); }} /></Field>
         <Field className="w-44"><FieldLabel>Method</FieldLabel><div className="flex gap-1"><Select className="min-w-0 flex-1" options={["GET", "POST", "PUT", "PATCH", "DELETE"].map((value) => ({ label: value, value }))} placeholder="全部" value={filterInputs.method} onChange={(value) => setFilterInputs((current) => ({ ...current, method: value ?? "" }))} /><Button type="button" size="icon" variant="outline" aria-label="清除 Method 筛选" disabled={!filterInputs.method} onClick={() => setFilterInputs((current) => ({ ...current, method: "" }))}><XIcon /></Button></div></Field>
@@ -237,7 +237,7 @@ export function LogViewer({ domainId: fixedDomainId }: { domainId?: string }) {
         <Button type="submit" disabled={!domainId || loading}><SearchIcon data-icon="inline-start" />{live ? "刷新历史" : "查询"}</Button>
       </form>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card p-3">
         <Field className="w-auto" orientation="horizontal"><Switch id="live-logs" checked={live} disabled={!domainId || unpublished} onCheckedChange={toggleLive} /><FieldLabel htmlFor="live-logs">实时日志</FieldLabel></Field>
         <Button variant="outline" onClick={togglePause} disabled={!live}>{paused ? <PlayIcon data-icon="inline-start" /> : <PauseIcon data-icon="inline-start" />}{paused ? `继续${pausedCount ? ` (${pausedCount})` : ""}` : "暂停"}</Button>
         <Button variant="outline" onClick={() => { setRecords([]); pausedBufferRef.current = []; setPausedCount(0); }}><Trash2Icon data-icon="inline-start" />清屏</Button>
@@ -247,7 +247,7 @@ export function LogViewer({ domainId: fixedDomainId }: { domainId?: string }) {
 
       {error ? <Alert variant="destructive"><AlertTitle>日志读取异常</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
       {loading ? <Skeleton className="h-80" /> : records.length ? (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card"><Table><TableHeader><TableRow>{visibleColumns.map((column) => <TableHead key={column.id}>{columnLabels[column.id]}</TableHead>)}</TableRow></TableHeader><TableBody>{records.map((record) => <TableRow key={record.id}>{visibleColumns.map((column) => <TableCell className="max-w-xl whitespace-nowrap font-mono text-xs" title={column.id === "raw" ? record.raw : undefined} key={column.id}>{String(fieldValue(record, column.id))}</TableCell>)}</TableRow>)}</TableBody></Table></div>
+        <div className="overflow-x-auto rounded-md border border-border bg-card"><Table><TableHeader><TableRow>{visibleColumns.map((column) => <TableHead key={column.id}>{columnLabels[column.id]}</TableHead>)}</TableRow></TableHeader><TableBody>{records.map((record) => <TableRow key={record.id}>{visibleColumns.map((column) => <TableCell className="max-w-xl whitespace-nowrap font-mono text-xs" title={column.id === "raw" ? record.raw : undefined} key={column.id}>{String(fieldValue(record, column.id))}</TableCell>)}</TableRow>)}</TableBody></Table></div>
       ) : <Empty className="min-h-72 border"><EmptyHeader><EmptyMedia variant="icon"><FileTextIcon /></EmptyMedia><EmptyTitle>{unpublished ? "Domain 尚未发布" : "还没有日志"}</EmptyTitle><EmptyDescription>{unpublished ? "发布 Domain 后才会创建运行日志。" : "向该 Domain 发起请求后，在这里查询或开启实时日志。"}</EmptyDescription></EmptyHeader></Empty>}
     </div>
   );

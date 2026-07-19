@@ -234,11 +234,8 @@
   }
 }
 
-/* Product controls follow DESIGN.md: 8px actions, 12px cards, hairline depth. */
-[data-slot="button"] {
-  border-radius: var(--radius-md);
-}
-
+/* Buttons: hairline-only depth (DESIGN.md — no drop shadows); press sinks 1px.
+   Border radius is set per-component in each ui component's className. */
 [data-slot="button"]:not(:focus-visible) {
   box-shadow: none;
 }

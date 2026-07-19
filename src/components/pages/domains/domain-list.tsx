@@ -244,7 +244,7 @@ export function DomainList() {
           </div>
         ) : query.data?.items.length ? (
           <>
-            <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
+            <div className="hidden overflow-hidden rounded-md border border-border bg-card md:block">
               <Table>
                 <TableHeader>
                   <TableRow>

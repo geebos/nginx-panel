@@ -75,7 +75,7 @@ function MetricCard({
   );
 
   return href ? (
-    <Link className="rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={href}>
+    <Link className="rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={href}>
       {card}
     </Link>
   ) : (
@@ -232,7 +232,7 @@ export function DashboardContent() {
                 </Button>
               </div>
               {query.data.recentDomains.length ? (
-                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="overflow-hidden rounded-md border border-border bg-card">
                   <Table>
                     <TableHeader>
                       <TableRow>

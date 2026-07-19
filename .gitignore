@@ -44,3 +44,6 @@ next-env.d.ts
 
 # sqlite local backend data dir
 /.sqlite
+
+# playwright mcp artifacts
+/.playwright-mcp

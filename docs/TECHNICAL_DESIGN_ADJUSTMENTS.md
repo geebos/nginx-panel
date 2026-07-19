@@ -1,13 +1,13 @@
 # 阶段性技术设计微调：日志查询、草稿编辑与发布引导
 
-> 状态：Draft for implementation — `review_adjust.md` 已闭环  
+> 状态：Implemented — 已回写 PRD v1.10 与技术设计 v1.10
 > 日期：2026-07-19  
-> 基线：`docs/PRD.md`、`docs/TECHNICAL_DESIGN.md`、`docs/review_adjust.md`、`DESIGN.md`  
+> 基线：`docs/PRD.md`、`docs/TECHNICAL_DESIGN.md`、`docs/review.md`
 > 适用范围：当前 Phase 2 配置与日志闭环的交互微调
 
 ## 1. 文档目的与覆盖关系
 
-本文只描述本轮新增或改变的技术约束，不复制完整 PRD 和主技术设计。实现时仍以原文为基础，但以下冲突项由本文覆盖：
+本文保留本轮新增或改变的技术约束及评审取舍。以下决策已经实现，并在 2026-07-20 回写 PRD v1.10 与主技术设计 v1.10；主文档是当前产品和技术基线，本文作为决策历史保留：
 
 1. 日志筛选从“一份已应用筛选同时驱动历史和实时”改为“历史筛选与实时筛选分别生效”。
 2. `config_versions` 从“任意保存都新建不可变版本”改为“已发布版本不可变，Domain 当前最新 Draft 可原位更新”。
@@ -473,7 +473,7 @@ preflight 只是 UI 和并发门槛，不能替代发布 Runner 自己的完整 
 3. 为全部 Test/Deploy 与旧发布入口补齐 expected checksum/preflight 校验，确认不存在绕过路径。
 4. 让 Routes、SSL、Headers、Advanced 共用 `DomainPageActions` 和发布向导。
 5. 实现日志历史/实时状态机、多选日志类型、Method Clear 与两类页面列偏好。
-6. 完成 API、组件和 Docker E2E 回归后，以独立文档提交同步：更新 `TECHNICAL_DESIGN.md` 中“每次保存新建版本”的冲突段落；更新 PRD 的可编辑 Tab/发布向导与日志类型；更新 `review.md` 已关闭决策，注明 Draft 改为原位保存、以最终 checksum/Deployment 审计替代逐次保存历史；最后删除日志旧 `type` 兼容。
+6. 完成 API、组件和 Docker E2E 回归后回写主文档与 `review.md`，注明 Draft 改为原位保存、以最终 checksum/Deployment 审计替代逐次保存历史。旧 `type` 参数暂作为显式兼容层保留，前端只发送 `types`；后续删除前需确认没有其他客户端。
 
 ## 11. 明确不做
 

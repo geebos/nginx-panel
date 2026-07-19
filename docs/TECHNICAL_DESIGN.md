@@ -1,10 +1,10 @@
 # Nginx Domain Manager 技术设计文档
 
-> 版本：v1.9
+> 版本：v1.10
 >
 > 状态：评审修订完成
 >
-> 更新日期：2026-07-18
+> 更新日期：2026-07-20
 > 关联文档：[产品需求文档](./PRD.md)
 
 ## 1. 目标与约束
@@ -417,8 +417,11 @@ HMAC key 固定由持久化 master secret 使用 HKDF-SHA-256 派生：`HKDF(mas
 | snapshot_checksum | text not null | canonical JSON SHA-256 |
 | created_by | text FK users | 操作者 |
 | created_at | integer not null | UTC ms |
+| updated_at | integer not null | Draft 最近更新时间；历史版本等于最后一次有效更新时间 |
 
 Route、Header 和 SSL 业务配置放进 snapshot，不拆成可变业务表。这样一次版本就是完整、一致、可回滚的聚合快照，避免跨表回滚。列表查询需要的主状态保留在 `domains` / `certificates` 投影表。
+
+每个 Domain 最多存在一个 `status='draft'` 的 Version，由部分唯一索引 `config_versions_one_draft_per_domain` 保证。Draft 发布前允许通过 checksum CAS 原位更新；Active、Superseded 以及任何曾被 Deployment 引用的版本不可修改。
 
 #### `certificates`
 
@@ -693,19 +696,22 @@ Schema 演进通过 `schemaVersion` 和纯函数 migration 完成。读取旧快
 | GET | `/api/domains` | 列表/搜索/筛选 |
 | POST | `/api/domains` | 创建 Domain + v1 草稿 |
 | GET | `/api/domains/:id` | Overview 聚合 |
-| PATCH | `/api/domains/:id` | 修改基本信息并产生新版本；有非终态 Order 时 hostname/aliases 变更返回 `DOMAIN_HAS_ACTIVE_ORDER` |
+| PATCH | `/api/domains/:id` | 修改基本信息并创建或更新当前 Draft；有非终态 Order 时 hostname/aliases 变更返回 `DOMAIN_HAS_ACTIVE_ORDER` |
 | POST | `/api/domains/:id/disable` | 创建 `toggle_domain` Deployment；成功后 challenge 保留、业务请求 503 |
 | POST | `/api/domains/:id/enable` | 创建 `toggle_domain` Deployment；成功后恢复当前 Active Version 路由 |
 | DELETE | `/api/domains/:id` | 未发布时软删除；已发布时创建 remove task，成功后软删除并保留日志归档 |
 | GET | `/api/domains/:id/versions` | 历史版本 |
 | GET | `/api/domains/:id/versions/:versionId` | 快照和版本 Nginx 预览；不混入线上 enabled、日志路径等运行时值 |
-| POST | `/api/domains/:id/versions` | 以完整目标 `DomainConfig` 整体替换并创建不可变快照 |
+| POST | `/api/domains/:id/versions` | 提交完整目标 `DomainConfig`；创建下一 Draft 或以 checksum CAS 原位更新当前 Draft |
 | GET | `/api/domains/:id/versions/:versionId/diff?base=` | 语义/JSON/版本 Nginx Diff |
-| POST | `/api/domains/:id/versions/:versionId/test` | 创建 test Deployment |
-| POST | `/api/domains/:id/versions/:versionId/deploy` | 创建 deploy Deployment |
+| GET | `/api/domains/:id/versions/:versionId/publish-preview` | 聚合语义/JSON/Nginx Diff 与目标 checksum；首次发布允许空基线 |
+| POST | `/api/domains/:id/versions/:versionId/test` | 校验 `expectedSnapshotChecksum` 并创建 test Deployment |
+| POST | `/api/domains/:id/versions/:versionId/deploy` | 校验成功 preflight、Version 与 checksum 后创建 deploy Deployment |
 | POST | `/api/domains/:id/versions/:versionId/rollback` | 复制快照并创建 rollback Deployment |
 
-Routes、Headers、SSL、Advanced 的页面保存都调用“创建完整新版本”接口。请求 body 必须是完整目标 `DomainConfig`，并携带 `If-Match: <当前草稿 snapshotChecksum>`；服务端不接受局部 patch，也不与“最新草稿”隐式合并。服务端 canonicalize + Schema/领域校验后比较 checksum，匹配才创建新的完整不可变快照并返回新 version/checksum；不匹配返回 `409 VERSION_CONFLICT`。各 Tab 因此加载并持有整份快照，只替换自己负责的 section 后提交全量对象。MVP 不为 snapshot 内部元素建立独立 CRUD API。
+Routes、Headers、SSL、Advanced 的页面保存都提交完整目标 `DomainConfig`，并携带 `If-Match: <当前草稿 snapshotChecksum>`；服务端不接受局部 patch，也不与“最新草稿”隐式合并。服务端 canonicalize + Schema/领域校验后比较 checksum：已有 Draft 时以旧 checksum 为条件 CAS 更新同一行；没有 Draft 时创建下一版本号；无变化时返回 `mode="unchanged"`；不匹配返回 `409 VERSION_CONFLICT`。响应通过 `mode="created"|"updated"|"unchanged"` 表达结果。各 Tab 加载并持有整份快照，只替换自己负责的 section 后提交全量对象。MVP 不为 snapshot 内部元素建立独立 CRUD API。
+
+Overview、Routes、SSL、Headers、Advanced 共用三步发布向导。Step 1 读取 `publish-preview`；Step 2 创建 checksum-bound Test Deployment；Step 3 必须提交同 Domain、Version、checksum 的成功 Test Deployment ID。Test 不锁 Draft，但 Draft 变化会使结果失效；Deploy 从排队到终态期间锁定目标 Draft，保存返回 `DRAFT_DEPLOYMENT_RUNNING`。preflight 不能替代 Runner 的完整 candidate `nginx -t`。
 
 Toggle 边界：无 Active Version 的 Domain 调用 disable 返回 `409 DOMAIN_NO_ACTIVE_VERSION`；目标态已等于当前投影时返回 `200 {changed:false, enabled}` 且不创建 Deployment/占锁。相同目标已有非终态 `toggle_domain` 时返回 `202` 和原 deploymentId；相反目标在其结束前返回 `409 DEPLOYMENT_ALREADY_RUNNING`。Disabled Domain 仍允许保存草稿、对草稿执行只读 test，以及申请/续期/激活证书。Test candidate 对目标 Version 按“would-be enabled”生成域名配置以覆盖 Route 语法，但绝不激活；证书 Activation Deployment 携不可变 activationId/sourceCertificateId，Runner 允许其更新 TLS 引用，同时 disabled 状态仍输出 503。普通业务版本 deploy/rollback 返回 `409 DOMAIN_DISABLED`，必须先 enable。
 
@@ -767,22 +773,23 @@ Certificate 列表/详情响应 join `domains.enabled`。数据库 `Certificate.
 | Method | Path | 用途 |
 | --- | --- | --- |
 | GET | `/api/logs/domains` | 返回 Active/Archived Domain、文件大小和最后写入时间；支持 `archiveStatus` 筛选 |
-| GET | `/api/logs/stream` | 历史尾部/向前分页/实时 follow 的 NDJSON 流 |
+| GET | `/api/logs/history` | 历史尾部/向前分页查询 |
+| GET | `/api/logs/follow` | 实时 follow 的 NDJSON 流 |
 | GET | `/api/settings/logs` | 当前 active/pending 日志设置与只读 Nginx 预览 |
 | PUT | `/api/settings/logs` | 校验新 revision 并创建 `apply_log_settings` Deployment |
 | POST | `/api/logs/rotate` | 创建全局或指定 Domain 的 `rotate_logs` 任务 |
 
-`GET /api/logs/stream` 参数：
+日志查询参数：
 
 - `domainId`：可重复传入，单 Domain Tab 传一个；实时 follow 支持 1–20 个，服务端在同一 NDJSON 流中 multiplex 并由每条记录的 `domainId` 标识来源。
 - `scope=all`：仅允许有界历史查询，由服务端枚举 Domain；不能与 `follow=true` 同时使用。
-- `type=access|error|all`。
+- `types=access,error`：去重并固定排序，至少一项；过渡期兼容旧 `type=access|error|all`，两者同时出现返回校验错误。
 - `follow=true|false`；`follow=true` 时必须显式选择 1–20 个 Domain。
 - `limit=1..2000`，默认 200。
 - `cursor`：服务端签发的不透明游标，包含文件 generation、byte offset、方向和查询作用域的签名，不接受客户端文件路径。
 - `from` / `to`、`method`、`status`、`path`、`clientIp`、`level`、`query`。
 
-响应 Content-Type 为 `application/x-ndjson`，每一行是以下判别联合之一：
+`/history` 返回 JSON 分页结果；`/follow` 的 Content-Type 为 `application/x-ndjson`，每一行是以下判别联合之一：
 
 ```ts
 type LogStreamRecord =
@@ -1414,11 +1421,13 @@ runtime  -> nginx + supervisor + ACME client + static assets + worker bundle
 - 列表筛选写入 router query，浏览器前进/后退可恢复。
 - Deployment 页面 1 秒轮询，终态停止；页面隐藏时降低到 5 秒。
 - Certificate Order 页面每 3 秒轮询；Manual DNS 页面隐藏时降到 15 秒，返回后立即刷新。按钮 recheck 只请求后端，不在浏览器直接查询 DNS/Cloudflare。
-- 保存草稿后用 API 返回的 version/checksum 更新本地基线。
+- 保存草稿后用 API 返回的 `mode`、version/checksum 更新本地基线；`updated` 保持原 Draft ID 与版本号。
 - Version Detail/Diff 只请求不可变 snapshot 与版本 Nginx 预览，保证比较仅反映 Version 业务差异。线上实际配置通过 Diagnostics runtime-config API 单独读取，响应携 active revision、source/config checksum，并对证书/日志等绝对路径做稳定占位脱敏；两种配置不得在同一 Diff 中混合。
 - Routes、Headers、SSL、Advanced 编辑页都先加载完整 `DomainConfig` 与 checksum；表单只修改自己拥有的 section，但提交完整目标快照并带 `If-Match`。`409 VERSION_CONFLICT` 时保留本地输入，拉取最新整份快照并展示重新应用/放弃选择，不静默覆盖其他 Tab 的保存。
-- Logs 页面使用 `fetch` + `ReadableStream` + 增量 `TextDecoder` 解析 NDJSON；按 `\n` 切分前必须保留跨 chunk 的残余文本，解析失败单行转为可展示错误且不终止整个流。
-- 日志列表使用虚拟滚动和固定有界内存；暂停实时追加时最多缓存 1,000 行，页面离开或过滤条件变化时 Abort 旧请求。
+- Logs 页面使用 `fetch` + `ReadableStream` + 增量 `TextDecoder` 解析 NDJSON；按 `\n` 切分前必须保留跨 chunk 的残余文本，解析失败单行转为 Raw/Unparsed 且不终止整个流。
+- 历史筛选与实时筛选分离：实时关闭时仅提交查询才更新历史条件；实时开启时合法控件值经 250 ms debounce 更新实时条件并重连，不刷新历史。日志类型使用至少一项的多选 `types`。
+- 日志显示列及顺序在 Domain/Global 两类页面分别存入 `localStorage`；该偏好只影响展示，不修改全局采集字段。损坏或旧版本偏好回退默认值。
+- 日志列表使用虚拟滚动和固定有界内存；暂停实时追加时最多缓存 1,000 行，页面离开、数据源或实时过滤条件变化时 Abort 旧请求。
 
 ### 13.2 组件复用
 
@@ -1430,8 +1439,8 @@ runtime  -> nginx + supervisor + ACME client + static assets + worker bundle
 - `DomainHeader`：Domain Tabs 公共 Header。
 - `DeploymentStepper`：发布步骤状态。
 - `SemanticConfigDiff`：结构化差异。
-- `LogViewer`：NDJSON 状态、虚拟列表、暂停和自动滚动。
-- `LogFilters`：URL 可恢复的 access/error 服务端过滤器。
+- `DomainPageActions`：可编辑 Tab 共用的 Diff → Test → Publish 三步向导。
+- `LogViewer`：历史/实时筛选状态、日志类型多选、列偏好、NDJSON、暂停和自动滚动。
 - `LogSettingsForm`：Settings/Logs 中的字段选择器、格式预览和轮动设置；全局 Logs 查看页只链接到这里。
 - `CertificateOrderStepper`、`DnsChallengeRecords`：Order 状态与可复制 TXT 指令。
 - `CloudflareCredentialForm`：命名 token 的写入/替换表单，永不接收服务端 token 回填。
@@ -1554,6 +1563,8 @@ UI 根据错误码提供下一步，而不是解析命令文本。
 
 - 临时 SQLite + migration + API CRUD/版本冲突。
 - 完整 DomainConfig + `If-Match` 并发保存测试；局部 body 被 Schema 拒绝，旧 checksum 返回 409。
+- Draft 连续保存保持同一 ID/版本号并更新 checksum/updatedAt；并发创建最多产生一个 Draft，Deploy 非终态期间保存被拒。
+- 发布向导测试覆盖首次发布空基线、Test checksum 绑定、陈旧 preflight 拒绝及 Deploy Runner 仍执行完整 `nginx -t`。
 - 使用临时目录和真实 `nginx -t` 测试候选配置。
 - fake runner 模拟 test/reload/health 各阶段失败，验证 active manifest 恢复。
 - ACME adapter fake 测试首次申请、续期、私钥不入日志。

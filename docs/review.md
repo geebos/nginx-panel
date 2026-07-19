@@ -96,3 +96,13 @@ v1.9 可进入 Phase 1，**无阻塞项、无重要问题、无次要问题**。
 唯一前置：**§18 spike 5 ADR** 物理验证"根配置 `include domains/*.conf` + 每域名完整文件 + `RuntimeManifestV1`"模型、`NGINX_LOG_DIR` 校验、candidate/active symlink 原子切换与故障恢复。已无待选实现分支，spike 5 仅用于固化目标 Nginx 版本/复现证据，不再做架构选型。
 
 文档层评审结束，进入实施阶段。
+
+## 10. v1.10 实现对齐复核
+
+2026-07-20 完成 Phase 2 阶段性调整的实现与主文档回写：
+
+- Draft 改为“未发布前原位更新，发布后冻结”；每个 Domain 最多一个 Draft，以最终 checksum、Test/Deploy Deployment 和不可变已发布版本提供审计边界。
+- Overview、Routes、SSL、Headers、Advanced 共用 Diff → Test → Publish 三步向导，Test 和 Deploy 均绑定 Version/checksum，发布 Runner 仍执行完整 candidate `nginx -t`。
+- 日志历史筛选与实时筛选分别生效，日志类型使用多选 `types`，显示列偏好仅保存在浏览器且不改变采集格式。
+
+复核验证：`pnpm test` 92/92、`pnpm typecheck`、`pnpm lint`、`pnpm build` 和生产 Docker smoke E2E 均通过。PRD 与技术设计版本更新为 v1.10，阶段性调整文档转为已实现的决策历史。

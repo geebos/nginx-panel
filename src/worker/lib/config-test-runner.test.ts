@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -8,6 +10,8 @@ import * as schema from "@/shared/schemas";
 import { createSnapshot } from "./snapshot";
 import { runConfigTest } from "./config-test-runner";
 import { recoverInterruptedDeployments } from "./deployment-recovery";
+
+const execFileAsync = promisify(execFile);
 
 const snapshot = {
   schemaVersion: 1 as const,
@@ -86,6 +90,68 @@ test("missing config-test target marks the queued deployment failed", async () =
   assert.equal(deployment?.status, "failed");
   assert.equal(deployment?.errorCode, "NGINX_TEST_FAILED");
   assert.equal(step?.status, "failed");
+  connection.close();
+});
+
+test("ssl disabled with a lingering certificate id still passes nginx -t", async (t) => {
+  const nginxBin = process.env.NGINX_BIN || "nginx";
+  try {
+    await execFileAsync(nginxBin, ["-v"]);
+  } catch {
+    t.skip("nginx binary is unavailable");
+    return;
+  }
+
+  const { connection, db } = createTestDb();
+  const saved = createSnapshot({ ...snapshot, ssl: { ...snapshot.ssl, certificateId: "cert-1" } });
+  const now = Date.now();
+  db.insert(schema.domains).values({
+    id: "domain-1",
+    primaryHostname: "example.com",
+    displayHostname: "example.com",
+    enabled: true,
+    runtimeStatus: "unknown",
+    draftVersionId: "version-1",
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+  db.insert(schema.configVersions).values({
+    id: "version-1",
+    domainId: "domain-1",
+    versionNumber: 1,
+    status: "draft",
+    changeSummary: "test",
+    snapshotJson: saved.json,
+    snapshotChecksum: saved.checksum,
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+  db.insert(schema.deployments).values({
+    id: "deployment-1",
+    domainId: "domain-1",
+    configVersionId: "version-1",
+    type: "test",
+    status: "queued",
+    idempotencyKey: "test-ssl-disabled",
+    inputJson: JSON.stringify({ expectedSnapshotChecksum: saved.checksum }),
+    createdAt: now,
+  }).run();
+  for (const [sequence, name] of ["Generate candidate config", "Validate files and targets", "Run nginx -t"].entries()) {
+    db.insert(schema.deploymentSteps).values({
+      id: `step-${sequence}`,
+      deploymentId: "deployment-1",
+      sequence,
+      name,
+      status: "pending",
+    }).run();
+  }
+
+  await runConfigTest(db, "deployment-1");
+
+  const deployment = db.select().from(schema.deployments)
+    .where(eq(schema.deployments.id, "deployment-1")).get();
+  assert.equal(deployment?.status, "succeeded");
+  assert.notEqual(deployment?.errorMessage, "证书文件测试将在 HTTPS 阶段接入");
   connection.close();
 });
 

@@ -137,7 +137,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       const version = versionsById.get(domain.sourceVersionId);
       if (!version) throw new Error("候选版本不存在");
       const snapshot = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
-      if (snapshot.ssl.certificateId) throw new Error("证书文件测试将在 HTTPS 阶段接入");
+      if (snapshot.ssl.enabled && snapshot.ssl.certificateId) throw new Error("证书文件测试将在 HTTPS 阶段接入");
       await mkdir(join(logsRoot, snapshot.primaryHostname), { recursive: true });
       const rendered = renderDomainConfig({
         mode: "runtime",

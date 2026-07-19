@@ -56,6 +56,12 @@ function toFilters(inputs: FilterInputs): { value?: LogFilters; error?: string }
   return { value: { keyword: inputs.keyword.trim(), method: inputs.method, ...(status ? { status } : {}) } };
 }
 
+export function resolveFilterSubmission(live: boolean, inputs: FilterInputs) {
+  const parsed = toFilters(inputs);
+  if (!parsed.value) return { error: parsed.error };
+  return { target: live ? "live" as const : "history" as const, filters: parsed.value };
+}
+
 function fieldValue(record: LogRecord, column: LogColumnId) {
   if (!record.parsed && column !== "raw") return "-";
   if (column === "timestamp") return record.timestamp ?? "-";
@@ -201,10 +207,11 @@ export function LogViewer({ domainId: fixedDomainId }: { domainId?: string }) {
 
   const submitHistory = (event: React.FormEvent) => {
     event.preventDefault();
-    if (live) { void load(domainId, types, historyFilters); return; }
-    const parsed = toFilters(filterInputs); setStatusError(parsed.error);
-    if (!parsed.value) return;
-    setHistoryFilters(parsed.value); void load(domainId, types, parsed.value);
+    const submission = resolveFilterSubmission(live, filterInputs);
+    setStatusError(submission.error);
+    if (!submission.filters) return;
+    if (submission.target === "live") { setLiveFilters(submission.filters); return; }
+    setHistoryFilters(submission.filters); void load(domainId, types, submission.filters);
   };
 
   const togglePause = () => {
@@ -234,7 +241,7 @@ export function LogViewer({ domainId: fixedDomainId }: { domainId?: string }) {
         <Field className="w-44"><FieldLabel>Method</FieldLabel><Select showClear options={["GET", "POST", "PUT", "PATCH", "DELETE"].map((value) => ({ label: value, value }))} placeholder="全部" value={filterInputs.method || null} onChange={(value) => setFilterInputs((current) => ({ ...current, method: value ?? "" }))} /></Field>
         <Field className="w-36" data-invalid={Boolean(statusError)}><FieldLabel htmlFor="log-status">Status</FieldLabel><Input id="log-status" aria-invalid={Boolean(statusError)} inputMode="numeric" max="599" min="100" placeholder="全部" value={filterInputs.statusText} onChange={(event) => { setStatusError(undefined); setFilterInputs((current) => ({ ...current, statusText: event.target.value })); }} />{statusError ? <FieldError>{statusError}</FieldError> : null}</Field>
         <Field className="min-w-56 flex-1"><FieldLabel htmlFor="log-keyword">Path / 关键字</FieldLabel><Input id="log-keyword" maxLength={256} placeholder="普通文本匹配" value={filterInputs.keyword} onChange={(event) => setFilterInputs((current) => ({ ...current, keyword: event.target.value }))} /></Field>
-        <Button type="submit" disabled={!domainId || loading}><SearchIcon data-icon="inline-start" />{live ? "刷新历史" : "查询"}</Button>
+        <Button type="submit" disabled={!domainId || loading}><SearchIcon data-icon="inline-start" />{live ? "应用筛选" : "查询"}</Button>
       </form>
 
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card p-3">

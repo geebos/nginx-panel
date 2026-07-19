@@ -41,7 +41,7 @@ export function DomainHistory() {
       <PageHeader
         title={domain?.domain.primaryHostname ?? "History"}
         description="已发布版本不可变；当前 Draft 会原位更新，直到发布后冻结。"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Domains", href: "/domains" }, { label: domain?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "History" }]}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domain?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "History" }]}
         action={<Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button>}
       />
       <DomainTabs domainId={domainId} active="history" />

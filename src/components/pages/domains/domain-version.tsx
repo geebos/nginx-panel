@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextDiff } from "@/components/pages/shared/text-diff";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { getDomainVersion, getDomainVersionDiff } from "@/lib/api";
+import { getDomain, getDomainVersion, getDomainVersionDiff } from "@/lib/api";
 
 type VersionPageData =
   | Awaited<ReturnType<typeof getDomainVersion>>
@@ -32,6 +32,8 @@ export function DomainVersion() {
   const baseId = typeof router.query.base === "string" ? router.query.base : "";
   const load = React.useCallback(async (): Promise<VersionPageData> => ids.diff ? getDomainVersionDiff(ids.domainId, ids.versionId, baseId) : getDomainVersion(ids.domainId, ids.versionId), [baseId, ids.diff, ids.domainId, ids.versionId]);
   const query = useApiQuery<VersionPageData>(load);
+  const domainLoad = React.useCallback(() => getDomain(ids.domainId), [ids.domainId]);
+  const domainQuery = useApiQuery(domainLoad);
   if (!router.isReady || !ids.domainId || !ids.versionId || (ids.diff && !baseId)) return <Skeleton className="m-8 h-96" />;
   const diff = ids.diff && query.data && "changes" in query.data ? query.data : null;
   const detail = !ids.diff && query.data && "nginxPreview" in query.data ? query.data : null;
@@ -40,7 +42,7 @@ export function DomainVersion() {
       <PageHeader
         title={diff ? `Compare v${diff.base.versionNumber} and v${diff.target.versionNumber}` : detail ? `Version v${detail.version.versionNumber}` : "Version"}
         description={diff ? `${diff.changes.length} 项语义变化` : detail ? `${detail.version.changeSummary}。${detail.version.status === "draft" ? "当前草稿可继续编辑" : "该已发布快照不可变"}` : "读取配置快照。"}
-        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: "History", href: `/domains/${ids.domainId}/history` }, { label: ids.diff ? "Diff" : "Version" }]}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domainQuery.data?.domain.primaryHostname ?? "Domain", href: `/domains/${ids.domainId}/overview` }, { label: "History", href: `/domains/${ids.domainId}/history` }, { label: ids.diff ? "Diff" : "Version" }]}
         action={<Button size="sm" variant="outline" asChild><Link href={`/domains/${ids.domainId}/history`}><ArrowLeftIcon data-icon="inline-start" />返回历史</Link></Button>}
       />
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-4 py-6 md:px-8">

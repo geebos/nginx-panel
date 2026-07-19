@@ -20,7 +20,7 @@ export default function DeploymentsPage() {
       <PageHeader
         title="Deployments"
         description="配置测试、发布、回滚和系统任务的审计记录。"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Deployments" }]}
+        breadcrumbs={[{ label: "Deployments" }]}
         action={<Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button>}
       />
       <div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-8">

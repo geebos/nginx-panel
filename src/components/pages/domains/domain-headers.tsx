@@ -81,7 +81,7 @@ export function DomainHeaders() {
       <PageHeader
         title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : "Headers"}
         description="管理 server 或指定 route 的响应 Header。未发布草稿会原位更新。"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Domains", href: "/domains" }, { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "Headers" }]}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "Headers" }]}
         action={<><Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button><DomainPageActions domainId={domainId} data={data} /><Button size="sm" onClick={() => openNew()} disabled={!config}><PlusIcon data-icon="inline-start" />添加 Header</Button></>}
       />
       <DomainTabs domainId={domainId} active="headers" />

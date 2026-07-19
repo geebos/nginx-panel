@@ -67,7 +67,6 @@ export function DomainRoutes() {
         title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : "Routes"}
         description="编辑 server 下的普通前缀 location。未发布草稿会原位更新。"
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
           { label: "Domains", href: "/domains" },
           { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` },
           { label: "Routes" },

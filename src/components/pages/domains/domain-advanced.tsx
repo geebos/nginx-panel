@@ -74,7 +74,7 @@ export function DomainAdvanced() {
       <PageHeader
         title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : "Advanced"}
         description="补充可视化表单尚未覆盖的少量 server 指令。"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Domains", href: "/domains" }, { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "Advanced" }]}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "Advanced" }]}
         action={<><Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing || dirty}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button><DomainPageActions domainId={domainId} data={data} dirty={dirty} /><Button size="sm" onClick={() => void save()} disabled={!dirty || submitting}><SaveIcon data-icon="inline-start" />{submitting ? "保存中" : "保存草稿"}</Button></>}
       />
       <DomainTabs domainId={domainId} active="advanced" />

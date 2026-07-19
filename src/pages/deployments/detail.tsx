@@ -47,7 +47,7 @@ export default function DeploymentDetailPage() {
       <PageHeader
         title={<span className="flex flex-wrap items-center gap-3">Deployment <span className="font-mono text-lg">{deploymentId.slice(0, 8)}</span>{deployment ? <StatusBadge status={deployment.status} /> : null}</span>}
         description={deployment ? `${deployment.type} · ${deployment.configVersionId ? `Version ${deployment.configVersionId.slice(0, 8)}` : "Global task"}` : "读取任务状态。"}
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Deployments", href: "/deployments" }, { label: deploymentId.slice(0, 8) }]}
+        breadcrumbs={[{ label: "Deployments", href: "/deployments" }, { label: deploymentId.slice(0, 8) }]}
         action={deployment?.domainId ? <Button size="sm" variant="outline" asChild><Link href={`/domains/${deployment.domainId}/overview`}>返回 Domain</Link></Button> : undefined}
       />
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 md:px-8">

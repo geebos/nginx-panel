@@ -78,7 +78,7 @@ export function CertificateList() {
     <PageHeader
       title="Certificates"
       description="查看证书有效期、自动续期状态和关联的 Domain 配置。"
-      breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Certificates" }]}
+      breadcrumbs={[{ label: "Certificates" }]}
       action={<Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon className={query.refreshing ? "animate-spin" : undefined} />刷新</Button>}
     />
     <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-6 md:px-8">

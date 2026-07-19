@@ -10,7 +10,6 @@ export default function CreateDomainPage() {
         title="添加域名"
         description="创建 Domain 和 v1 草稿。发布前不会修改线上 Nginx。"
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
           { label: "Domains", href: "/domains" },
           { label: "添加域名" },
         ]}

@@ -20,7 +20,7 @@ function LogSettingsPage() {
   const query = useApiQuery(getLogSettings);
   return (
     <Page className="px-0 pb-16">
-      <PageHeader title="Log Settings" description="配置实例级结构化日志字段、error level 和安全轮动策略。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }, { label: "Logs" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
+      <PageHeader title="Log Settings" description="配置实例级结构化日志字段、error level 和安全轮动策略。" breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Logs" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>日志设置加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
         {query.data?.pendingDeploymentId ? <Alert><AlertTitle>日志设置正在应用</AlertTitle><AlertDescription><Link className="underline underline-offset-4" href={`/deployments/${query.data.pendingDeploymentId}`}>查看 Deployment</Link></AlertDescription></Alert> : null}
@@ -34,7 +34,7 @@ function DiagnosticsPage() {
   const query = useApiQuery(getRuntimeDiagnostics);
   return (
     <Page className="px-0 pb-16">
-      <PageHeader title="Diagnostics" description="检查 Active revision 与 SQLite 运行投影的一致性。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }, { label: "Diagnostics" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/logs">Log Settings</Link></Button>} />
+      <PageHeader title="Diagnostics" description="检查 Active revision 与 SQLite 运行投影的一致性。" breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Diagnostics" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/logs">Log Settings</Link></Button>} />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>Diagnostics 加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-[520px]" /> : query.data ? <RuntimeDiagnosticsForm diagnostics={query.data} /> : null}
@@ -54,7 +54,7 @@ function CloudflareSettingsPage() {
     finally { setSubmittingId(undefined); }
   };
   return <Page className="px-0 pb-16">
-    <PageHeader title="Cloudflare DNS" description="管理 DNS-01 自动验证使用的最小权限 API Token。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }, { label: "Cloudflare DNS" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/logs">Log Settings</Link></Button>} />
+    <PageHeader title="Cloudflare DNS" description="管理 DNS-01 自动验证使用的最小权限 API Token。" breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Cloudflare DNS" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/logs">Log Settings</Link></Button>} />
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 md:px-8">
       {error || query.error ? <Alert variant="destructive"><AlertTitle>Cloudflare 凭据操作失败</AlertTitle><AlertDescription>{error ?? query.error?.message}</AlertDescription></Alert> : null}
       <CreateCloudflareCredentialForm submitting={submittingId === "new"} onSubmit={(input) => run("new", () => createCloudflareCredential(input), "Cloudflare 凭据已保存")} />
@@ -66,7 +66,7 @@ function CloudflareSettingsPage() {
 function SecuritySettingsPage() {
   return (
     <Page className="px-0 pb-16">
-      <PageHeader title="Security" description="管理管理员密码与已登录会话。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }, { label: "Security" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
+      <PageHeader title="Security" description="管理管理员密码与已登录会话。" breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Security" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         <SecuritySettingsForm />
       </div>
@@ -78,7 +78,7 @@ function NginxSettingsPage() {
   const query = useApiQuery(getNginxSettings);
   return (
     <Page className="px-0 pb-16">
-      <PageHeader title="Nginx" description="查看运行路径、健康状态并管理 runtime artifacts 容量。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }, { label: "Nginx" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
+      <PageHeader title="Nginx" description="查看运行路径、健康状态并管理 runtime artifacts 容量。" breadcrumbs={[{ label: "Settings", href: "/settings" }, { label: "Nginx" }]} action={<Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">Diagnostics</Link></Button>} />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>Nginx 设置加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-[620px]" /> : query.data ? <NginxSettingsForm settings={query.data} onSaved={query.refresh} /> : null}
@@ -97,7 +97,7 @@ export default function SettingsPage() {
   if (path === "/settings/nginx") return <NginxSettingsPage />;
   return (
     <Page className="px-0 pb-16">
-      <PageHeader title="Settings" description="该设置分类将在后续阶段接入。" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }]} />
+      <PageHeader title="Settings" description="该设置分类将在后续阶段接入。" breadcrumbs={[{ label: "Settings" }]} />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         <Empty><EmptyHeader><EmptyTitle>选择设置分类</EmptyTitle><EmptyDescription>配置 Nginx、Cloudflare DNS、日志、安全策略或运行时诊断。</EmptyDescription></EmptyHeader><EmptyContent className="flex flex-wrap gap-2"><Button asChild><Link href="/settings/nginx">Nginx</Link></Button><Button asChild variant="outline"><Link href="/settings/security">Security</Link></Button><Button asChild variant="outline"><Link href="/settings/cloudflare">Cloudflare DNS</Link></Button><Button asChild variant="outline"><Link href="/settings/logs">Log Settings</Link></Button></EmptyContent></Empty>
       </div>

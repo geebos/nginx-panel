@@ -73,7 +73,6 @@ export function DomainOverview() {
             : "读取域名概览。"
         }
         breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
           { label: "Domains", href: "/domains" },
           { label: domain?.primaryHostname ?? "Overview" },
         ]}

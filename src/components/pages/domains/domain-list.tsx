@@ -182,7 +182,7 @@ export function DomainList() {
       <PageHeader
         title="Domains"
         description="创建、查询和管理所有 Nginx 域名。"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Domains" }]}
+        breadcrumbs={[{ label: "Domains" }]}
         action={
           <Button asChild size="sm">
             <Link href="/domains/create">

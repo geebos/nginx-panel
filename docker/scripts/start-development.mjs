@@ -1,13 +1,15 @@
 import { spawn, spawnSync } from "node:child_process";
 import { lstatSync, mkdirSync, readFileSync, readlinkSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { refreshActiveRoot } from "./runtime-root.mjs";
 
 const runtimeRoot = process.env.NGINX_RUNTIME_ROOT || "/data/nginx";
 const activePath = join(runtimeRoot, "active");
 const bootstrapRoot = join(runtimeRoot, "revisions", "bootstrap");
 const templatePath = process.env.NGINX_TEMPLATE_FILE || "/etc/nginx/nginx.development.conf";
+const nginxConfig = readFileSync(templatePath, "utf8");
 mkdirSync(join(bootstrapRoot, "domains"), { recursive: true });
-writeFileSync(join(bootstrapRoot, "nginx.conf"), readFileSync(templatePath, "utf8"), { mode: 0o640 });
+writeFileSync(join(bootstrapRoot, "nginx.conf"), nginxConfig, { mode: 0o640 });
 try {
   const activeStat = lstatSync(activePath);
   if (!activeStat.isSymbolicLink()) throw new Error("Development runtime active path must be a symlink");
@@ -22,6 +24,15 @@ try {
     throw error;
   }
 }
+
+refreshActiveRoot({
+  runtimeRoot,
+  rootConfig: nginxConfig,
+  validate: (candidateRoot) => {
+    const result = spawnSync("/usr/sbin/nginx", ["-p", `${candidateRoot}/`, "-t", "-c", "nginx.conf"], { stdio: "inherit" });
+    if (result.status !== 0) throw new Error("refreshed development nginx configuration test failed");
+  },
+});
 
 const configTest = spawnSync(
   "/usr/sbin/nginx",

@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, lstatSync, mkdirSync, readFileSync, readlinkSync, renameSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { refreshActiveRoot } from "./runtime-root.mjs";
 
 const requiredEnvironment = [
   "MANAGER_HOST",
@@ -75,6 +76,15 @@ try {
     throw error;
   }
 }
+
+refreshActiveRoot({
+  runtimeRoot,
+  rootConfig: nginxConfig,
+  validate: (candidateRoot) => {
+    const result = spawnSync("/usr/sbin/nginx", ["-p", `${candidateRoot}/`, "-t", "-c", "nginx.conf"], { stdio: "inherit" });
+    if (result.status !== 0) throw new Error("refreshed nginx configuration test failed");
+  },
+});
 
 const configTest = spawnSync(
   "/usr/sbin/nginx",

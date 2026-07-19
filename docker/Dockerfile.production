@@ -47,6 +47,7 @@ COPY package.json ./package.json
 COPY drizzle ./drizzle
 COPY docker/nginx/nginx.conf.template /etc/nginx/templates/nginx-manager.conf.template
 COPY docker/scripts/start-production.mjs /usr/local/bin/start-nginx-manager.mjs
+COPY docker/scripts/runtime-root.mjs /usr/local/bin/runtime-root.mjs
 
 RUN mkdir -p /data/acme /data/certs /data/db /data/logs /data/nginx /run/nginx \
     && chown -R nginx-manager:nginx-manager /data /opt/nginx-manager /run/nginx

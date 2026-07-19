@@ -268,7 +268,7 @@ export function DomainList() {
                       <TableCell className="max-w-56 truncate text-muted-foreground">
                         {domain.aliases.length ? domain.aliases.join(", ") : "None"}
                       </TableCell>
-                      <TableCell><StatusBadge status="unknown" /></TableCell>
+                      <TableCell><StatusBadge status={domain.sslStatus} /></TableCell>
                       <TableCell>
                         <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
                       </TableCell>

@@ -66,8 +66,10 @@ export type DomainListItem = {
   draftChanged: boolean;
 };
 
+export type SslStatus = "active" | "pending" | "disabled";
+
 export type DomainListResponse = {
-  items: DomainListItem[];
+  items: (DomainListItem & { sslStatus: SslStatus })[];
   page: number;
   pageSize: number;
   total: number;

@@ -220,7 +220,7 @@ export function DomainOverview() {
                 <CardAction><ShieldCheckIcon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-4">
-                <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-1"><StatusBadge status={config.ssl.enabled ? "draft" : "disabled"} /></div></div>
+                <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-1"><StatusBadge status={config.ssl.certificateId ? "active" : config.ssl.enabled ? "draft" : "disabled"} /></div></div>
                 <div><p className="text-xs text-muted-foreground">Environment</p><p className="mt-1 text-sm capitalize">{config.ssl.environment}</p></div>
                 <div><p className="text-xs text-muted-foreground">Auto renew</p><p className="mt-1 text-sm">{config.ssl.autoRenew ? "Enabled" : "Disabled"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Force HTTPS</p><p className="mt-1 text-sm">{config.ssl.forceHttps ? "Enabled" : "Disabled"}</p></div>

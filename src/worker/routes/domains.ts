@@ -82,11 +82,33 @@ domainsRoute.get("/domains", async (c) => {
     ]);
   }
 
-  const items = domainRows.map((domain) => ({
-    ...domain,
-    aliases: aliasesByDomain.get(domain.id) ?? [],
-    draftChanged: Boolean(domain.draftVersionId && domain.draftVersionId !== domain.activeVersionId),
-  }));
+  const versionIds = domainRows
+    .map((domain) => domain.draftVersionId ?? domain.activeVersionId)
+    .filter((id): id is string => Boolean(id));
+  const versionRows = versionIds.length
+    ? await db
+        .select({ id: configVersions.id, snapshotJson: configVersions.snapshotJson })
+        .from(configVersions)
+        .where(inArray(configVersions.id, versionIds))
+    : [];
+  const sslStatusByVersion = new Map<string, "active" | "pending" | "disabled">();
+  for (const version of versionRows) {
+    const config = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
+    sslStatusByVersion.set(
+      version.id,
+      config.ssl.certificateId ? "active" : config.ssl.enabled ? "pending" : "disabled",
+    );
+  }
+
+  const items = domainRows.map((domain) => {
+    const versionId = domain.draftVersionId ?? domain.activeVersionId;
+    return {
+      ...domain,
+      aliases: aliasesByDomain.get(domain.id) ?? [],
+      draftChanged: Boolean(domain.draftVersionId && domain.draftVersionId !== domain.activeVersionId),
+      sslStatus: (versionId ? sslStatusByVersion.get(versionId) : undefined) ?? "disabled",
+    };
+  });
 
   return c.json({ items, page: query.page, pageSize: query.pageSize, total: totalRows[0]?.value ?? 0 });
 });

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFile } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -93,17 +96,31 @@ test("missing config-test target marks the queued deployment failed", async () =
   connection.close();
 });
 
-test("ssl disabled with a lingering certificate id still passes nginx -t", async (t) => {
+test("ssl-disabled draft passes nginx -t alongside an active HTTPS domain", async (t) => {
   const nginxBin = process.env.NGINX_BIN || "nginx";
   try {
     await execFileAsync(nginxBin, ["-v"]);
+    await execFileAsync("openssl", ["version"]);
   } catch {
-    t.skip("nginx binary is unavailable");
+    t.skip("nginx or openssl is unavailable");
     return;
   }
 
   const { connection, db } = createTestDb();
   const saved = createSnapshot({ ...snapshot, ssl: { ...snapshot.ssl, certificateId: "cert-1" } });
+  const activeSaved = createSnapshot({
+    ...snapshot,
+    primaryHostname: "secure.example.com",
+    ssl: { ...snapshot.ssl, enabled: true, certificateId: "cert-active" },
+  });
+  const certificateRoot = await mkdtemp(join(tmpdir(), "nginx-config-test-cert-"));
+  const certPath = join(certificateRoot, "fullchain.pem");
+  const keyPath = join(certificateRoot, "private.key");
+  await execFileAsync("openssl", [
+    "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
+    "-subj", "/CN=secure.example.com", "-keyout", keyPath, "-out", certPath,
+  ]);
+  t.after(() => rm(certificateRoot, { recursive: true, force: true }));
   const now = Date.now();
   db.insert(schema.domains).values({
     id: "domain-1",
@@ -125,6 +142,54 @@ test("ssl disabled with a lingering certificate id still passes nginx -t", async
     snapshotChecksum: saved.checksum,
     createdAt: now,
     updatedAt: now,
+  }).run();
+  db.insert(schema.domains).values({
+    id: "domain-active",
+    primaryHostname: "secure.example.com",
+    displayHostname: "secure.example.com",
+    enabled: true,
+    runtimeStatus: "running",
+    activeVersionId: "version-active",
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+  db.insert(schema.configVersions).values({
+    id: "version-active",
+    domainId: "domain-active",
+    versionNumber: 1,
+    status: "active",
+    changeSummary: "active HTTPS config",
+    snapshotJson: activeSaved.json,
+    snapshotChecksum: activeSaved.checksum,
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+  db.insert(schema.acmeOrders).values({
+    id: "order-active",
+    domainId: "domain-active",
+    validationMethod: "http-01",
+    accountEmail: "ops@example.com",
+    environment: "production",
+    status: "valid",
+    identifiersJson: JSON.stringify(["secure.example.com"]),
+    cleanupStatus: "succeeded",
+    idempotencyKey: "order-active",
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+  db.insert(schema.certificates).values({
+    id: "cert-active",
+    domainId: "domain-active",
+    acmeOrderId: "order-active",
+    provider: "letsencrypt",
+    environment: "production",
+    status: "active",
+    sansJson: JSON.stringify(["secure.example.com"]),
+    certPath,
+    keyPath,
+    certFileChecksum: "test-cert",
+    publicKeySpkiChecksum: "test-key",
+    autoRenew: true,
   }).run();
   db.insert(schema.deployments).values({
     id: "deployment-1",
@@ -150,8 +215,8 @@ test("ssl disabled with a lingering certificate id still passes nginx -t", async
 
   const deployment = db.select().from(schema.deployments)
     .where(eq(schema.deployments.id, "deployment-1")).get();
-  assert.equal(deployment?.status, "succeeded");
   assert.notEqual(deployment?.errorMessage, "证书文件测试将在 HTTPS 阶段接入");
+  assert.equal(deployment?.status, "succeeded", deployment?.errorMessage ?? undefined);
   connection.close();
 });
 

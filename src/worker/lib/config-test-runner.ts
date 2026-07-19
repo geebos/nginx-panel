@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import {
+  certificates,
   configVersions,
   deploymentSteps,
   deployments,
@@ -128,6 +129,18 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       selected.map((domain) => domain.sourceVersionId),
     ));
     const versionsById = new Map(versionRows.map((version) => [version.id, version]));
+    const snapshotsByVersionId = new Map(versionRows.map((version) => [
+      version.id,
+      domainConfigSchema.parse(JSON.parse(version.snapshotJson)),
+    ]));
+    const certificateIds = [...new Set([...snapshotsByVersionId.values()]
+      .filter((snapshot) => snapshot.ssl.enabled)
+      .map((snapshot) => snapshot.ssl.certificateId)
+      .filter((value): value is string => Boolean(value)))];
+    const certificateRows = certificateIds.length
+      ? await db.select().from(certificates).where(inArray(certificates.id, certificateIds))
+      : [];
+    const certificatesById = new Map(certificateRows.map((certificate) => [certificate.id, certificate]));
     const logsRoot = join(candidateRoot, "logs");
     await mkdir(join(candidateRoot, "domains"), { recursive: true });
     await mkdir(logsRoot, { recursive: true });
@@ -136,8 +149,13 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
     for (const domain of selected) {
       const version = versionsById.get(domain.sourceVersionId);
       if (!version) throw new Error("候选版本不存在");
-      const snapshot = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
-      if (snapshot.ssl.enabled && snapshot.ssl.certificateId) throw new Error("证书文件测试将在 HTTPS 阶段接入");
+      const snapshot = snapshotsByVersionId.get(version.id)!;
+      const certificate = snapshot.ssl.enabled && snapshot.ssl.certificateId
+        ? certificatesById.get(snapshot.ssl.certificateId)
+        : undefined;
+      if (snapshot.ssl.enabled && snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !["ready", "active"].includes(certificate.status))) {
+        throw new Error("配置引用的证书资产不可用");
+      }
       await mkdir(join(logsRoot, snapshot.primaryHostname), { recursive: true });
       const rendered = renderDomainConfig({
         mode: "runtime",
@@ -145,6 +163,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
         snapshot,
         enabled: domain.id === targetDomain.id ? true : domain.enabled,
         logs: { root: logsRoot, errorLevel: "warn" },
+        certificate: certificate ? { fullchainPath: certificate.certPath, privateKeyPath: certificate.keyPath } : undefined,
       });
       await writeFile(join(candidateRoot, "domains", `${domain.id}.conf`), rendered);
     }

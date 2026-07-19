@@ -20,7 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { logout } from "@/lib/api";
+import { getDashboard, logout } from "@/lib/api";
+import { useApiQuery } from "@/hooks/use-api-query";
 import { EllipsisIcon, FileTextIcon, GaugeIcon, Globe2Icon, LogOutIcon, RocketIcon, SettingsIcon, ShieldCheckIcon, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
@@ -74,6 +75,7 @@ function NavButton({ item, active }: { item: NavItem; active: boolean }) {
 
 export function Sidebar() {
   const router = useRouter();
+  const dashboard = useApiQuery(getDashboard);
   const { pathname } = router;
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -109,7 +111,9 @@ export function Sidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
         <div className={cn("mb-2 text-muted-foreground", collapsed ? "text-center text-[10px]" : "px-2 text-xs")}>
-          {collapsed ? "N/A" : "Nginx status: unknown"}
+          {collapsed
+            ? "N/A"
+            : `Nginx status: ${dashboard.data?.nginx.status ?? (dashboard.error ? "unavailable" : "checking")}`}
         </div>
         <Button
           variant="ghost"

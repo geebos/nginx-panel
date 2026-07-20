@@ -1,9 +1,63 @@
+# VCS / editor / agent tooling
 .git
-.next
-.sqlite
-.pnpm-store
-dist
+.claude
+.codegraph
+.mcp.json
+.vscode
+.idea
+
+# Dependencies and package managers
 node_modules
+.pnpm-store
+.pnp
+.pnp.*
+.yarn
+
+# Local / generated build outputs (rebuilt inside the image)
+.next
 out
-src-tauri/target
-src-tauri/gen
+dist
+build
+coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# Local runtime data
+.sqlite
+.playwright-mcp
+
+# Env and secrets (runtime secrets are bind-mounted, not baked in)
+.env
+.env.*
+docker/secrets
+
+# Desktop (Tauri) — not part of the Docker nginx-manager image
+src-tauri
+
+# Docs and project meta not used by the image build
+docs
+*.md
+
+# Docker assets unused by the production Dockerfile
+docker/compose.yml
+docker/e2e
+docker/supervisor
+docker/.gitignore
+docker/.env.example
+
+# Tests and lint (production image does not run them)
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+eslint.config.mjs
+Makefile
+
+# Misc
+.DS_Store
+*.pem
+.vercel
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

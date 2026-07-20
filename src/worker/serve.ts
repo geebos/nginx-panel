@@ -64,10 +64,15 @@ async function start() {
       });
       if (result.timedOut) console.error("[worker] shutdown drain timed out");
       else console.log("[worker] shutdown drain complete");
-    })().catch((error) => {
-      console.error("[worker] graceful shutdown failed", error);
-      process.exitCode = 1;
-    });
+    })()
+      .catch((error) => {
+        console.error("[worker] graceful shutdown failed", error);
+        process.exitCode = 1;
+      })
+      .finally(() => {
+        // Signal handlers keep the event loop alive; exit once drain finishes.
+        process.exit(process.exitCode ?? 0);
+      });
     return shutdownPromise;
   };
   process.once("SIGTERM", () => void shutdown());

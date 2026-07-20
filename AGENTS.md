@@ -60,81 +60,27 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 # 5. Development Branch Workflow
 
-**This workflow does not create or remove worktrees. Main stays clean.**
+**This workflow does not create or remove worktrees. Keep the main worktree clean.**
 
 ## Start
-
 1. Check the current branch:
-
    ```bash
    git branch --show-current
    ```
-
-2. Prepare the development branch:
-
-   * If currently on `main`, create a new branch:
-
+2. Prepare a development branch:
+   * If currently on `main`:
      ```bash
      git switch -c dev/<short-description>
      ```
-
-   * If already on another branch, verify that it matches the current task. Rename it when necessary:
-
+   * Otherwise, confirm the current branch is for this task and rename it if needed:
      ```bash
      git branch -m dev/<short-description>
      ```
-
 3. Keep all development commits on the development branch. Do not push it unless explicitly requested.
-
-## Complete and Merge
-
-After completion is confirmed:
-
-1. Commit all remaining changes and review the branch:
-
-   ```bash
-   git status
-   git log main..HEAD --oneline
-   ```
-
-2. Create a temporary integration branch from `main` and squash the development branch into it:
-
-   ```bash
-   DEV_BRANCH=$(git branch --show-current)
-
-   git switch -c integrate/<short-description> main
-   git merge --squash "$DEV_BRANCH"
-   git commit
-   ```
-
-3. Rebase the integration branch onto the latest remote `main` and run the required tests:
-
-   ```bash
-   git fetch origin
-   git rebase origin/main
-   ```
-
-4. In the main worktree, fast-forward and push:
-
-   ```bash
-   git switch main
-   git pull --ff-only origin main
-   git merge --ff-only integrate/<short-description>
-   git push origin main
-   ```
-
-5. Delete the local development and integration branches after verifying the merge:
-
-   ```bash
-   git branch -d dev/<short-description>
-   git branch -d integrate/<short-description>
-   ```
-
-Delete the remote development branch only if it was previously pushed.
 
 ## Squash Commit Message
 
-Use Conventional Commits and summarize every meaningful change:
+The squash commit message **must use Conventional Commits and list every meaningful change**. Do not use only a generic one-line message.
 
 ```text
 <type>[optional scope]: <description>
@@ -143,6 +89,44 @@ Use Conventional Commits and summarize every meaningful change:
 - <change 2>
 - <change 3>
 ```
+
+## Complete and Merge
+
+After completion is confirmed:
+
+1. Commit and review all changes:
+   ```bash
+   git status
+   git log main..HEAD --oneline
+   ```
+2. Create an integration branch from `main` and squash the development branch:
+   ```bash
+   DEV_BRANCH=$(git branch --show-current)
+
+   git switch -c integrate/<short-description> main
+   git merge --squash "$DEV_BRANCH"
+   git commit
+   ```
+3. Rebase onto the latest remote `main` and run the required tests:
+   ```bash
+   git fetch origin
+   git rebase origin/main
+   ```
+4. Update and push `main` from the main worktree.
+   **If the current worktree is not the main worktree, do not check out ****`main`**** here. Locate the worktree where ****`main`**** is checked out and run the following commands from that directory instead.**
+   ```bash
+   git switch main
+   git pull --ff-only origin main
+   git merge --ff-only integrate/<short-description>
+   git push origin main
+   ```
+5. After verifying the merge, delete the local development and integration branches:
+   ```bash
+   git branch -d dev/<short-description>
+   git branch -d integrate/<short-description>
+   ```
+
+Delete the remote development branch only if it was previously pushed.
 
 # 6. Project Structure
 

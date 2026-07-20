@@ -9,7 +9,7 @@
     "dev:worker": "DB_SQLITE_DIR=./.sqlite tsx src/worker/serve.ts",
     "lint": "eslint",
     "build": "next build",
-    "build:worker": "esbuild src/worker/serve.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/worker.mjs",
+    "build:worker": "esbuild src/worker/serve.ts --bundle --platform=node --format=esm --external:better-sqlite3 --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" --outfile=dist/worker.mjs",
     "start": "next start",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "test:e2e:docker": "node docker/e2e/production-smoke.mjs",

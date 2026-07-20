@@ -257,6 +257,9 @@ export function renderRootConfig(input: RenderRootConfigInput) {
   if (!Number.isInteger(workerConnections) || workerConnections < 128 || workerConnections > 65535) {
     throw new Error("workerConnections out of range");
   }
+  // Temp paths are relative to the nginx prefix (-p). That keeps nginx -t
+  // writable under the candidate root on a read-only container filesystem,
+  // instead of the compiled-in defaults under /var/cache/nginx.
   return `worker_processes auto;
 pid ${quote(input.pidPath)};
 error_log stderr warn;
@@ -266,6 +269,12 @@ events {
 }
 
 http {
+  client_body_temp_path client_temp;
+  fastcgi_temp_path fastcgi_temp;
+  proxy_temp_path proxy_temp;
+  scgi_temp_path scgi_temp;
+  uwsgi_temp_path uwsgi_temp;
+
   map $http_upgrade $connection_upgrade {
     default upgrade;
     '' close;

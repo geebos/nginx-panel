@@ -77,6 +77,16 @@ test("preview preserves route semantics and omits disabled routes", () => {
   assert.doesNotMatch(preview, /access_log/);
 });
 
+test("root config keeps temp paths under the nginx prefix", () => {
+  const rootConfig = renderRootConfig({ pidPath: "/tmp/nginx-manager/nginx.pid" });
+  assert.match(rootConfig, /client_body_temp_path client_temp;/);
+  assert.match(rootConfig, /proxy_temp_path proxy_temp;/);
+  assert.match(rootConfig, /fastcgi_temp_path fastcgi_temp;/);
+  assert.match(rootConfig, /scgi_temp_path scgi_temp;/);
+  assert.match(rootConfig, /uwsgi_temp_path uwsgi_temp;/);
+  assert.doesNotMatch(rootConfig, /\/var\/cache\/nginx/);
+});
+
 test("certificate preview uses stable placeholders", () => {
   const preview = renderDomainPreview({
     ...snapshot,

@@ -237,6 +237,15 @@ function stopNginx() {
   nginx.kill("SIGQUIT");
 }
 
+// Node keeps the event loop alive while SIGTERM/SIGINT handlers are registered,
+// so the supervisor must exit explicitly once both children are gone. Without
+// this, compose recreate waits the full stop_grace_period (30s) then SIGKILLs.
+function maybeExit() {
+  if (workerExited && nginxExited) {
+    process.exit(process.exitCode ?? 0);
+  }
+}
+
 function shutdown(exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
@@ -251,11 +260,16 @@ function shutdown(exitCode = 0) {
   setTimeout(() => {
     if (!workerExited) worker.kill("SIGKILL");
     if (!nginxExited) nginx.kill("SIGKILL");
+    // Exit events may still be pending after SIGKILL; do not wait on them.
+    process.exit(process.exitCode ?? 0);
   }, 30_000).unref();
 }
 
 process.on("SIGTERM", () => shutdown(0));
 process.on("SIGINT", () => shutdown(0));
+// Defensive: nginx base images default to STOPSIGNAL SIGQUIT. Even after the
+// Dockerfile override, accept SIGQUIT so stop still drains cleanly.
+process.on("SIGQUIT", () => shutdown(0));
 
 worker.on("exit", (code, signal) => {
   workerExited = true;
@@ -265,6 +279,7 @@ worker.on("exit", (code, signal) => {
   } else {
     stopNginx();
   }
+  maybeExit();
 });
 
 nginx.on("exit", (code, signal) => {
@@ -273,4 +288,5 @@ nginx.on("exit", (code, signal) => {
     console.error(`[supervisor] nginx exited unexpectedly (${code ?? signal})`);
     shutdown(code ?? 1);
   }
+  maybeExit();
 });

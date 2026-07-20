@@ -27,9 +27,17 @@ FROM dependencies AS test
 COPY . .
 CMD ["pnpm", "test"]
 
+# Worker is fully bundled except native better-sqlite3. Install only that runtime
+# dependency so the image does not ship next/react/UI packages (~800MB+).
 FROM node-base AS production-dependencies
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --prod --frozen-lockfile
+WORKDIR /app
+COPY package.json ./package.root.json
+RUN VERSION="$(node -p "require('./package.root.json').dependencies['better-sqlite3']")" \
+    && test -n "$VERSION" \
+    && pnpm init \
+    && pnpm pkg set pnpm.onlyBuiltDependencies[0]=better-sqlite3 \
+    && pnpm add "better-sqlite3@${VERSION}" \
+    && rm package.root.json
 
 FROM ${NGINX_IMAGE} AS runtime
 
@@ -40,17 +48,21 @@ COPY --from=node-base /usr/local/ /usr/local/
 
 WORKDIR /opt/nginx-manager
 
-COPY --from=production-dependencies /app/node_modules ./node_modules
-COPY --from=web-build /app/out ./ui
-COPY --from=worker-build /app/dist/worker.mjs ./worker/serve.mjs
-COPY package.json ./package.json
-COPY drizzle ./drizzle
+# Ownership is set at COPY time so we never chown -R tens of thousands of files.
+COPY --from=production-dependencies --chown=nginx-manager:nginx-manager /app/node_modules ./node_modules
+COPY --from=production-dependencies --chown=nginx-manager:nginx-manager /app/package.json ./package.json
+COPY --from=web-build --chown=nginx-manager:nginx-manager /app/out ./ui
+COPY --from=worker-build --chown=nginx-manager:nginx-manager /app/dist/worker.mjs ./worker/serve.mjs
+COPY --chown=nginx-manager:nginx-manager drizzle ./drizzle
 COPY docker/nginx/nginx.conf.template /etc/nginx/templates/nginx-manager.conf.template
 COPY docker/scripts/start.mjs /usr/local/bin/start-nginx-manager.mjs
 COPY docker/scripts/runtime-root.mjs /usr/local/bin/runtime-root.mjs
 
 RUN mkdir -p /data/acme /data/certs /data/db /data/logs /data/nginx /data/secrets /run/nginx \
-    && chown -R nginx-manager:nginx-manager /data /opt/nginx-manager /run/nginx
+    && chown nginx-manager:nginx-manager \
+      /opt/nginx-manager \
+      /data /data/acme /data/certs /data/db /data/logs /data/nginx /data/secrets \
+      /run/nginx
 
 ENV APP_ENV=production \
     DB_ENGINE=sqlite \
@@ -65,6 +77,11 @@ ENV APP_ENV=production \
 USER nginx-manager
 
 EXPOSE 8080 8443
+
+# nginx base image sets STOPSIGNAL SIGQUIT for the master process. Our PID 1 is
+# the Node supervisor, which only implements graceful drain on SIGTERM/SIGINT.
+# Without this override, docker stop/recreate waits the full stop_grace_period.
+STOPSIGNAL SIGTERM
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:8082/internal/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]

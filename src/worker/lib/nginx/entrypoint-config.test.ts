@@ -19,4 +19,7 @@ test("bootstrap template serves localhost without 308 and forwards $scheme", asy
   assert.doesNotMatch(config, /X-Forwarded-Proto https;/);
   assert.doesNotMatch(config, /return 308 https:\/\//);
   assert.doesNotMatch(config, /\$\{MANAGER_HOST\}/);
+  assert.match(config, /try_files \$uri \$uri\/index\.html \$uri\.html =404;/);
+  assert.match(config, /listen 8443 ssl default_server;/);
+  assert.match(config, /ssl_certificate \/data\/nginx\/tls\/default\/fullchain\.pem;/);
 });

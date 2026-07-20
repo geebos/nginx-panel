@@ -1,6 +1,7 @@
 import type { CreateDomainInput, DomainConfig, LogStreamRecord, LogType, NginxLogSettings, NginxLogSettingsInput, RouteConfig, SessionPolicy } from "@/shared/schemas";
 import { type AppLocale, type Messages } from "@/i18n/settings";
 import { consumeNdjsonStream } from "@/lib/log-stream";
+import { randomUUID } from "@/lib/utils";
 
 export type ErrorParams = Record<string, string | number>;
 
@@ -234,21 +235,21 @@ export function getPublishPreview(domainId: string, versionId: string, signal?: 
   );
 }
 
-export function testDomainVersion(domainId: string, versionId: string, expectedSnapshotChecksum: string, idempotencyKey = crypto.randomUUID()) {
+export function testDomainVersion(domainId: string, versionId: string, expectedSnapshotChecksum: string, idempotencyKey = randomUUID()) {
   return requestJson<{ deploymentId: string; statusUrl: string }>(
     `/api/domains/${encodeURIComponent(domainId)}/versions/${encodeURIComponent(versionId)}/test`,
     { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ expectedSnapshotChecksum }) },
   );
 }
 
-export function deployDomainVersion(domainId: string, versionId: string, expectedSnapshotChecksum: string, preflightDeploymentId: string, idempotencyKey = crypto.randomUUID()) {
+export function deployDomainVersion(domainId: string, versionId: string, expectedSnapshotChecksum: string, preflightDeploymentId: string, idempotencyKey = randomUUID()) {
   return requestJson<{ deploymentId: string; statusUrl: string }>(
     `/api/domains/${encodeURIComponent(domainId)}/versions/${encodeURIComponent(versionId)}/deploy`,
     { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ expectedSnapshotChecksum, preflightDeploymentId }) },
   );
 }
 
-export function rollbackDomainVersion(domainId: string, versionId: string, idempotencyKey = crypto.randomUUID()) {
+export function rollbackDomainVersion(domainId: string, versionId: string, idempotencyKey = randomUUID()) {
   return requestJson<{ deploymentId: string; versionId: string; versionNumber: number | null; statusUrl: string }>(
     `/api/domains/${encodeURIComponent(domainId)}/versions/${encodeURIComponent(versionId)}/rollback`,
     { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
@@ -308,11 +309,11 @@ export function getDomainCertificates(domainId: string) {
   return requestJson<{ items: CertificateSummary[] }>(`/api/domains/${encodeURIComponent(domainId)}/certificates`);
 }
 
-export function createCertificateOrder(domainId: string, input: { accountEmail: string; environment: "staging" | "production"; validation: DomainConfig["ssl"]["validation"] }, idempotencyKey = crypto.randomUUID()) {
+export function createCertificateOrder(domainId: string, input: { accountEmail: string; environment: "staging" | "production"; validation: DomainConfig["ssl"]["validation"] }, idempotencyKey = randomUUID()) {
   return requestJson<{ order: CertificateOrderSummary }>(`/api/domains/${encodeURIComponent(domainId)}/certificate/orders`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(input) });
 }
 
-export function renewCertificate(domainId: string, idempotencyKey = crypto.randomUUID()) {
+export function renewCertificate(domainId: string, idempotencyKey = randomUUID()) {
   return requestJson<{ order: CertificateOrderSummary }>(`/api/domains/${encodeURIComponent(domainId)}/certificate/renew`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey } });
 }
 
@@ -412,7 +413,7 @@ export function getLogSettings() {
 export function updateLogSettings(input: NginxLogSettingsInput) {
   return requestJson<{ deploymentId: string; statusUrl: string }>("/api/settings/logs", {
     method: "PUT",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": randomUUID() },
     body: JSON.stringify(input),
   });
 }
@@ -513,7 +514,7 @@ export function updateNginxSettings(revisionMaxBytes: number) {
 export function rotateLogs(domainId?: string) {
   return requestJson<{ deploymentId: string; statusUrl: string }>("/api/logs/rotate", {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": randomUUID() },
     body: JSON.stringify(domainId ? { domainId } : {}),
   });
 }
@@ -585,14 +586,14 @@ export function getActiveRuntimeConfig(domainId: string) {
 export function runDiagnosticNginxTest() {
   return requestJson<{ deploymentId: string; statusUrl: string }>("/api/settings/diagnostics/nginx-test", {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": randomUUID() },
   });
 }
 
 export function rebuildActiveRuntime(currentPassword: string) {
   return requestJson<{ deploymentId: string; statusUrl: string }>("/api/settings/diagnostics/rebuild-active", {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": randomUUID() },
     body: JSON.stringify({ currentPassword }),
   });
 }
@@ -600,7 +601,7 @@ export function rebuildActiveRuntime(currentPassword: string) {
 export function reloadManagerTls() {
   return requestJson<{ deploymentId: string; statusUrl: string }>("/api/settings/diagnostics/reload-manager-tls", {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": randomUUID() },
   });
 }
 
@@ -687,14 +688,14 @@ export function updateManagerSettings(input: {
   });
 }
 
-export function publishManagerSettings(idempotencyKey = crypto.randomUUID()) {
+export function publishManagerSettings(idempotencyKey = randomUUID()) {
   return requestJson<{ deploymentId: string; statusUrl: string; preflightDeploymentId: string }>(
     "/api/settings/manager/publish",
     { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
   );
 }
 
-export function rollbackManagerSettings(sourceVersionId: string, idempotencyKey = crypto.randomUUID()) {
+export function rollbackManagerSettings(sourceVersionId: string, idempotencyKey = randomUUID()) {
   return requestJson<{
     deploymentId: string;
     versionId: string | null;
@@ -733,7 +734,7 @@ export function createManagerCertificateOrder(
       | { method: "dns-01"; provider: "manual" }
       | { method: "dns-01"; provider: "cloudflare"; cloudflareCredentialId: string };
   },
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey = randomUUID(),
 ) {
   return requestJson<{ order: CertificateOrderSummary }>("/api/settings/manager/certificate/orders", {
     method: "POST",
@@ -742,7 +743,7 @@ export function createManagerCertificateOrder(
   });
 }
 
-export function renewManagerCertificate(idempotencyKey = crypto.randomUUID()) {
+export function renewManagerCertificate(idempotencyKey = randomUUID()) {
   return requestJson<{ order: CertificateOrderSummary }>("/api/settings/manager/certificate/renew", {
     method: "POST",
     headers: { "Idempotency-Key": idempotencyKey },

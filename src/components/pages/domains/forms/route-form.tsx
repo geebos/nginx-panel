@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { RouteConfig } from "@/shared/schemas";
+import { randomUUID } from "@/lib/utils";
 
 function buildRouteFormSchema(t: TFunction) {
   return z.object({
@@ -93,7 +94,7 @@ export function RouteForm({
       form.setError("path", { message: t("domains:forms.routeForm.validations.pathDuplicate") });
       return;
     }
-    const base = { id: route?.id ?? crypto.randomUUID(), path: values.path, enabled: values.enabled, order: route?.order ?? existingPaths.length };
+    const base = { id: route?.id ?? randomUUID(), path: values.path, enabled: values.enabled, order: route?.order ?? existingPaths.length };
     const next: RouteConfig = values.type === "proxy"
       ? {
           ...base,

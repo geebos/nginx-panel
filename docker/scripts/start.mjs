@@ -1,18 +1,21 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import {
   accessSync,
   constants,
+  cpSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   renameSync,
+  rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { basename, isAbsolute, join } from "node:path";
 
 const DEFAULT_MASTER_KEY_FILE = "/run/secrets/nginx_manager_master_key";
 const GENERATED_SECRETS_DIR = "/data/secrets";
@@ -103,6 +106,41 @@ for (const directory of ["client", "fastcgi", "proxy", "scgi", "uwsgi"]) {
   mkdirSync(`/run/nginx/${directory}_temp`, { recursive: true });
 }
 
+// Catch-all HTTPS material for root default_server (see renderManagerRoot /
+// nginx.conf.template). Without it, a business domain listening on 8443 ssl
+// becomes nginx's implicit default and unmatched Host leaks reverse-proxied content.
+{
+  const catchallDir = "/data/nginx/tls/default";
+  const catchallCert = join(catchallDir, "fullchain.pem");
+  const catchallKey = join(catchallDir, "private.key");
+  if (!isReadableNonEmpty(catchallCert) || !isReadableNonEmpty(catchallKey)) {
+    mkdirSync(catchallDir, { recursive: true, mode: 0o700 });
+    const generated = spawnSync(
+      "openssl",
+      [
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-keyout",
+        catchallKey,
+        "-out",
+        catchallCert,
+        "-days",
+        "3650",
+        "-subj",
+        "/CN=invalid.nginx-manager.local",
+      ],
+      { stdio: "inherit" },
+    );
+    if (generated.status !== 0) {
+      throw new Error("Failed to generate HTTPS catch-all certificate for default_server");
+    }
+    console.log("[supervisor] generated HTTPS catch-all certificate for default_server");
+  }
+}
+
 const runtimeRoot = "/data/nginx";
 const revisionsRoot = join(runtimeRoot, "revisions");
 const bootstrapRoot = join(revisionsRoot, "bootstrap");
@@ -125,6 +163,99 @@ function hasActiveSymlink() {
 
 const activeExists = hasActiveSymlink();
 
+/**
+ * One-shot migrations for published roots that predate:
+ * - try_files $uri/index.html (avoid autoindex-off 403 on bare locale dirs)
+ * - always-on HTTPS default_server with catch-all cert (avoid business domain
+ *   becoming the implicit 8443 default and leaking reverse-proxied content)
+ */
+function migrateActiveRootIfNeeded() {
+  const activeTarget = readlinkSync(activePath);
+  if (isAbsolute(activeTarget) || activeTarget.split(/[\\/]/).includes("..")) {
+    throw new Error("Runtime active symlink target is unsafe");
+  }
+  const activeRoot = join(runtimeRoot, activeTarget);
+  const confPath = join(activeRoot, "nginx.conf");
+  let conf = readFileSync(confPath, "utf8");
+  let changed = false;
+
+  const oldTry = "try_files $uri $uri/ $uri.html =404;";
+  const newTry = "try_files $uri $uri/index.html $uri.html =404;";
+  if (conf.includes(oldTry)) {
+    conf = conf.split(oldTry).join(newTry);
+    changed = true;
+  }
+
+  if (!/listen\s+\d+\s+ssl\s+default_server/.test(conf)) {
+    const block = [
+      "  server {",
+      "    listen 8443 ssl default_server;",
+      "    server_name _;",
+      "    ssl_certificate /data/nginx/tls/default/fullchain.pem;",
+      "    ssl_certificate_key /data/nginx/tls/default/private.key;",
+      "    return 444;",
+      "  }",
+      "",
+      "",
+    ].join("\n");
+    const includeMarker = "  include domains/*.conf;";
+    if (!conf.includes(includeMarker)) {
+      throw new Error("Active nginx.conf is missing domains include; cannot migrate HTTPS default_server");
+    }
+    conf = conf.replace(includeMarker, `${block}${includeMarker}`);
+    changed = true;
+  }
+
+  if (!changed) {
+    console.log("[supervisor] active revision present; no root migration needed");
+    return;
+  }
+
+  const manifestPath = join(activeRoot, "manifest.json");
+  let manifest = null;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch {
+    // bootstrap roots may lack a full deploy manifest
+  }
+
+  const candidateRoot = mkdtempSync(join(revisionsRoot, ".root-migrate-"));
+  let revisionRoot;
+  let nextActive;
+  try {
+    cpSync(activeRoot, candidateRoot, { recursive: true });
+    writeFileSync(join(candidateRoot, "nginx.conf"), conf, { mode: 0o640 });
+    if (manifest && typeof manifest === "object") {
+      writeFileSync(
+        join(candidateRoot, "manifest.json"),
+        `${JSON.stringify({
+          ...manifest,
+          rootConfigChecksum: createHash("sha256").update(conf).digest("hex"),
+        }, null, 2)}\n`,
+        { mode: 0o640 },
+      );
+    }
+    const test = spawnSync(
+      "/usr/sbin/nginx",
+      ["-p", `${candidateRoot}/`, "-t", "-c", "nginx.conf"],
+      { stdio: "inherit" },
+    );
+    if (test.status !== 0) throw new Error("Migrated nginx root failed config test");
+
+    const revisionId = `root-migrate-${Date.now()}-${process.pid}`;
+    revisionRoot = join(revisionsRoot, revisionId);
+    renameSync(candidateRoot, revisionRoot);
+    nextActive = join(runtimeRoot, `.active-${revisionId}`);
+    symlinkSync(`revisions/${basename(revisionRoot)}`, nextActive);
+    renameSync(nextActive, activePath);
+    console.log("[supervisor] migrated active root (try_files / HTTPS default_server)");
+  } catch (error) {
+    if (nextActive) rmSync(nextActive, { force: true });
+    rmSync(revisionRoot ?? candidateRoot, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 if (!activeExists) {
   // Contract A: only write bootstrap root when there is no active revision.
   // Do NOT call refreshActiveRoot when active already exists — that would wipe published manager segments.
@@ -139,7 +270,7 @@ if (!activeExists) {
   renameSync(nextActive, activePath);
   console.log("[supervisor] wrote bootstrap root (no prior active revision)");
 } else {
-  console.log("[supervisor] active revision present; skipping root rewrite");
+  migrateActiveRootIfNeeded();
 }
 
 const configTest = spawnSync(

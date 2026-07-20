@@ -23,6 +23,7 @@ import {
   type PublishPreviewResponse,
 } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
+import { randomUUID } from "@/lib/utils";
 
 type PublishStep = "diff" | "test" | "publish";
 
@@ -171,7 +172,7 @@ export function PublishDomainDialog({
     if (!preview || !deployment || deployment.deployment.status !== "succeeded") return;
     setLoading(true);
     setError(undefined);
-    idempotencyKey.current ??= crypto.randomUUID();
+    idempotencyKey.current ??= randomUUID();
     try {
       const result = await deployDomainVersion(domainId, preview.targetVersion.id, preview.targetSnapshotChecksum, deployment.deployment.id, idempotencyKey.current);
       changeOpen(false);

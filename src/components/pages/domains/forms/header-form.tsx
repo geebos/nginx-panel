@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { HeaderConfig, RouteConfig } from "@/shared/schemas";
+import { randomUUID } from "@/lib/utils";
 
 function buildHeaderFormSchema(t: TFunction) {
   return z.object({
@@ -70,7 +71,7 @@ export function HeaderForm({
     }
     const routeId = values.scope.startsWith("route:") ? values.scope.slice(6) : null;
     await onSubmit({
-      id: header?.id ?? crypto.randomUUID(),
+      id: header?.id ?? randomUUID(),
       name: values.name,
       value: values.value,
       scope: routeId ? { type: "route", routeId } : { type: "server" },

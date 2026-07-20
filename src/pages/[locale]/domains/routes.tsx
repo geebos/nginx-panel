@@ -21,6 +21,7 @@ import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createConfigVersion, getDomain } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
+import { randomUUID } from "@/lib/utils";
 import type { RouteConfig } from "@/shared/schemas";
 
 function routeTarget(route: RouteConfig) {
@@ -91,7 +92,7 @@ function DomainRoutes({ domainId }: { domainId: string }) {
                       <TableCell className="max-w-72 truncate font-mono text-xs">{routeTarget(route)}</TableCell>
                       <TableCell className="text-muted-foreground">{route.type === "proxy" ? `${route.readTimeoutSeconds}s${route.websocket ? `, ${t("domains:routes.options.ws")}` : ""}` : route.type === "redirect" ? route.statusCode : route.spaFallback ? t("domains:routes.options.spa") : t("domains:routes.options.static")}</TableCell>
                       <TableCell><Badge variant={route.enabled ? "outline" : "secondary"}>{route.enabled ? t("domains:common.status.enabled") : t("domains:common.status.disabled")}</Badge></TableCell>
-                      <TableCell><div className="flex justify-end gap-1"><Button size="icon-sm" variant="ghost" onClick={() => setEditing(route)}><PencilIcon /><span className="sr-only">{t("domains:routes.srOnly.edit", { path: route.path })}</span></Button><Button size="icon-sm" variant="ghost" onClick={() => void saveRoutes([...config.routes, { ...route, id: crypto.randomUUID(), path: `${route.path === "/" ? "" : route.path}-copy`, order: config.routes.length }])}><CopyIcon /><span className="sr-only">{t("domains:routes.srOnly.copy", { path: route.path })}</span></Button><Button size="icon-sm" variant="ghost" onClick={() => setDeleting(route)}><Trash2Icon /><span className="sr-only">{t("domains:routes.srOnly.delete", { path: route.path })}</span></Button></div></TableCell>
+                      <TableCell><div className="flex justify-end gap-1"><Button size="icon-sm" variant="ghost" onClick={() => setEditing(route)}><PencilIcon /><span className="sr-only">{t("domains:routes.srOnly.edit", { path: route.path })}</span></Button><Button size="icon-sm" variant="ghost" onClick={() => void saveRoutes([...config.routes, { ...route, id: randomUUID(), path: `${route.path === "/" ? "" : route.path}-copy`, order: config.routes.length }])}><CopyIcon /><span className="sr-only">{t("domains:routes.srOnly.copy", { path: route.path })}</span></Button><Button size="icon-sm" variant="ghost" onClick={() => setDeleting(route)}><Trash2Icon /><span className="sr-only">{t("domains:routes.srOnly.delete", { path: route.path })}</span></Button></div></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

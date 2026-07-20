@@ -63,12 +63,24 @@ http {
     }
 
     location / {
-      # Next export uses directories with index.html (trailingSlash). Prefer $uri/ so
-      # /en and /en/login resolve to .../index.html instead of matching the
-      # directory as a bare $uri (which would 404 with autoindex off).
+      # Next export uses directories with index.html (trailingSlash). Prefer
+      # $uri/index.html over bare $uri/ so a locale directory without an index
+      # never returns autoindex-off 403 (e.g. /en/).
       index index.html;
-      try_files $uri $uri/ $uri.html =404;
+      try_files $uri $uri/index.html $uri.html =404;
     }
+  }
+
+  # Own HTTPS default_server even before manager TLS is bound, so a later
+  # business-domain `listen 8443 ssl` cannot become nginx's implicit default
+  # and leak reverse-proxied content on unmatched Host (e.g. https://127.0.0.1).
+  # Cert material is ensured by start.mjs at /data/nginx/tls/default/.
+  server {
+    listen 8443 ssl default_server;
+    server_name _;
+    ssl_certificate /data/nginx/tls/default/fullchain.pem;
+    ssl_certificate_key /data/nginx/tls/default/private.key;
+    return 444;
   }
 
   server {

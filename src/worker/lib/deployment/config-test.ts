@@ -1,3 +1,4 @@
+import { accessSync, constants } from "node:fs";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -16,7 +17,13 @@ import {
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
-import { renderDomainConfig, renderManagerRoot, renderRootConfig } from "@/worker/lib/nginx/config";
+import {
+  HTTPS_CATCHALL_CERT_PATH,
+  HTTPS_CATCHALL_KEY_PATH,
+  renderDomainConfig,
+  renderManagerRoot,
+  renderRootConfig,
+} from "@/worker/lib/nginx/config";
 import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
 
 const execFileAsync = promisify(execFile);
@@ -25,6 +32,46 @@ const activeConfigTests = new Set<Promise<void>>();
 const stepNames = ["Generate candidate config", "Validate files and targets", "Run nginx -t"];
 
 class DraftChangedError extends Error {}
+
+function isReadableNonEmpty(path: string) {
+  try {
+    accessSync(path, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Ensure HTTPS default_server cert material exists for nginx -t (candidate or runtime). */
+async function ensureHttpsCatchallCerts(candidateRoot: string) {
+  const preferredCert = process.env.NGINX_HTTPS_DEFAULT_CERT || HTTPS_CATCHALL_CERT_PATH;
+  const preferredKey = process.env.NGINX_HTTPS_DEFAULT_KEY || HTTPS_CATCHALL_KEY_PATH;
+  if (isReadableNonEmpty(preferredCert) && isReadableNonEmpty(preferredKey)) {
+    return { fullchainPath: preferredCert, privateKeyPath: preferredKey };
+  }
+  const dir = join(candidateRoot, "tls", "default");
+  await mkdir(dir, { recursive: true });
+  const fullchainPath = join(dir, "fullchain.pem");
+  const privateKeyPath = join(dir, "private.key");
+  if (!isReadableNonEmpty(fullchainPath) || !isReadableNonEmpty(privateKeyPath)) {
+    await execFileAsync("openssl", [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-keyout",
+      privateKeyPath,
+      "-out",
+      fullchainPath,
+      "-days",
+      "1",
+      "-subj",
+      "/CN=invalid.nginx-manager.local",
+    ], { timeout: 15_000 });
+  }
+  return { fullchainPath, privateKeyPath };
+}
 
 async function retry<T>(operation: () => Promise<T>, attempts = 3) {
   let lastError: unknown;
@@ -158,8 +205,12 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
         ? managerConfigSchema.parse(JSON.parse(targetVersion.snapshotJson))
         : undefined;
       const rootInput = await buildManagerRootInput(db, { targetConfig: targetManager });
+      const catchall = await ensureHttpsCatchallCerts(candidateRoot);
       // Candidate test root uses a writable pid under the temp prefix.
-      rootConfig = renderManagerRoot(rootInput).replace(
+      rootConfig = renderManagerRoot({
+        ...rootInput,
+        httpsDefaultTls: catchall,
+      }).replace(
         "pid /run/nginx/nginx.pid;",
         `pid ${join(candidateRoot, "nginx.pid")};`,
       );

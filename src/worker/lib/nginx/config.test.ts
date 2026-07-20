@@ -92,7 +92,13 @@ test("manager root splits bootstrap and bound servers and never 308 localhost", 
   assert.match(bootstrapOnly, /server_name 127\.0\.0\.1 localhost;/);
   assert.match(bootstrapOnly, /X-Forwarded-Proto \$scheme;/);
   assert.doesNotMatch(bootstrapOnly, /return 308 https:\/\/\$host\$request_uri;/);
-  assert.doesNotMatch(bootstrapOnly, /listen 8443 ssl;/);
+  // HTTPS default_server is always present (catch-all cert) so business domains
+  // cannot become the implicit default on 8443.
+  assert.match(bootstrapOnly, /listen 8443 ssl default_server;/);
+  assert.match(bootstrapOnly, /ssl_certificate "\/data\/nginx\/tls\/default\/fullchain\.pem";/);
+  assert.match(bootstrapOnly, /try_files \$uri \$uri\/index\.html \$uri\.html =404;/);
+  // No manager-bound ssl server without user hostnames + manager tls
+  assert.doesNotMatch(bootstrapOnly, /listen 8443 ssl;\n/);
 
   const bound = renderManagerRoot({
     userHostnames: ["panel.example.com"],
@@ -101,6 +107,7 @@ test("manager root splits bootstrap and bound servers and never 308 localhost", 
   });
   assert.match(bound, /server_name panel\.example\.com;/);
   assert.match(bound, /return 308 https:\/\/\$host\$request_uri;/);
+  assert.match(bound, /listen 8443 ssl default_server;/);
   assert.match(bound, /listen 8443 ssl;/);
   assert.match(bound, /ssl_certificate "\/data\/certs\/fullchain\.pem";/);
   // bootstrap remains without 308

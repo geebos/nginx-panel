@@ -21,7 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { hostnameSchema, type DomainConfig, type RouteConfig } from "@/shared/schemas";
 import { ApiError, createDomain } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, randomUUID } from "@/lib/utils";
 import { formatErrorMessage, formatMessageKey } from "@/lib/i18n/error";
 import { localizedZodResolver } from "@/lib/i18n/form";
 
@@ -69,7 +69,7 @@ function parseAliases(value: string) {
 function buildRoute(values: DomainFormValues): RouteConfig[] {
   if (values.routeType === "none") return [];
   const base = {
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     path: values.routePath,
     enabled: true,
     order: 0,

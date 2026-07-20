@@ -11,6 +11,15 @@ import {
 
 const errorLevels = new Set(["error", "warn", "notice", "info"]);
 
+/**
+ * Catch-all material for HTTPS default_server when manager has no TLS of its own.
+ * Required so a lone business-domain `listen … ssl` cannot become nginx's implicit
+ * default and leak reverse-proxied content on unmatched Host (e.g. https://127.0.0.1).
+ * Files are ensured at container start (see docker/scripts/start.mjs).
+ */
+export const HTTPS_CATCHALL_CERT_PATH = "/data/nginx/tls/default/fullchain.pem";
+export const HTTPS_CATCHALL_KEY_PATH = "/data/nginx/tls/default/private.key";
+
 const accessLogVariables: Record<AccessLogField, string> = {
   timestamp: "$time_iso8601",
   domain: "$host",
@@ -296,6 +305,8 @@ export type RenderManagerRootInput = {
   userHostnames: string[];
   listeners?: { http: number; https: number };
   tls?: { fullchainPath: string; privateKeyPath: string };
+  /** HTTPS default_server material when manager has no TLS (tests / overrides). */
+  httpsDefaultTls?: { fullchainPath: string; privateKeyPath: string };
   forceHttpsOnBound?: boolean;
   uiRoot?: string;
   apiUpstream?: string;
@@ -316,10 +327,12 @@ function renderManagerLocations(input: {
     '  proxy_set_header X-Internal-Health-Check "";',
     "}",
   ];
+  // Prefer $uri/index.html over bare $uri/ so a locale directory without an
+  // index (e.g. /en/ before export) never hits autoindex-off 403.
   const uiLines = [
     "location / {",
     "  index index.html;",
-    "  try_files $uri $uri/ $uri.html =404;",
+    "  try_files $uri $uri/index.html $uri.html =404;",
     "}",
   ];
   return [
@@ -425,27 +438,35 @@ export function renderManagerRoot(input: RenderManagerRootInput) {
     }).join("\n"));
   }
 
-  // default_server HTTPS only when TLS material exists (nginx requires ssl_* on ssl listen)
-  if (tls) {
-    sections.push([
-      "server {",
-      `  listen ${listeners.https} ssl default_server;`,
-      "  server_name _;",
-      `  ssl_certificate ${quote(tls.fullchainPath)};`,
-      `  ssl_certificate_key ${quote(tls.privateKeyPath)};`,
-      "  return 444;",
-      "}",
-    ].join("\n"));
+  // Always own HTTPS default_server. Without this, the first business domain
+  // that listens on 8443 ssl becomes the implicit default and unmatched Host
+  // (including https://127.0.0.1) is reverse-proxied to that domain.
+  // nginx requires ssl_* on any ssl listen, so fall back to the catch-all cert
+  // when manager has no TLS of its own.
+  const httpsDefaultTls = tls ?? input.httpsDefaultTls ?? {
+    fullchainPath: process.env.NGINX_HTTPS_DEFAULT_CERT || HTTPS_CATCHALL_CERT_PATH,
+    privateKeyPath: process.env.NGINX_HTTPS_DEFAULT_KEY || HTTPS_CATCHALL_KEY_PATH,
+  };
+  assertAbsolutePath(httpsDefaultTls.fullchainPath, "HTTPS default fullchain");
+  assertAbsolutePath(httpsDefaultTls.privateKeyPath, "HTTPS default private key");
+  sections.push([
+    "server {",
+    `  listen ${listeners.https} ssl default_server;`,
+    "  server_name _;",
+    `  ssl_certificate ${quote(httpsDefaultTls.fullchainPath)};`,
+    `  ssl_certificate_key ${quote(httpsDefaultTls.privateKeyPath)};`,
+    "  return 444;",
+    "}",
+  ].join("\n"));
 
-    if (userHostnames.length > 0) {
-      sections.push(renderManagerServer({
-        listen: `${listeners.https} ssl`,
-        hostnames: userHostnames,
-        uiRoot,
-        apiUpstream,
-        certificate: tls,
-      }).join("\n"));
-    }
+  if (tls && userHostnames.length > 0) {
+    sections.push(renderManagerServer({
+      listen: `${listeners.https} ssl`,
+      hostnames: userHostnames,
+      uiRoot,
+      apiUpstream,
+      certificate: tls,
+    }).join("\n"));
   }
 
   // internal health

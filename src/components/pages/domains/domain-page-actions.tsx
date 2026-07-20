@@ -167,7 +167,7 @@ export function PublishDomainDialog({
     try {
       const result = await deployDomainVersion(domainId, preview.targetVersion.id, preview.targetSnapshotChecksum, deployment.deployment.id, idempotencyKey.current);
       changeOpen(false);
-      await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === "PREFLIGHT_STALE") {
         setStep("diff");

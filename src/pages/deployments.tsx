@@ -29,7 +29,7 @@ export default function DeploymentsPage() {
           <div className="rounded-md border border-border bg-card">
             <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Domain</TableHead><TableHead>Started</TableHead><TableHead>Duration</TableHead></TableRow></TableHeader><TableBody>
               {query.data.items.map((item) => (
-                <TableRow key={item.id}><TableCell><Link className="font-mono text-xs underline-offset-4 hover:underline" href={`/deployments/${item.id}`}>{item.id.slice(0, 8)}</Link></TableCell><TableCell className="capitalize">{item.type}</TableCell><TableCell><StatusBadge status={item.status} /></TableCell><TableCell className="font-mono text-xs">{item.domainId?.slice(0, 8) ?? "Global"}</TableCell><TableCell>{dateFormatter.format(item.startedAt ?? item.createdAt)}</TableCell><TableCell>{item.startedAt && item.finishedAt ? `${item.finishedAt - item.startedAt} ms` : "-"}</TableCell></TableRow>
+                <TableRow key={item.id}><TableCell><Link className="font-mono text-xs underline-offset-4 hover:underline" href={`/deployments/detail?id=${item.id}`}>{item.id.slice(0, 8)}</Link></TableCell><TableCell className="capitalize">{item.type}</TableCell><TableCell><StatusBadge status={item.status} /></TableCell><TableCell className="font-mono text-xs">{item.domainId?.slice(0, 8) ?? "Global"}</TableCell><TableCell>{dateFormatter.format(item.startedAt ?? item.createdAt)}</TableCell><TableCell>{item.startedAt && item.finishedAt ? `${item.finishedAt - item.startedAt} ms` : "-"}</TableCell></TableRow>
               ))}
             </TableBody></Table>
           </div>

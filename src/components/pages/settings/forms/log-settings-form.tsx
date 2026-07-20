@@ -51,7 +51,7 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
     setSubmitting(true);
     try {
       const result = await updateLogSettings(parsed.data);
-      await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "日志设置保存失败");
       setSubmitting(false);
@@ -63,7 +63,7 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
     setError(undefined);
     try {
       const result = await rotateLogs();
-      await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "日志轮动失败");
       setRotating(false);

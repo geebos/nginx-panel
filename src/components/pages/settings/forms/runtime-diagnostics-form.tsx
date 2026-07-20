@@ -45,7 +45,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setSubmitting(true);
     try {
       const result = await rebuildActiveRuntime(currentPassword);
-      await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "运行配置重建失败");
       setSubmitting(false);
@@ -57,7 +57,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setReloadingTls(true);
     try {
       const result = await reloadManagerTls();
-      await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "管理端 TLS 重新加载失败");
       setReloadingTls(false);
@@ -69,7 +69,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setTestingNginx(true);
     try {
       const result = await runDiagnosticNginxTest();
-      await router.push(`/deployments/${result.deploymentId}`);
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Nginx 配置测试失败");
       setTestingNginx(false);

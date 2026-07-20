@@ -158,12 +158,13 @@ async function assertProductionRoutes(name) {
     "/",
     "/domains",
     "/domains/create",
-    "/domains/domain-1/overview",
-    "/domains/domain-1/ssl/orders/order-1",
-    "/domains/domain-1/versions/version-1",
-    "/domains/domain-1/versions/version-1/diff",
-    "/deployments/deployment-1",
+    "/domains/overview?id=domain-1",
+    "/domains/ssl?id=domain-1&orderId=order-1",
+    "/domains/version?id=domain-1&versionId=version-1",
+    "/domains/version?id=domain-1&versionId=version-1&base=version-0",
+    "/deployments/detail?id=deployment-1",
     "/settings/diagnostics",
+    "/settings/nginx",
   ]) {
     const response = await request({ port: httpsPort, secure: true, path });
     assert.equal(response.status, 200, `${path} should resolve to a static page shell`);
@@ -171,9 +172,9 @@ async function assertProductionRoutes(name) {
   }
 
   const settings = await request({ port: httpsPort, secure: true, path: "/settings" });
-  assert.equal(settings.status, 302);
-  assert.equal(settings.headers.location, "/settings/general");
-  assert.equal((await request({ port: httpsPort, secure: true, path: "/domains/domain-1/not-a-tab" })).status, 404);
+  assert.equal(settings.status, 200);
+  assert.match(settings.headers["content-type"] ?? "", /text\/html/);
+  assert.equal((await request({ port: httpsPort, secure: true, path: "/domains/not-a-section" })).status, 404);
   assert.equal((await request({ port: httpsPort, secure: true, path: "/settings/diagnostics/extra" })).status, 404);
   assert.equal((await request({ port: httpsPort, secure: true, path: "/internal/health" })).status, 404);
   assert.equal((await request({ port: httpsPort, secure: true, path: "/api/health" })).status, 200);

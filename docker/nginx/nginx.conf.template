@@ -77,27 +77,6 @@ http {
       proxy_set_header X-Internal-Health-Check "";
     }
 
-    location = /settings {
-      absolute_redirect off;
-      return 302 /settings/general;
-    }
-
-    location ~ ^/domains/[^/]+/(?:overview|routes|ssl|headers|advanced|logs|history)/?$ {
-      try_files /domains/detail.html =404;
-    }
-
-    location ~ ^/domains/[^/]+/(?:versions/[^/]+(?:/diff)?|ssl/orders/[^/]+)/?$ {
-      try_files /domains/detail.html =404;
-    }
-
-    location ~ ^/deployments/[^/]+/?$ {
-      try_files /deployments/detail.html =404;
-    }
-
-    location ~ ^/settings/[^/]+/?$ {
-      try_files /settings.html =404;
-    }
-
     location / {
       try_files $uri $uri.html $uri/index.html =404;
     }

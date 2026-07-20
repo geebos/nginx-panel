@@ -8,6 +8,8 @@ import {
   RefreshCwIcon,
   ShieldCheckIcon,
 } from "lucide-react";
+import { Page } from "@/components/layout/page";
+import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,12 +22,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader } from "@/components/layout/page-header";
+import { DomainPageActions } from "@/components/pages/domains/domain-page-actions";
+import { DomainTabs } from "@/components/pages/domains/domain-tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { getDomain } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { DomainTabs } from "./domain-tabs";
-import { DomainPageActions } from "./domain-page-actions";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
@@ -35,21 +36,9 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   minute: "2-digit",
 });
 
-function domainIdFromRouter(asPath: string, queryId: string | string[] | undefined) {
-  const match = asPath.match(/^\/domains\/([^/?]+)\//);
-  if (match?.[1] && match[1] !== "detail") return decodeURIComponent(match[1]);
-  return typeof queryId === "string" ? queryId : "";
-}
-
-export function DomainOverview() {
-  const router = useRouter();
-  const domainId = domainIdFromRouter(router.asPath, router.query.id);
+function DomainOverview({ domainId, created }: { domainId: string; created: boolean }) {
   const load = React.useCallback(() => getDomain(domainId), [domainId]);
   const query = useApiQuery(load);
-
-  if (!router.isReady || !domainId) {
-    return <Skeleton className="m-8 h-96" />;
-  }
 
   const domain = query.data?.domain;
   const config = query.data?.config;
@@ -88,7 +77,7 @@ export function DomainOverview() {
       />
       <DomainTabs domainId={domainId} active="overview" />
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 md:px-8">
-        {router.query.created === "1" ? (
+        {created ? (
           <Alert>
             <CheckCreatedIcon />
             <AlertTitle>v1 草稿已创建</AlertTitle>
@@ -234,4 +223,12 @@ export function DomainOverview() {
 
 function CheckCreatedIcon() {
   return <CheckCircle2Icon aria-hidden="true" />;
+}
+
+export default function DomainOverviewPage() {
+  const router = useRouter();
+  const domainId = typeof router.query.id === "string" ? router.query.id : "";
+  const created = router.query.created === "1";
+  if (!router.isReady || !domainId) return <Page className="px-0 pb-16"><Skeleton className="m-8 h-96" /></Page>;
+  return <Page className="px-0 pb-16"><DomainOverview domainId={domainId} created={created} /></Page>;
 }

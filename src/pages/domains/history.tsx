@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { EyeIcon, GitCompareArrowsIcon, HistoryIcon, LoaderCircleIcon, RefreshCwIcon, RotateCcwIcon } from "lucide-react";
+import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -9,21 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DomainTabs } from "@/components/pages/domains/domain-tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { TextDiff } from "@/components/pages/shared/text-diff";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDomain, getDomainVersionDiff, getDomainVersions, rollbackDomainVersion, type ConfigVersionResponse } from "@/lib/api";
-import { DomainTabs } from "./domain-tabs";
-
-function domainIdFromPath(asPath: string) {
-  return decodeURIComponent(asPath.match(/^\/domains\/([^/?]+)\/history/)?.[1] ?? "");
-}
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
-export function DomainHistory() {
+function DomainHistory({ domainId }: { domainId: string }) {
   const router = useRouter();
-  const domainId = domainIdFromPath(router.asPath);
   const load = React.useCallback(async () => {
     const [domain, versions] = await Promise.all([getDomain(domainId), getDomainVersions(domainId)]);
     return { domain, versions: versions.items };
@@ -33,7 +29,6 @@ export function DomainHistory() {
   const [rollbackDiff, setRollbackDiff] = React.useState<Awaited<ReturnType<typeof getDomainVersionDiff>> | null>(null);
   const [rollbackError, setRollbackError] = React.useState("");
   const [rollingBack, setRollingBack] = React.useState(false);
-  if (!router.isReady || !domainId) return <Skeleton className="m-8 h-96" />;
   const domain = query.data?.domain;
   const compareBase = domain?.activeVersion?.id ?? query.data?.versions.at(-1)?.id;
   return (
@@ -41,7 +36,7 @@ export function DomainHistory() {
       <PageHeader
         title={domain?.domain.primaryHostname ?? "History"}
         description="已发布版本不可变；当前 Draft 会原位更新，直到发布后冻结。"
-        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domain?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "History" }]}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domain?.domain.primaryHostname ?? "Domain", href: `/domains/overview?id=${domainId}` }, { label: "History" }]}
         action={<Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button>}
       />
       <DomainTabs domainId={domainId} active="history" />
@@ -50,7 +45,7 @@ export function DomainHistory() {
         {query.loading && !query.data ? <Skeleton className="h-80" /> : query.data?.versions.length ? (
           <div className="rounded-md border border-border bg-card"><Table><TableHeader><TableRow><TableHead>Version</TableHead><TableHead>Status</TableHead><TableHead>Summary</TableHead><TableHead>Created</TableHead><TableHead>Updated</TableHead><TableHead>Checksum</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>
             {query.data.versions.map((version) => (
-              <TableRow key={version.id}><TableCell className="font-mono">v{version.versionNumber}</TableCell><TableCell><StatusBadge status={version.id === domain?.activeVersion?.id ? "active" : version.status} /></TableCell><TableCell>{version.changeSummary}</TableCell><TableCell>{dateFormatter.format(version.createdAt)}</TableCell><TableCell>{dateFormatter.format(version.updatedAt)}</TableCell><TableCell className="max-w-40 truncate font-mono text-xs">{version.snapshotChecksum}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="icon-sm" variant="ghost" asChild><Link href={`/domains/${domainId}/versions/${version.id}`}><EyeIcon /><span className="sr-only">查看 v{version.versionNumber}</span></Link></Button>{compareBase && compareBase !== version.id ? <><Button size="icon-sm" variant="ghost" asChild><Link href={`/domains/${domainId}/versions/${version.id}/diff?base=${compareBase}`}><GitCompareArrowsIcon /><span className="sr-only">比较 v{version.versionNumber}</span></Link></Button>{version.status !== "draft" && version.status !== "failed" ? <Button size="icon-sm" variant="ghost" onClick={() => { setRollbackTarget(version); setRollbackDiff(null); setRollbackError(""); void getDomainVersionDiff(domainId, version.id, compareBase).then((result) => setRollbackDiff(result)).catch((error: Error) => setRollbackError(error.message)); }}><RotateCcwIcon /><span className="sr-only">回滚到 v{version.versionNumber}</span></Button> : null}</> : null}</div></TableCell></TableRow>
+              <TableRow key={version.id}><TableCell className="font-mono">v{version.versionNumber}</TableCell><TableCell><StatusBadge status={version.id === domain?.activeVersion?.id ? "active" : version.status} /></TableCell><TableCell>{version.changeSummary}</TableCell><TableCell>{dateFormatter.format(version.createdAt)}</TableCell><TableCell>{dateFormatter.format(version.updatedAt)}</TableCell><TableCell className="max-w-40 truncate font-mono text-xs">{version.snapshotChecksum}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="icon-sm" variant="ghost" asChild><Link href={`/domains/version?id=${domainId}&versionId=${version.id}`}><EyeIcon /><span className="sr-only">查看 v{version.versionNumber}</span></Link></Button>{compareBase && compareBase !== version.id ? <><Button size="icon-sm" variant="ghost" asChild><Link href={`/domains/version?id=${domainId}&versionId=${version.id}&base=${compareBase}`}><GitCompareArrowsIcon /><span className="sr-only">比较 v{version.versionNumber}</span></Link></Button>{version.status !== "draft" && version.status !== "failed" ? <Button size="icon-sm" variant="ghost" onClick={() => { setRollbackTarget(version); setRollbackDiff(null); setRollbackError(""); void getDomainVersionDiff(domainId, version.id, compareBase).then((result) => setRollbackDiff(result)).catch((error: Error) => setRollbackError(error.message)); }}><RotateCcwIcon /><span className="sr-only">回滚到 v{version.versionNumber}</span></Button> : null}</> : null}</div></TableCell></TableRow>
             ))}
           </TableBody></Table></div>
         ) : <Empty className="min-h-72 border"><EmptyHeader><EmptyMedia variant="icon"><HistoryIcon /></EmptyMedia><EmptyTitle>没有配置版本</EmptyTitle><EmptyDescription>创建 Domain 后会生成可编辑草稿，发布后成为不可变版本。</EmptyDescription></EmptyHeader></Empty>}
@@ -68,7 +63,7 @@ export function DomainHistory() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={rollingBack}>取消</AlertDialogCancel>
-            <AlertDialogAction disabled={rollingBack || !rollbackDiff || Boolean(rollbackError)} onClick={(event) => { event.preventDefault(); if (!rollbackTarget) return; setRollingBack(true); setRollbackError(""); void rollbackDomainVersion(domainId, rollbackTarget.id).then((result) => router.push(`/deployments/${result.deploymentId}`)).catch((error: Error) => { setRollbackError(error.message); setRollingBack(false); }); }}>
+            <AlertDialogAction disabled={rollingBack || !rollbackDiff || Boolean(rollbackError)} onClick={(event) => { event.preventDefault(); if (!rollbackTarget) return; setRollingBack(true); setRollbackError(""); void rollbackDomainVersion(domainId, rollbackTarget.id).then((result) => router.push(`/deployments/detail?id=${result.deploymentId}`)).catch((error: Error) => { setRollbackError(error.message); setRollingBack(false); }); }}>
               {rollingBack ? <LoaderCircleIcon className="animate-spin" /> : <RotateCcwIcon />}确认回滚
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -76,4 +71,11 @@ export function DomainHistory() {
       </AlertDialog>
     </>
   );
+}
+
+export default function DomainHistoryPage() {
+  const router = useRouter();
+  const domainId = typeof router.query.id === "string" ? router.query.id : "";
+  if (!router.isReady || !domainId) return <Page className="px-0 pb-16"><Skeleton className="m-8 h-96" /></Page>;
+  return <Page className="px-0 pb-16"><DomainHistory domainId={domainId} /></Page>;
 }

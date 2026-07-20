@@ -36,7 +36,7 @@ export const navItems: NavItem[] = [
   { title: "Certificates", href: "/certificates", icon: ShieldCheckIcon },
   { title: "Deployments", href: "/deployments", icon: RocketIcon },
   { title: "Logs", href: "/logs", icon: FileTextIcon },
-  { title: "Settings", href: "/settings", icon: SettingsIcon },
+  { title: "Settings", href: "/settings/nginx", icon: SettingsIcon },
 ];
 
 // `useRouter().pathname` returns the route without a trailing slash (e.g. "/buttons"),

@@ -13,12 +13,6 @@ import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDeployment } from "@/lib/api";
 
-function deploymentIdFromPath(asPath: string, queryId: string | string[] | undefined) {
-  const match = asPath.match(/^\/deployments\/([^/?]+)/);
-  if (match?.[1] && match[1] !== "detail") return decodeURIComponent(match[1]);
-  return typeof queryId === "string" ? queryId : "";
-}
-
 function StepIcon({ status }: { status: string }) {
   if (status === "succeeded") return <CheckCircle2Icon className="text-foreground" />;
   if (status === "failed") return <XCircleIcon className="text-destructive" />;
@@ -28,7 +22,7 @@ function StepIcon({ status }: { status: string }) {
 
 export default function DeploymentDetailPage() {
   const router = useRouter();
-  const deploymentId = deploymentIdFromPath(router.asPath, router.query.id);
+  const deploymentId = typeof router.query.id === "string" ? router.query.id : "";
   const load = React.useCallback(() => getDeployment(deploymentId), [deploymentId]);
   const query = useApiQuery(load);
   const refresh = query.refresh;
@@ -48,7 +42,7 @@ export default function DeploymentDetailPage() {
         title={<span className="flex flex-wrap items-center gap-3">Deployment <span className="font-mono text-lg">{deploymentId.slice(0, 8)}</span>{deployment ? <StatusBadge status={deployment.status} /> : null}</span>}
         description={deployment ? `${deployment.type} · ${deployment.configVersionId ? `Version ${deployment.configVersionId.slice(0, 8)}` : "Global task"}` : "读取任务状态。"}
         breadcrumbs={[{ label: "Deployments", href: "/deployments" }, { label: deploymentId.slice(0, 8) }]}
-        action={deployment?.domainId ? <Button size="sm" variant="outline" asChild><Link href={`/domains/${deployment.domainId}/overview`}>返回 Domain</Link></Button> : undefined}
+        action={deployment?.domainId ? <Button size="sm" variant="outline" asChild><Link href={`/domains/overview?id=${deployment.domainId}`}>返回 Domain</Link></Button> : undefined}
       />
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>任务加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}

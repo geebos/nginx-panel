@@ -160,7 +160,7 @@ export function DomainForm() {
 
     try {
       const result = await createDomain({ config });
-      await router.push(`/domains/${result.domainId}/overview?created=1`);
+      await router.push(`/domains/overview?id=${result.domainId}&created=1`);
     } catch (error) {
       if (error instanceof ApiError) {
         setServerError(error.message);

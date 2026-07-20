@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { ArrowLeftIcon } from "lucide-react";
+import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -17,33 +18,25 @@ type VersionPageData =
   | Awaited<ReturnType<typeof getDomainVersion>>
   | Awaited<ReturnType<typeof getDomainVersionDiff>>;
 
-function idsFromPath(asPath: string) {
-  const match = asPath.match(/^\/domains\/([^/?]+)\/versions\/([^/?]+)(\/diff)?/);
-  return { domainId: match?.[1] ? decodeURIComponent(match[1]) : "", versionId: match?.[2] ? decodeURIComponent(match[2]) : "", diff: Boolean(match?.[3]) };
-}
-
 function CodePanel({ value }: { value: string }) {
   return <pre className="max-h-[60dvh] overflow-auto rounded-lg border border-border bg-muted/30 p-4 font-mono text-xs whitespace-pre">{value}</pre>;
 }
 
-export function DomainVersion() {
-  const router = useRouter();
-  const ids = idsFromPath(router.asPath);
-  const baseId = typeof router.query.base === "string" ? router.query.base : "";
-  const load = React.useCallback(async (): Promise<VersionPageData> => ids.diff ? getDomainVersionDiff(ids.domainId, ids.versionId, baseId) : getDomainVersion(ids.domainId, ids.versionId), [baseId, ids.diff, ids.domainId, ids.versionId]);
+function DomainVersion({ domainId, versionId, base }: { domainId: string; versionId: string; base: string }) {
+  const isDiff = Boolean(base);
+  const load = React.useCallback(async (): Promise<VersionPageData> => isDiff ? getDomainVersionDiff(domainId, versionId, base) : getDomainVersion(domainId, versionId), [base, isDiff, domainId, versionId]);
   const query = useApiQuery<VersionPageData>(load);
-  const domainLoad = React.useCallback(() => getDomain(ids.domainId), [ids.domainId]);
+  const domainLoad = React.useCallback(() => getDomain(domainId), [domainId]);
   const domainQuery = useApiQuery(domainLoad);
-  if (!router.isReady || !ids.domainId || !ids.versionId || (ids.diff && !baseId)) return <Skeleton className="m-8 h-96" />;
-  const diff = ids.diff && query.data && "changes" in query.data ? query.data : null;
-  const detail = !ids.diff && query.data && "nginxPreview" in query.data ? query.data : null;
+  const diff = isDiff && query.data && "changes" in query.data ? query.data : null;
+  const detail = !isDiff && query.data && "nginxPreview" in query.data ? query.data : null;
   return (
     <>
       <PageHeader
         title={diff ? `Compare v${diff.base.versionNumber} and v${diff.target.versionNumber}` : detail ? `Version v${detail.version.versionNumber}` : "Version"}
         description={diff ? `${diff.changes.length} 项语义变化` : detail ? `${detail.version.changeSummary}。${detail.version.status === "draft" ? "当前草稿可继续编辑" : "该已发布快照不可变"}` : "读取配置快照。"}
-        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domainQuery.data?.domain.primaryHostname ?? "Domain", href: `/domains/${ids.domainId}/overview` }, { label: "History", href: `/domains/${ids.domainId}/history` }, { label: ids.diff ? "Diff" : "Version" }]}
-        action={<Button size="sm" variant="outline" asChild><Link href={`/domains/${ids.domainId}/history`}><ArrowLeftIcon data-icon="inline-start" />返回历史</Link></Button>}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domainQuery.data?.domain.primaryHostname ?? "Domain", href: `/domains/overview?id=${domainId}` }, { label: "History", href: `/domains/history?id=${domainId}` }, { label: isDiff ? "Diff" : "Version" }]}
+        action={<Button size="sm" variant="outline" asChild><Link href={`/domains/history?id=${domainId}`}><ArrowLeftIcon data-icon="inline-start" />返回历史</Link></Button>}
       />
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>版本加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
@@ -58,4 +51,13 @@ export function DomainVersion() {
       </div>
     </>
   );
+}
+
+export default function DomainVersionPage() {
+  const router = useRouter();
+  const domainId = typeof router.query.id === "string" ? router.query.id : "";
+  const versionId = typeof router.query.versionId === "string" ? router.query.versionId : "";
+  const base = typeof router.query.base === "string" ? router.query.base : "";
+  if (!router.isReady || !domainId || !versionId) return <Page className="px-0 pb-16"><Skeleton className="m-8 h-96" /></Page>;
+  return <Page className="px-0 pb-16"><DomainVersion domainId={domainId} versionId={versionId} base={base} /></Page>;
 }

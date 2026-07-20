@@ -183,7 +183,7 @@ export function DashboardContent() {
                       {query.data.certificates.expiring + query.data.certificates.failed + query.data.certificates.waitingManual}
                     </span>
                   </div>
-                  {query.data.certificates.waitingManual ? <Alert><AlertTitle>Manual DNS 续期等待处理</AlertTitle><AlertDescription className="flex flex-col items-start gap-2"><span>{query.data.certificates.waitingManual} 个续期订单正在等待 TXT 记录。</span>{query.data.renewalAttention.map((item) => <Button asChild size="sm" variant="outline" key={item.orderId}><Link href={`/domains/${item.domainId}/ssl/orders/${item.orderId}`}>{item.hostname}</Link></Button>)}</AlertDescription></Alert> : null}
+                  {query.data.certificates.waitingManual ? <Alert><AlertTitle>Manual DNS 续期等待处理</AlertTitle><AlertDescription className="flex flex-col items-start gap-2"><span>{query.data.certificates.waitingManual} 个续期订单正在等待 TXT 记录。</span>{query.data.renewalAttention.map((item) => <Button asChild size="sm" variant="outline" key={item.orderId}><Link href={`/domains/ssl?id=${item.domainId}&orderId=${item.orderId}`}>{item.hostname}</Link></Button>)}</AlertDescription></Alert> : null}
                 </CardContent>
               </Card>
 
@@ -198,7 +198,7 @@ export function DashboardContent() {
                       {query.data.recentDeployments.map((deployment) => (
                         <Link
                           className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0"
-                          href={`/deployments/${deployment.id}`}
+                          href={`/deployments/detail?id=${deployment.id}`}
                           key={deployment.id}
                         >
                           <div className="min-w-0">
@@ -246,7 +246,7 @@ export function DashboardContent() {
                       {query.data.recentDomains.map((domain) => (
                         <TableRow key={domain.id}>
                           <TableCell>
-                            <Link className="font-medium hover:underline" href={`/domains/${domain.id}/overview`}>
+                            <Link className="font-medium hover:underline" href={`/domains/overview?id=${domain.id}`}>
                               {domain.primaryHostname}
                             </Link>
                           </TableCell>

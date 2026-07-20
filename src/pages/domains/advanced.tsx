@@ -1,29 +1,23 @@
 import * as React from "react";
-import { toast } from "sonner";
 import { useRouter } from "next/router";
+import { toast } from "sonner";
 import { BracesIcon, RefreshCwIcon, SaveIcon, WandSparklesIcon } from "lucide-react";
+import { Page } from "@/components/layout/page";
+import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { PageHeader } from "@/components/layout/page-header";
+import { DomainPageActions } from "@/components/pages/domains/domain-page-actions";
+import { DomainTabs } from "@/components/pages/domains/domain-tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { ApiError, createConfigVersion, getDomain } from "@/lib/api";
 import { advancedDirectiveNames, parseAdvancedSnippet } from "@/shared/schemas";
-import { DomainTabs } from "./domain-tabs";
-import { DomainPageActions } from "./domain-page-actions";
 
-function domainIdFromPath(asPath: string) {
-  const match = asPath.match(/^\/domains\/([^/?]+)\/advanced/);
-  return match?.[1] ? decodeURIComponent(match[1]) : "";
-}
-
-export function DomainAdvanced() {
-  const router = useRouter();
-  const domainId = domainIdFromPath(router.asPath);
+function DomainAdvanced({ domainId }: { domainId: string }) {
   const load = React.useCallback(() => getDomain(domainId), [domainId]);
   const query = useApiQuery(load);
   const [snippetOverride, setSnippetOverride] = React.useState<string | null>(null);
@@ -65,8 +59,6 @@ export function DomainAdvanced() {
     }
   };
 
-  if (!router.isReady || !domainId) return <Skeleton className="m-8 h-96" />;
-
   const dirty = Boolean(config && snippetOverride !== null && snippet !== config.advanced.serverSnippet);
 
   return (
@@ -74,7 +66,7 @@ export function DomainAdvanced() {
       <PageHeader
         title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : "Advanced"}
         description="补充可视化表单尚未覆盖的少量 server 指令。"
-        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` }, { label: "Advanced" }]}
+        breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/overview?id=${domainId}` }, { label: "Advanced" }]}
         action={<><Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing || dirty}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button><DomainPageActions domainId={domainId} data={data} dirty={dirty} /><Button size="sm" onClick={() => void save()} disabled={!dirty || submitting}><SaveIcon data-icon="inline-start" />{submitting ? "保存中" : "保存草稿"}</Button></>}
       />
       <DomainTabs domainId={domainId} active="advanced" />
@@ -107,4 +99,11 @@ export function DomainAdvanced() {
       </div>
     </>
   );
+}
+
+export default function DomainAdvancedPage() {
+  const router = useRouter();
+  const domainId = typeof router.query.id === "string" ? router.query.id : "";
+  if (!router.isReady || !domainId) return <Page className="px-0 pb-16"><Skeleton className="m-8 h-96" /></Page>;
+  return <Page className="px-0 pb-16"><DomainAdvanced domainId={domainId} /></Page>;
 }

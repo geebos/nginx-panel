@@ -25,7 +25,7 @@ export function DomainTabs({ domainId, active }: { domainId: string; active: str
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
-              href={`/domains/${domainId}/${tab.slug}`}
+              href={`/domains/${tab.slug}?id=${domainId}`}
               key={tab.slug}
             >
               {tab.label}

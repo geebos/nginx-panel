@@ -1,7 +1,9 @@
 import * as React from "react";
-import { toast } from "sonner";
 import { useRouter } from "next/router";
+import { toast } from "sonner";
 import { CopyIcon, NetworkIcon, PencilIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
+import { Page } from "@/components/layout/page";
+import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -10,28 +12,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageHeader } from "@/components/layout/page-header";
-import { DomainTabs } from "./domain-tabs";
-import { RouteForm } from "./forms/route-form";
+import { DomainPageActions } from "@/components/pages/domains/domain-page-actions";
+import { DomainTabs } from "@/components/pages/domains/domain-tabs";
+import { RouteForm } from "@/components/pages/domains/forms/route-form";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { ApiError, createConfigVersion, getDomain } from "@/lib/api";
 import type { RouteConfig } from "@/shared/schemas";
-import { DomainPageActions } from "./domain-page-actions";
-
-function domainIdFromPath(asPath: string) {
-  const match = asPath.match(/^\/domains\/([^/?]+)\/routes/);
-  return match?.[1] ? decodeURIComponent(match[1]) : "";
-}
 
 function routeTarget(route: RouteConfig) {
   if (route.type === "static") return route.root;
   return route.target;
 }
 
-export function DomainRoutes() {
-  const router = useRouter();
-  const domainId = domainIdFromPath(router.asPath);
+function DomainRoutes({ domainId }: { domainId: string }) {
   const load = React.useCallback(() => getDomain(domainId), [domainId]);
   const query = useApiQuery(load);
   const [editing, setEditing] = React.useState<RouteConfig | "new" | null>(null);
@@ -59,8 +53,6 @@ export function DomainRoutes() {
     }
   };
 
-  if (!router.isReady || !domainId) return <Skeleton className="m-8 h-96" />;
-
   return (
     <>
       <PageHeader
@@ -68,7 +60,7 @@ export function DomainRoutes() {
         description="编辑 server 下的普通前缀 location。未发布草稿会原位更新。"
         breadcrumbs={[
           { label: "Domains", href: "/domains" },
-          { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/${domainId}/overview` },
+          { label: data?.domain.primaryHostname ?? "Domain", href: `/domains/overview?id=${domainId}` },
           { label: "Routes" },
         ]}
         action={
@@ -116,9 +108,16 @@ export function DomainRoutes() {
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>删除路由 {deleting?.path}？</AlertDialogTitle><AlertDialogDescription>删除会更新当前草稿，线上配置不会立即改变。</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => { if (!deleting || !config) return; void saveRoutes(config.routes.filter((item) => item.id !== deleting.id)).then(() => setDeleting(null)); }}>删除路由</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => { if (!deleting || !config) return; void saveRoutes(config.routes.filter((item) => item.id === deleting.id)).then(() => setDeleting(null)); }}>删除路由</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
+}
+
+export default function DomainRoutesPage() {
+  const router = useRouter();
+  const domainId = typeof router.query.id === "string" ? router.query.id : "";
+  if (!router.isReady || !domainId) return <Page className="px-0 pb-16"><Skeleton className="m-8 h-96" /></Page>;
+  return <Page className="px-0 pb-16"><DomainRoutes domainId={domainId} /></Page>;
 }

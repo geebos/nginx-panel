@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { drainWorker } from "./graceful-shutdown";
-import { resetServiceLifecycleForTests } from "./service-lifecycle";
+import { drainWorker } from "@/worker/lib/graceful-shutdown";
+import { resetServiceLifecycleForTests } from "@/worker/lib/service-lifecycle";
 
 test("worker drain stops producers, ends streams, waits for work, then closes the server", async (t) => {
   resetServiceLifecycleForTests();

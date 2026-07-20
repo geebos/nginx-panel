@@ -1,4 +1,4 @@
-import { beginServiceShutdown } from "./service-lifecycle";
+import { beginServiceShutdown } from "@/worker/lib/service-lifecycle";
 
 export type DrainableServer = {
   close: (callback: (error?: Error) => void) => void;

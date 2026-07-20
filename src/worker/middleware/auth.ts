@@ -4,7 +4,7 @@ import { createMiddleware } from "hono/factory";
 import { sessions, users } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { hashSessionToken, SESSION_COOKIE } from "@/worker/lib/auth";
-import { managerUrl } from "@/worker/lib/runtime-env";
+import { managerUrl } from "@/worker/lib/runtime/env";
 
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   const token = getCookie(c, SESSION_COOKIE);

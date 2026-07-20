@@ -1,4 +1,4 @@
-import settings from "./settings.json";
+import settings from "@/i18n/settings.json";
 
 const LOCALES = ["en", "zh-CN"] as const;
 

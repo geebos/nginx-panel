@@ -1,6 +1,6 @@
 import type { Env, ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { BusinessError } from "../lib/errors";
+import { BusinessError } from "@/worker/lib/errors";
 
 export function createErrorHandler<E extends Env>(): ErrorHandler<E> {
   return (err, c) => {

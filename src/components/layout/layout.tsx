@@ -6,7 +6,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage } from "@/hooks/use-storage";
-import { Sidebar, Tabbar } from "./navigate";
+import { Sidebar, Tabbar } from "@/components/layout/navigate";
 
 // Collapsed sidebar shows icon stacked over smaller label, so it needs more
 // width than shadcn's default 3rem (which only fits a square icon).

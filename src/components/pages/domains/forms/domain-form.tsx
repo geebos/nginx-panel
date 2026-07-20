@@ -23,9 +23,9 @@ import { hostnameSchema, type DomainConfig, type RouteConfig } from "@/shared/sc
 import { ApiError, createDomain } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
-import { formatErrorMessage, formatMessageKey } from "@/lib/i18n-error";
-import { localizePath } from "@/lib/i18n-utils";
-import { localizedZodResolver } from "@/lib/i18n-form";
+import { formatErrorMessage, formatMessageKey } from "@/lib/i18n/error";
+import { localizePath } from "@/lib/i18n/utils";
+import { localizedZodResolver } from "@/lib/i18n/form";
 
 function buildFormSchema(t: TFunction) {
   return z

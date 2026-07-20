@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
@@ -12,12 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { DomainPageActions } from "@/components/pages/domains/domain-page-actions";
-import { DomainTabs } from "@/components/pages/domains/domain-tabs";
+import { DomainPageActions } from "@/components/pages/domains/page-actions";
+import { DomainTabs } from "@/components/pages/domains/tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createConfigVersion, getDomain } from "@/lib/api";
-import { formatErrorMessage } from "@/lib/i18n-error";
+import { formatErrorMessage } from "@/lib/i18n/error";
 import { advancedDirectiveNames, parseAdvancedSnippet } from "@/shared/schemas";
 
 function DomainAdvanced({ domainId }: { domainId: string }) {

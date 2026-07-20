@@ -1,20 +1,20 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import type { AppEnv } from "@/worker/types";
-import { healthRoute, internalHealthRoute } from "./routes/health";
-import { dashboardRoute } from "./routes/dashboard";
-import { domainsRoute } from "./routes/domains";
-import { authRoute } from "./routes/auth";
-import { versionsRoute } from "./routes/versions";
-import { deploymentsRoute } from "./routes/deployments";
-import { logsRoute } from "./routes/logs";
-import { settingsRoute } from "./routes/settings";
-import { acmeChallengeRoute, certificatesRoute } from "./routes/certificates";
-import { requireAuth, requireSameOrigin } from "./middleware/auth";
-import { createErrorHandler } from "./middleware/error";
-import { i18nRoute } from "./routes/i18n";
-import { createDbMiddleware } from "./middleware/db";
-import { assertAcceptingWrites } from "./lib/service-lifecycle";
+import { healthRoute, internalHealthRoute } from "@/worker/routes/health";
+import { dashboardRoute } from "@/worker/routes/dashboard";
+import { domainsRoute } from "@/worker/routes/domains";
+import { authRoute } from "@/worker/routes/auth";
+import { versionsRoute } from "@/worker/routes/versions";
+import { deploymentsRoute } from "@/worker/routes/deployments";
+import { logsRoute } from "@/worker/routes/logs";
+import { settingsRoute } from "@/worker/routes/settings";
+import { acmeChallengeRoute, certificatesRoute } from "@/worker/routes/certificates";
+import { requireAuth, requireSameOrigin } from "@/worker/middleware/auth";
+import { createErrorHandler } from "@/worker/middleware/error";
+import { i18nRoute } from "@/worker/routes/i18n";
+import { createDbMiddleware } from "@/worker/middleware/db";
+import { assertAcceptingWrites } from "@/worker/lib/service-lifecycle";
 
 // 构建 Hono app。Node 入口（serve.ts）复用此构造，
 // 保证中间件/路由挂载一致。

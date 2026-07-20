@@ -14,11 +14,11 @@ import {
   domainConfigSchema,
   domains,
 } from "@/shared/schemas";
-import { retryCertificateActivation } from "@/worker/acme/activation";
-import { cleanupCloudflareOrder } from "@/worker/acme/cloudflare-cleanup";
-import { createRenewalOrder } from "@/worker/acme/renewal";
-import { decryptCloudflareToken } from "@/worker/cloudflare/credentials";
-import { getCloudflareDnsProvider } from "@/worker/cloudflare/dns";
+import { retryCertificateActivation } from "@/worker/lib/acme/activation";
+import { cleanupCloudflareOrder } from "@/worker/lib/acme/cloudflare-cleanup";
+import { createRenewalOrder } from "@/worker/lib/acme/renewal";
+import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
+import { getCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { BusinessError } from "@/worker/lib/errors";
 import { jsonValidator } from "@/worker/lib/validator";
 import type { AppEnv } from "@/worker/types";

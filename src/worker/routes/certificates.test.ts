@@ -8,9 +8,9 @@ import { Hono } from "hono";
 import * as schema from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { createSnapshot } from "@/worker/lib/snapshot";
-import { assertHostnamesMutable } from "@/worker/lib/domain-validation";
+import { assertHostnamesMutable } from "@/worker/lib/domain/validation";
 import { createErrorHandler } from "@/worker/middleware/error";
-import { acmeChallengeRoute, certificatesRoute } from "./certificates";
+import { acmeChallengeRoute, certificatesRoute } from "@/worker/routes/certificates";
 
 function fixture() {
   const connection = new Database(":memory:");

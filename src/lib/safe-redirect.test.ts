@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { safeRedirectPath } from "./safe-redirect";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
 test("safe redirect accepts local paths and rejects normalized external paths", () => {
   assert.equal(safeRedirectPath("/domains/example.com"), "/domains/example.com");

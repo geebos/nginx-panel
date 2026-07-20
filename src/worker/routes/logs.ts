@@ -6,13 +6,13 @@ import { domains, logQuerySchema, logRotationRequestSchema, logStreamQuerySchema
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { jsonValidator, queryValidator } from "@/worker/lib/validator";
-import { logStreamCapacity } from "@/worker/logs/capacity";
-import { encodeLogCursor } from "@/worker/logs/cursor";
-import { followLogFiles } from "@/worker/logs/follower";
-import { matchesLogFilters, parseLogLine } from "@/worker/logs/parser";
-import { controlledLogPath } from "@/worker/logs/path";
-import { readLastLines } from "@/worker/logs/reader";
-import { createLogRotationDeployment, enqueueLogRotation } from "@/worker/logs/rotator";
+import { logStreamCapacity } from "@/worker/lib/logs/capacity";
+import { encodeLogCursor } from "@/worker/lib/logs/cursor";
+import { followLogFiles } from "@/worker/lib/logs/follower";
+import { matchesLogFilters, parseLogLine } from "@/worker/lib/logs/parser";
+import { controlledLogPath } from "@/worker/lib/logs/path";
+import { readLastLines } from "@/worker/lib/logs/reader";
+import { createLogRotationDeployment, enqueueLogRotation } from "@/worker/lib/logs/rotator";
 import { assertAcceptingLogStreams, registerLogStream } from "@/worker/lib/service-lifecycle";
 
 export const logsRoute = new Hono<AppEnv>();

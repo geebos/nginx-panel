@@ -15,7 +15,7 @@ import {
   PREFERRED_LOCALE_KEY,
   SUPPORTED_LOCALES,
 } from "@/i18n/settings";
-import { replacePathLocale } from "@/lib/i18n-utils";
+import { replacePathLocale } from "@/lib/i18n/utils";
 
 export function LanguageSwitcher({
   collapsed = false,

@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
@@ -12,14 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DomainTabs } from "@/components/pages/domains/domain-tabs";
+import { DomainTabs } from "@/components/pages/domains/tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { TextDiff } from "@/components/pages/shared/text-diff";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n-utils";
+import { localizePath } from "@/lib/i18n/utils";
 import { getDomain, getDomainVersionDiff, getDomainVersions, rollbackDomainVersion, type ConfigVersionResponse } from "@/lib/api";
-import { formatErrorMessage } from "@/lib/i18n-error";
+import { formatErrorMessage } from "@/lib/i18n/error";
 
 function DomainHistory({ domainId }: { domainId: string }) {
   const { t } = useTranslation(["common", "domains"]);

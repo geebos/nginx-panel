@@ -10,7 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { sslConfigSchema, type DomainConfig } from "@/shared/schemas";
 import type { CloudflareCredentialSummary } from "@/lib/api";
-import { formatMessageKey, zodIssueParams } from "@/lib/i18n-error";
+import { formatMessageKey, zodIssueParams } from "@/lib/i18n/error";
 
 type SslConfig = DomainConfig["ssl"];
 

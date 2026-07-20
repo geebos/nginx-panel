@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/api";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n-utils";
+import { localizePath } from "@/lib/i18n/utils";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();

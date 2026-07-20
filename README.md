@@ -99,7 +99,7 @@ pnpm db:generate    # 生成 Drizzle 迁移（drizzle-kit generate）
 后端使用 better-sqlite3 本地文件库，Drizzle ORM 访问，schema 共享于 `src/shared/schemas/`。
 
 - **read-your-writes**：单写者文件库，同进程内写后立即可读。
-- **受影响行数**：better-sqlite3 的 `result.changes`，统一用 `src/worker/db/engine.ts` 的 `affectedRows()` 读取。
+- **受影响行数**：better-sqlite3 的 `result.changes`，统一用 `src/worker/lib/db/engine.ts` 的 `affectedRows()` 读取。
 - **打包隔离**：`better-sqlite3`、`node:fs`、`node:path` 均动态 import。
 
 数据文件落在 `./.sqlite/app.db`（已加入 `.gitignore`）；由 `DB_SQLITE_DIR` 指定目录，`PORT` 可覆盖默认 8787 端口。

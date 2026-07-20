@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import type { NginxSettingsResponse } from "@/lib/api";
 import { updateNginxSettings } from "@/lib/api";
 import { useLocale } from "@/hooks/use-locale";
-import { formatErrorMessage, formatMessageKey } from "@/lib/i18n-error";
+import { formatErrorMessage, formatMessageKey } from "@/lib/i18n/error";
 import { runtimeStorageSettingsSchema } from "@/shared/schemas";
 
 const MIB = 1024 * 1024;

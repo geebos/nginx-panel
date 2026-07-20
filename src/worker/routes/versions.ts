@@ -13,14 +13,14 @@ import {
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { createSnapshot } from "@/worker/lib/snapshot";
-import { diffDomainConfigs } from "@/worker/lib/domain-diff";
-import { renderDomainPreview } from "@/worker/lib/nginx-config";
-import { createConfigTestDeployment, runConfigTest } from "@/worker/lib/config-test-runner";
+import { diffDomainConfigs } from "@/worker/lib/domain/diff";
+import { renderDomainPreview } from "@/worker/lib/nginx/config";
+import { createConfigTestDeployment, runConfigTest } from "@/worker/lib/deployment/config-test";
 import { jsonValidator } from "@/worker/lib/validator";
-import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain-validation";
-import { rethrowWriteConflict } from "@/worker/lib/constraint-conflict";
-import { saveDraftVersion } from "@/worker/lib/draft-version";
-import { createPublishDeployment, createRollbackDeployment, enqueuePublish } from "@/worker/lib/deployment-runner";
+import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain/validation";
+import { rethrowWriteConflict } from "@/worker/lib/domain/constraint-conflict";
+import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
+import { createPublishDeployment, createRollbackDeployment, enqueuePublish } from "@/worker/lib/deployment/runner";
 
 async function domainOrThrow(db: AppEnv["Variables"]["db"], id: string) {
   const domain = await db.query.domains.findFirst({ where: and(eq(domains.id, id), isNull(domains.deletedAt)) });

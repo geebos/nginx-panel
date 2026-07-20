@@ -4,8 +4,8 @@ import test from "node:test";
 import { Hono } from "hono";
 import type { AppEnv } from "@/worker/types";
 import { resetServiceLifecycleForTests, startJobRunnerHeartbeat } from "@/worker/lib/service-lifecycle";
-import { setRuntimeState } from "@/worker/lib/runtime-state";
-import { createHealthRoutes } from "./health";
+import { setRuntimeState } from "@/worker/lib/runtime/state";
+import { createHealthRoutes } from "@/worker/routes/health";
 
 function requestBindings(remoteAddress: string): AppEnv["Bindings"] {
   return { incoming: { socket: { remoteAddress } } as unknown as IncomingMessage };

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { consumeNdjsonStream } from "./log-stream";
+import { consumeNdjsonStream } from "@/lib/log-stream";
 
 test("NDJSON consumer preserves split UTF-8 records and skips malformed lines", async () => {
   const encoder = new TextEncoder();

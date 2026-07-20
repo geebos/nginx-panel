@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import { useTranslation } from "react-i18next";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";

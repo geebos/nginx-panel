@@ -2,8 +2,8 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import type { AppEnv } from "@/worker/types";
 import { getServiceLifecycle } from "@/worker/lib/service-lifecycle";
-import { getRuntimeState, setRuntimeState, type RuntimeState } from "@/worker/lib/runtime-state";
-import { verifyRuntime } from "@/worker/lib/runtime-verifier";
+import { getRuntimeState, setRuntimeState, type RuntimeState } from "@/worker/lib/runtime/state";
+import { verifyRuntime } from "@/worker/lib/runtime/verifier";
 import { deployments } from "@/shared/schemas";
 
 type HealthDependencies = {

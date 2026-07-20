@@ -1,20 +1,20 @@
 import { serve } from "@hono/node-server";
-import { createApp } from "./index";
-import { validateRuntimeEnv } from "./lib/runtime-env";
-import { getSqliteDb } from "./db/engine";
-import { startLogRotationScheduler } from "./logs/rotator";
-import { setRuntimeState } from "./lib/runtime-state";
-import { verifyRuntime } from "./lib/runtime-verifier";
-import { resumeQueuedDeployments } from "./lib/deployment-resume";
-import { persistAcmeShutdownState, startAcmeScheduler, waitForAcmeScheduler } from "./acme/scheduler";
-import { startCertificateActivationCoordinator, waitForCertificateActivationCoordinator } from "./acme/activation";
-import { startRenewalScheduler, waitForRenewalScheduler } from "./acme/renewal";
-import { cleanupRuntimeStorage, startRuntimeStorageScheduler } from "./lib/runtime-storage";
-import { startJobRunnerHeartbeat } from "./lib/service-lifecycle";
-import { drainWorker, type DrainableServer } from "./lib/graceful-shutdown";
-import { waitForRuntimeOperations } from "./lib/deployment-runner";
-import { waitForConfigTests } from "./lib/config-test-runner";
-import { interruptRunningDeployments } from "./lib/deployment-recovery";
+import { createApp } from "@/worker/index";
+import { validateRuntimeEnv } from "@/worker/lib/runtime/env";
+import { getSqliteDb } from "@/worker/lib/db/engine";
+import { startLogRotationScheduler } from "@/worker/lib/logs/rotator";
+import { setRuntimeState } from "@/worker/lib/runtime/state";
+import { verifyRuntime } from "@/worker/lib/runtime/verifier";
+import { resumeQueuedDeployments } from "@/worker/lib/deployment/resume";
+import { persistAcmeShutdownState, startAcmeScheduler, waitForAcmeScheduler } from "@/worker/lib/acme/scheduler";
+import { startCertificateActivationCoordinator, waitForCertificateActivationCoordinator } from "@/worker/lib/acme/activation";
+import { startRenewalScheduler, waitForRenewalScheduler } from "@/worker/lib/acme/renewal";
+import { cleanupRuntimeStorage, startRuntimeStorageScheduler } from "@/worker/lib/runtime/storage";
+import { startJobRunnerHeartbeat } from "@/worker/lib/service-lifecycle";
+import { drainWorker, type DrainableServer } from "@/worker/lib/graceful-shutdown";
+import { waitForRuntimeOperations } from "@/worker/lib/deployment/runner";
+import { waitForConfigTests } from "@/worker/lib/deployment/config-test";
+import { interruptRunningDeployments } from "@/worker/lib/deployment/recovery";
 
 // Node 运行时入口（@hono/node-server）。
 // better-sqlite3 本地文件库；启动方式：DB_SQLITE_DIR=./.sqlite pnpm dev:worker

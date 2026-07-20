@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import { Page } from "@/components/layout/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoginForm } from "@/components/pages/login/forms/login-form";

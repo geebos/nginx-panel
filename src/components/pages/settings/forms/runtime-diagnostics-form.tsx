@@ -14,8 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getActiveRuntimeConfig, getDomains, rebuildActiveRuntime, reloadManagerTls, runDiagnosticNginxTest, type ActiveRuntimeConfig, type RuntimeDiagnostics } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { formatErrorMessage, formatMessageKey } from "@/lib/i18n-error";
-import { localizePath } from "@/lib/i18n-utils";
+import { formatErrorMessage, formatMessageKey } from "@/lib/i18n/error";
+import { localizePath } from "@/lib/i18n/utils";
 
 function formatBytes(value: number | null, notAvailable: string) {
   if (value === null) return notAvailable;

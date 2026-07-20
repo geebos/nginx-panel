@@ -2,7 +2,7 @@ import * as React from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { Controller, useForm } from "react-hook-form";
-import { localizedZodResolver } from "@/lib/i18n-form";
+import { localizedZodResolver } from "@/lib/i18n/form";
 import { z } from "zod";
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon, LockKeyholeIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,12 +24,12 @@ import {
 } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser, getSetupStatus, login, setupAdmin } from "@/lib/api";
-import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n-error";
+import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n/error";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { passwordSchema, usernameSchema } from "@/shared/schemas";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n-utils";
+import { localizePath } from "@/lib/i18n/utils";
 
 export function LoginForm() {
   const { t } = useTranslation(["common", "login"]);

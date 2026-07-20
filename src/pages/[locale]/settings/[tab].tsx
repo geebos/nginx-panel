@@ -4,7 +4,7 @@ import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
-import { SettingsTabs } from "@/components/pages/settings/settings-tabs";
+import { SettingsTabs } from "@/components/pages/settings/tabs";
 import { LogSettingsForm } from "@/components/pages/settings/forms/log-settings-form";
 import { RuntimeDiagnosticsForm } from "@/components/pages/settings/forms/runtime-diagnostics-form";
 import { SecuritySettingsForm } from "@/components/pages/settings/forms/security-settings-form";
@@ -15,9 +15,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createCloudflareCredential, deleteCloudflareCredential, getCloudflareCredentials, getLogSettings, getNginxSettings, getRuntimeDiagnostics, replaceCloudflareCredentialToken } from "@/lib/api";
-import { formatErrorMessage } from "@/lib/i18n-error";
+import { formatErrorMessage } from "@/lib/i18n/error";
 import { toast } from "sonner";
-import { getI18nProps, SUPPORTED_LOCALES, type StaticPageContext } from "@/lib/i18n-static";
+import { getI18nProps, SUPPORTED_LOCALES, type StaticPageContext } from "@/lib/i18n/static";
 
 const SETTINGS_TABS = ["general", "nginx", "security", "cloudflare", "logs", "diagnostics"] as const;
 

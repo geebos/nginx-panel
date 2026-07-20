@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import type { ZodType } from "zod";
 
-import { BusinessError, type ErrorParams } from "./errors";
+import { BusinessError, type ErrorParams } from "@/worker/lib/errors";
 
 type IssueLike = {
   path: PropertyKey[];

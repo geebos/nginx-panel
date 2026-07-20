@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
@@ -12,13 +12,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DomainTabs } from "@/components/pages/domains/domain-tabs";
+import { DomainTabs } from "@/components/pages/domains/tabs";
 import { SslSettingsForm } from "@/components/pages/domains/forms/ssl-form";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n-utils";
+import { localizePath } from "@/lib/i18n/utils";
 import { createCertificateOrder, createConfigVersion, getCertificateOrder, getCloudflareCredentials, getDomain, getDomainCertificateOrders, getDomainCertificates, recheckCertificateOrder, renewCertificate, retryCertificateActivation, retryCloudflareCleanup } from "@/lib/api";
-import { formatErrorMessage } from "@/lib/i18n-error";
+import { formatErrorMessage } from "@/lib/i18n/error";
 import type { DomainConfig } from "@/shared/schemas";
 
 const terminalOrders = ["succeeded", "failed", "expired", "cancelled"];

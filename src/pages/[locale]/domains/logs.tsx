@@ -1,12 +1,12 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DomainTabs } from "@/components/pages/domains/domain-tabs";
-import { LogViewer } from "@/components/pages/logs/log-viewer";
+import { DomainTabs } from "@/components/pages/domains/tabs";
+import { LogViewer } from "@/components/pages/logs/viewer";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDomain } from "@/lib/api";

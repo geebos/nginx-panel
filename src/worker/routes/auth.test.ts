@@ -8,7 +8,7 @@ import * as schema from "@/shared/schemas";
 import { hashSessionToken } from "@/worker/lib/auth";
 import { createErrorHandler } from "@/worker/middleware/error";
 import type { AppEnv } from "@/worker/types";
-import { authRoute } from "./auth";
+import { authRoute } from "@/worker/routes/auth";
 
 test("revoke all sessions includes the current browser session", async () => {
   const previous = process.env.APP_ENV;

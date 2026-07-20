@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextDiff } from "@/components/pages/shared/text-diff";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDomain, getDomainVersion, getDomainVersionDiff } from "@/lib/api";
-import { formatErrorMessage } from "@/lib/i18n-error";
+import { formatErrorMessage } from "@/lib/i18n/error";
 
 type VersionPageData =
   | Awaited<ReturnType<typeof getDomainVersion>>

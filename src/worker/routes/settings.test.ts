@@ -9,10 +9,10 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { Hono } from "hono";
 import * as schema from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
-import { setCloudflareDnsProvider } from "@/worker/cloudflare/dns";
+import { setCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { createErrorHandler } from "@/worker/middleware/error";
 import { assertLoginAllowed, assertRebuildAllowed, createSession, hashPassword, verifyPassword } from "@/worker/lib/auth";
-import { settingsRoute } from "./settings";
+import { settingsRoute } from "@/worker/routes/settings";
 
 test("Nginx settings expose runtime capacity and reject a limit below protected revisions", async (t) => {
   const runtimeRoot = join(tmpdir(), `nginx-settings-${Date.now()}-${Math.random().toString(16).slice(2)}`);

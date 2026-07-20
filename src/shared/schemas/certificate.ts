@@ -1,8 +1,8 @@
 import { blob, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
-import { configVersions } from "./config-version";
-import { deployments } from "./deployment";
-import { domains } from "./domain";
+import { configVersions } from "@/shared/schemas/config-version";
+import { deployments } from "@/shared/schemas/deployment";
+import { domains } from "@/shared/schemas/domain";
 
 export const cloudflareCredentials = sqliteTable("cloudflare_credentials", {
   id: text("id").primaryKey(),

@@ -2,7 +2,7 @@ import * as React from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
-import { localizedZodResolver } from "@/lib/i18n-form";
+import { localizedZodResolver } from "@/lib/i18n/form";
 import { Clock3Icon, EyeIcon, EyeOffIcon, KeyRoundIcon, LoaderCircleIcon, LogOutIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,8 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { changePassword, getSessionPolicy, logout, revokeAllSessions, updateSessionPolicy } from "@/lib/api";
 import { useLocale } from "@/hooks/use-locale";
-import { formatErrorMessage } from "@/lib/i18n-error";
-import { localizePath } from "@/lib/i18n-utils";
+import { formatErrorMessage } from "@/lib/i18n/error";
+import { localizePath } from "@/lib/i18n/utils";
 import { changePasswordSchema, sessionPolicySchema, type ChangePasswordInput, type SessionPolicy } from "@/shared/schemas";
 
 export function SecuritySettingsForm() {

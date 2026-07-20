@@ -10,11 +10,11 @@ import type { DomainConfig } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { createErrorHandler } from "@/worker/middleware/error";
 import { createSnapshot } from "@/worker/lib/snapshot";
-import { createPublishDeployment } from "@/worker/lib/deployment-runner";
-import { setRuntimeHealthy } from "@/worker/lib/runtime-state";
-import { domainsRoute } from "./domains";
-import { dashboardRoute } from "./dashboard";
-import { versionsRoute } from "./versions";
+import { createPublishDeployment } from "@/worker/lib/deployment/runner";
+import { setRuntimeHealthy } from "@/worker/lib/runtime/state";
+import { domainsRoute } from "@/worker/routes/domains";
+import { dashboardRoute } from "@/worker/routes/dashboard";
+import { versionsRoute } from "@/worker/routes/versions";
 
 process.env.MANAGER_URL = "https://manager.example.test";
 

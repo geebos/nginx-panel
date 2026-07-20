@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
 import { uniqueIndex } from "drizzle-orm/sqlite-core";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { domains } from "./domain";
-import { users } from "./auth";
+import { domains } from "@/shared/schemas/domain";
+import { users } from "@/shared/schemas/auth";
 import { z } from "zod";
-import { domainConfigSchema } from "./domain";
+import { domainConfigSchema } from "@/shared/schemas/domain";
 
 export const configVersions = sqliteTable(
   "config_versions",

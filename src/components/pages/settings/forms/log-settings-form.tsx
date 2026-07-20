@@ -12,8 +12,8 @@ import { Select } from "@/components/ui/select";
 import { nginxLogSettingsInputSchema, requiredAccessLogFields, type AccessLogField, type NginxLogSettings } from "@/shared/schemas";
 import { rotateLogs, updateLogSettings } from "@/lib/api";
 import { useLocale } from "@/hooks/use-locale";
-import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n-error";
-import { localizePath } from "@/lib/i18n-utils";
+import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n/error";
+import { localizePath } from "@/lib/i18n/utils";
 
 const allFieldValues: AccessLogField[] = [
   "timestamp",

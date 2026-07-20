@@ -6,7 +6,7 @@ import {
   isSupportedLocale,
   type AppLocale,
 } from "@/i18n/settings";
-import { localizePath } from "@/lib/i18n-utils";
+import { localizePath } from "@/lib/i18n/utils";
 
 type LocalizedLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
   href: string;

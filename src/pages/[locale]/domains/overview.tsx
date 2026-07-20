@@ -1,4 +1,4 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
@@ -24,13 +24,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DomainPageActions } from "@/components/pages/domains/domain-page-actions";
-import { DomainTabs } from "@/components/pages/domains/domain-tabs";
+import { DomainPageActions } from "@/components/pages/domains/page-actions";
+import { DomainTabs } from "@/components/pages/domains/tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { getDomain } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { formatErrorMessage } from "@/lib/i18n-error";
+import { formatErrorMessage } from "@/lib/i18n/error";
 
 function DomainOverview({ domainId, created }: { domainId: string; created: boolean }) {
   const { t } = useTranslation(["common", "domains"]);

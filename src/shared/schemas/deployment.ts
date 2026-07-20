@@ -1,7 +1,7 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { configVersions } from "./config-version";
-import { domains } from "./domain";
-import { users } from "./auth";
+import { configVersions } from "@/shared/schemas/config-version";
+import { domains } from "@/shared/schemas/domain";
+import { users } from "@/shared/schemas/auth";
 
 export const deployments = sqliteTable(
   "deployments",

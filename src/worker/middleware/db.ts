@@ -1,6 +1,6 @@
 import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../types";
-import { getSqliteDb } from "../db/engine";
+import type { AppEnv } from "@/worker/types";
+import { getSqliteDb } from "@/worker/lib/db/engine";
 
 export function createDbMiddleware() {
   return createMiddleware<AppEnv>(async (c, next) => {

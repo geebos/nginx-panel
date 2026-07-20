@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { logColumnPreferenceSchema, logQuerySchema } from "./log";
+import { logColumnPreferenceSchema, logQuerySchema } from "@/shared/schemas/log";
 
 test("log query normalizes multi-types and preserves legacy type compatibility", () => {
   assert.deepEqual(logQuerySchema.parse({ domainId: "domain-1", types: "error,access,error" }).types, ["access", "error"]);

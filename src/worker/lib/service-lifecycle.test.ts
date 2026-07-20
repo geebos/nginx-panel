@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BusinessError } from "./errors";
+import { BusinessError } from "@/worker/lib/errors";
 import {
   assertAcceptingLogStreams,
   assertAcceptingWrites,
@@ -9,7 +9,7 @@ import {
   registerLogStream,
   resetServiceLifecycleForTests,
   startJobRunnerHeartbeat,
-} from "./service-lifecycle";
+} from "@/worker/lib/service-lifecycle";
 
 test("service shutdown rejects new writes, ends streams, and keeps a fresh runner heartbeat", async (t) => {
   resetServiceLifecycleForTests();

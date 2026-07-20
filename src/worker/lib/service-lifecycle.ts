@@ -1,4 +1,4 @@
-import { BusinessError } from "./errors";
+import { BusinessError } from "@/worker/lib/errors";
 
 const HEARTBEAT_STALE_MS = 30_000;
 

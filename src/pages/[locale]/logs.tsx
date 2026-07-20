@@ -1,10 +1,10 @@
-import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { SettingsIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
-import { LogViewer } from "@/components/pages/logs/log-viewer";
+import { LogViewer } from "@/components/pages/logs/viewer";
 import { Button } from "@/components/ui/button";
 
 export const getStaticPaths = getLocaleStaticPaths;

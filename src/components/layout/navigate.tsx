@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { getDashboard } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n-utils";
+import { localizePath } from "@/lib/i18n/utils";
 import { EllipsisIcon, FileTextIcon, GaugeIcon, Globe2Icon, RocketIcon, SettingsIcon, ShieldCheckIcon, type LucideIcon } from "lucide-react";
 
 export type NavItem = {

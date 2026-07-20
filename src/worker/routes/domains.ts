@@ -15,9 +15,9 @@ import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { jsonValidator, validationError } from "@/worker/lib/validator";
-import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain-validation";
-import { rethrowWriteConflict } from "@/worker/lib/constraint-conflict";
-import { saveDraftVersion } from "@/worker/lib/draft-version";
+import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain/validation";
+import { rethrowWriteConflict } from "@/worker/lib/domain/constraint-conflict";
+import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
 
 const updateDomainSchema = z.object({
   config: domainConfigSchema,

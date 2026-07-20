@@ -6,7 +6,7 @@ import {
   type NginxLogSettings,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
-import { checksum } from "./runtime-manifest";
+import { checksum } from "@/worker/lib/runtime/manifest";
 
 export const defaultLogSettings: NginxLogSettings = {
   revision: 0,

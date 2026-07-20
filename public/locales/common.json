@@ -1,0 +1,7 @@
+{
+  "language": {
+    "label": { "en": "Language", "zh-CN": "语言" },
+    "en": { "en": "English", "zh-CN": "English" },
+    "zh-CN": { "en": "简体中文", "zh-CN": "简体中文" }
+  }
+}

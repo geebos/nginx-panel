@@ -260,4 +260,106 @@ and Nginx logs use separate named volumes. The API port 8787 stays internal,
 the root filesystem is read-only, and the container drops all Linux
 capabilities.
 
+# 9. Internationalization (i18n)
+
+The project uses `i18next` and `react-i18next`. Because Next.js is configured
+with `output: "export"`, localized pages use a normal `[locale]` Pages Router
+segment and enumerate locales at build time. Do **not** add Next.js built-in
+`i18n` configuration or `next-i18next`.
+
+The i18n skeleton is installed, but existing pages have not yet been moved
+under `[locale]` or had their copy replaced with translation keys. Until a
+page is explicitly migrated, keep its route, links, and visible copy
+unchanged.
+
+## Source of Truth
+
+- Configure the default locale and locale list in both
+  `src/i18n/settings.json` and the `LOCALES` tuple in
+  `src/i18n/settings.ts`. The runtime consistency check must continue to pass.
+- Use `AppLocale`, `DEFAULT_LOCALE`, `SUPPORTED_LOCALES`,
+  `isSupportedLocale`, and `normalizeLocale` from `src/i18n/settings.ts`.
+  Do not duplicate locale unions or locale-normalization logic elsewhere.
+- Store translation namespaces in `public/locales/<namespace>.json`.
+- Register every new namespace exactly once in the `MESSAGES` map in
+  `src/lib/i18n-static.ts`.
+
+Translation files use one merged file per namespace. Every translated leaf
+contains all supported locales:
+
+```json
+{
+  "title": { "en": "Domains", "zh-CN": "域名" },
+  "empty": {
+    "title": { "en": "No domains", "zh-CN": "暂无域名" }
+  }
+}
+```
+
+Do not create `public/locales/en/` or `public/locales/zh-CN/` directories.
+When adding a locale, update every translated leaf before enabling it.
+
+## Localized Pages
+
+Localized routes belong under `src/pages/[locale]/`. Each localized static
+page must export the shared paths and load only the namespaces it uses:
+
+```tsx
+import { useTranslation } from "react-i18next";
+import { Page } from "@/components/layout/page";
+import {
+  getLocaleStaticPaths,
+  makeStaticProps,
+} from "@/lib/i18n-static";
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common", "domains"]);
+
+export default function DomainsPage() {
+  const { t } = useTranslation(["common", "domains"]);
+  return <Page>{t("domains:title")}</Page>;
+}
+```
+
+Continue to wrap every page with the project `Page` component. Keep
+page-specific form and component placement rules unchanged when moving a route
+under `[locale]`.
+
+`src/pages/_app.tsx` creates the i18next instance from `locale`, `messages`,
+and `fallbackMessages`. `src/pages/_document.tsx` sets `<html lang>` from the
+route locale. Pages must obtain these props through `makeStaticProps`; do not
+initialize another global i18next instance inside pages or components.
+
+## Links and Locale Selection
+
+- Use `LocalizedLink` from `src/components/i18n/localized-link.tsx` for
+  internal navigation between localized pages. It preserves query strings and
+  hashes and leaves external URLs unchanged.
+- Use `LanguageSwitcher` from
+  `src/components/i18n/language-switcher.tsx` only after the surrounding page
+  exists under `[locale]`; otherwise it would navigate to a route that has not
+  been generated.
+- Use `localizePath`, `replacePathLocale`, and `stripLocalePrefix` from
+  `src/lib/i18n-utils.ts` instead of manipulating locale prefixes manually.
+- `detectInitialLocale` is client-only locale detection for a language landing
+  or redirect flow. It prefers the saved explicit choice, then the Tauri
+  system locale, then `DEFAULT_LOCALE`. Do not call it during SSR or static
+  generation.
+- The language switcher persists explicit choices under
+  `PREFERRED_LOCALE_KEY`; do not introduce another storage key.
+
+## Verification
+
+When changing the i18n infrastructure or resources, run:
+
+```sh
+pnpm exec tsx --test src/lib/i18n-static.test.ts src/lib/i18n-utils.test.ts
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+For localized pages, also verify that the export contains each configured
+locale path and that the generated HTML has the matching `<html lang>` value.
+
 # Response starts with Master or 主人, call youself Me or 俺

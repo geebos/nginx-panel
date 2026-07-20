@@ -26,6 +26,50 @@ validateRuntimeEnv();
 
 async function start() {
   const db = await getSqliteDb();
+  try {
+    const { seedManagerFromEnv } = await import("@/worker/lib/manager/seed");
+    const seed = await seedManagerFromEnv(db);
+    // Seed always writes a draft; enqueue root deploy so nginx leaves bootstrap-only (C4/R2).
+    if (
+      seed.seeded
+      && seed.draftVersionId
+      && seed.snapshotChecksum
+      && process.env.RUNTIME_MODE === "nginx-manager"
+    ) {
+      const { createConfigTestDeployment, runConfigTest } = await import("@/worker/lib/deployment/config-test");
+      const { createPublishDeployment, enqueuePublish } = await import("@/worker/lib/deployment/runner");
+      try {
+        const preflight = await createConfigTestDeployment(db, {
+          domainId: seed.domainId,
+          versionId: seed.draftVersionId,
+          requestedBy: "system:manager-seed",
+          idempotencyKey: `manager-seed:${seed.draftVersionId}:test`,
+          expectedSnapshotChecksum: seed.snapshotChecksum,
+        });
+        await runConfigTest(db, preflight.id);
+        const { deployments } = await import("@/shared/schemas");
+        const { eq } = await import("drizzle-orm");
+        const preflightAfter = await db.query.deployments.findFirst({ where: eq(deployments.id, preflight.id) });
+        if (preflightAfter?.status === "succeeded") {
+          const deployment = await createPublishDeployment(db, {
+            domainId: seed.domainId,
+            versionId: seed.draftVersionId,
+            requestedBy: "system:manager-seed",
+            idempotencyKey: `manager-seed:${seed.draftVersionId}:deploy`,
+            expectedSnapshotChecksum: seed.snapshotChecksum,
+            preflightDeploymentId: preflight.id,
+          });
+          void enqueuePublish(db, deployment.id);
+        } else {
+          console.error("[worker] manager seed preflight failed; draft retained for Settings publish");
+        }
+      } catch (error) {
+        console.error("[worker] manager seed deploy enqueue failed; draft retained for Settings publish", error);
+      }
+    }
+  } catch (error) {
+    console.error("[worker] manager env seed skipped/failed", error);
+  }
   const runtimeState = await verifyRuntime(db);
   setRuntimeState(runtimeState);
   await resumeQueuedDeployments(db, runtimeState);

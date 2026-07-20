@@ -15,7 +15,7 @@ dashboardRoute.get("/dashboard", async (c) => {
       enabled: sql<number>`coalesce(sum(case when ${domains.enabled} = 1 then 1 else 0 end), 0)`.mapWith(Number),
       drafts: sql<number>`coalesce(sum(case when ${domains.draftVersionId} is not null and (${domains.activeVersionId} is null or ${domains.draftVersionId} != ${domains.activeVersionId}) then 1 else 0 end), 0)`.mapWith(Number),
       failed: sql<number>`coalesce(sum(case when ${domains.runtimeStatus} = 'failed' then 1 else 0 end), 0)`.mapWith(Number),
-    }).from(domains).where(isNull(domains.deletedAt)),
+    }).from(domains).where(and(isNull(domains.deletedAt), eq(domains.type, "domain"))),
     db.select({
       active: sql<number>`coalesce(sum(case when ${certificates.status} = 'active' then 1 else 0 end), 0)`.mapWith(Number),
       expiring: sql<number>`coalesce(sum(case when ${certificates.status} = 'active' and ${certificates.notAfter} <= ${renewalWindowEnd} then 1 else 0 end), 0)`.mapWith(Number),
@@ -32,7 +32,7 @@ dashboardRoute.get("/dashboard", async (c) => {
         eq(acmeOrders.dnsProvider, "manual"),
         isNull(domains.deletedAt),
       )).orderBy(desc(acmeOrders.createdAt)).limit(5),
-    db.select().from(domains).where(isNull(domains.deletedAt)).orderBy(desc(domains.updatedAt)).limit(5),
+    db.select().from(domains).where(and(isNull(domains.deletedAt), eq(domains.type, "domain"))).orderBy(desc(domains.updatedAt)).limit(5),
     db.select().from(deployments).orderBy(desc(deployments.createdAt)).limit(8),
   ]);
   const metrics = metricRows[0] ?? { total: 0, enabled: 0, drafts: 0, failed: 0 };

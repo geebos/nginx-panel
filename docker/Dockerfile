@@ -67,8 +67,6 @@ RUN mkdir -p /data/acme /data/certs /data/db /data/logs /data/nginx /data/secret
 ENV APP_ENV=production \
     DB_ENGINE=sqlite \
     DB_SQLITE_DIR=/data/db \
-    MANAGER_TLS_CERT_FILE=/run/secrets/manager.crt \
-    MANAGER_TLS_KEY_FILE=/run/secrets/manager.key \
     NGINX_LOG_DIR=/data/logs \
     NGINX_MANAGER_MASTER_KEY_FILE=/run/secrets/nginx_manager_master_key \
     PORT=8787 \

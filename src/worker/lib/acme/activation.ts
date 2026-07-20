@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
-import { acmeOrders, certificateActivations, certificates, configVersions, deploymentSteps, deployments, domainAliases, domainConfigSchema, domains } from "@/shared/schemas";
+import { acmeOrders, certificateActivations, certificates, configVersions, deploymentSteps, deployments, domainAliases, domainConfigSchema, domains, managerConfigSchema } from "@/shared/schemas";
 import { createCertificateDeployment, enqueuePublish } from "@/worker/lib/deployment/runner";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import type { AppEnv } from "@/worker/types";
@@ -58,17 +58,42 @@ export async function processCertificateActivation(db: AppEnv["Variables"]["db"]
     const certificateSans = JSON.parse(certificate.sansJson) as string[];
     if (!sameHostnames([domain.primaryHostname, ...aliases.map((alias) => alias.hostname)], certificateSans)) throw new Error("Current domain hostnames do not match certificate SANs");
 
-    const baseVersionId = domain.activeVersionId ?? order.unpublishedBaseVersionId;
-    if (!baseVersionId) throw new Error("Certificate activation baseline version does not exist");
-    const baseVersion = await db.query.configVersions.findFirst({ where: and(eq(configVersions.id, baseVersionId), eq(configVersions.domainId, domain.id)) });
-    if (!baseVersion) throw new Error("Certificate activation baseline version does not exist");
-    const baseConfig = domainConfigSchema.parse(JSON.parse(baseVersion.snapshotJson));
-    if (!sameHostnames([baseConfig.primaryHostname, ...baseConfig.aliases], certificateSans)) throw new Error("Baseline version hostnames do not match certificate SANs");
+    // Prefer the version whose hostnames match the certificate SANs.
+    // Manager SSL orders set unpublishedBaseVersionId to the SSL draft (C6).
+    // Business domains keep the legacy rule: active baseline, leave unrelated drafts alone.
+    const isManager = domain.type === "manager";
+    const candidateIds = (isManager
+      ? [order.unpublishedBaseVersionId, domain.draftVersionId, domain.activeVersionId]
+      : [order.unpublishedBaseVersionId, domain.activeVersionId]
+    ).filter((id): id is string => Boolean(id));
+    let baseVersion: typeof configVersions.$inferSelect | undefined;
+    let baseConfig: ReturnType<typeof domainConfigSchema.parse> | ReturnType<typeof managerConfigSchema.parse> | undefined;
+    for (const candidateId of candidateIds) {
+      const candidate = await db.query.configVersions.findFirst({
+        where: and(eq(configVersions.id, candidateId), eq(configVersions.domainId, domain.id)),
+      });
+      if (!candidate) continue;
+      try {
+        const parsed = isManager
+          ? managerConfigSchema.parse(JSON.parse(candidate.snapshotJson))
+          : domainConfigSchema.parse(JSON.parse(candidate.snapshotJson));
+        if (sameHostnames([parsed.primaryHostname, ...parsed.aliases], certificateSans)) {
+          baseVersion = candidate;
+          baseConfig = parsed;
+          break;
+        }
+      } catch {
+        // try next candidate
+      }
+    }
+    if (!baseVersion || !baseConfig) throw new Error("Baseline version hostnames do not match certificate SANs");
 
     let version = await db.query.configVersions.findFirst({ where: eq(configVersions.sourceCertificateId, certificate.id) });
     if (!version) {
-      const config = domainConfigSchema.parse({ ...baseConfig, ssl: { ...baseConfig.ssl, enabled: true, certificateId: certificate.id } });
-      const snapshot = createSnapshot(config);
+      const nextSnapshot = isManager
+        ? managerConfigSchema.parse({ ...baseConfig, ssl: { ...baseConfig.ssl, enabled: true, certificateId: certificate.id } })
+        : domainConfigSchema.parse({ ...baseConfig, ssl: { ...baseConfig.ssl, enabled: true, certificateId: certificate.id } });
+      const snapshot = createSnapshot(nextSnapshot);
       const now = Date.now();
       version = db.transaction((tx) => {
         const existing = tx.select().from(configVersions).where(eq(configVersions.sourceCertificateId, certificate.id)).get();

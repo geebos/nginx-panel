@@ -18,7 +18,7 @@ function fixture(validationMethod: "http-01" | "dns-01") {
   const db = drizzle(connection, { schema });
   migrate(db, { migrationsFolder: "./drizzle" });
   const now = Date.now();
-  db.insert(schema.domains).values({ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "unknown", createdAt: now, updatedAt: now }).run();
+  db.insert(schema.domains).values({ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "unknown", createdAt: now, updatedAt: now }).run();
   db.insert(schema.acmeOrders).values({ id: `order-${validationMethod}`, domainId: "domain-1", validationMethod, dnsProvider: validationMethod === "dns-01" ? "manual" : null, accountEmail: "admin@example.com", environment: "staging", status: "preparing", identifiersJson: JSON.stringify(["example.com", "www.example.com"]), cleanupStatus: "pending", idempotencyKey: `key-${validationMethod}`, createdAt: now, updatedAt: now }).run();
   return { connection, db, orderId: `order-${validationMethod}` };
 }

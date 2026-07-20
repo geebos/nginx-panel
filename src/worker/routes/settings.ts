@@ -15,7 +15,7 @@ import { getRuntimeState } from "@/worker/lib/runtime/state";
 import { getSessionPolicy } from "@/worker/lib/session-policy";
 import { encryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
-import { validateManagerTlsEnvironment } from "@/worker/lib/runtime/manager-tls";
+import { validateManagerTlsFiles } from "@/worker/lib/runtime/manager-tls";
 import { collectRuntimeDiagnostics, getActiveRuntimeConfig } from "@/worker/lib/runtime/diagnostics";
 import { cleanupRuntimeStorage, getRuntimeStorageSnapshot } from "@/worker/lib/runtime/storage";
 
@@ -261,14 +261,96 @@ settingsRoute.put("/settings/logs", jsonValidator(nginxLogSettingsInputSchema), 
 
 settingsRoute.get("/settings/diagnostics", async (c) => {
   const runtime = getRuntimeState();
-  let managerTls: { status: "valid" | "invalid" | "unavailable"; certificate?: ReturnType<typeof validateManagerTlsEnvironment>; error?: string };
+  // Prefer active manager snapshot + ACME cert (H5). Fall back to mounted file cert only when present.
+  let managerTls: {
+    status: "valid" | "invalid" | "unavailable" | "bootstrap" | "bound-http";
+    source?: "acme" | "file" | "none";
+    certificate?: ReturnType<typeof validateManagerTlsFiles> | {
+      hostname: string;
+      subject: string;
+      issuer: string;
+      subjectAltName: string;
+      validFrom: number;
+      validTo: number;
+      fingerprint256: string;
+    };
+    error?: string;
+  };
   if (process.env.RUNTIME_MODE !== "nginx-manager") {
-    managerTls = { status: "unavailable" };
+    managerTls = { status: "unavailable", source: "none" };
   } else {
     try {
-      managerTls = { status: "valid", certificate: validateManagerTlsEnvironment() };
+      const { loadActiveManagerConfig } = await import("@/worker/lib/manager/root-input");
+      const { certificates } = await import("@/shared/schemas");
+      const { eq } = await import("drizzle-orm");
+      const active = await loadActiveManagerConfig(c.get("db"));
+      if (!active.config?.bound) {
+        managerTls = { status: "bootstrap", source: "none" };
+      } else if (active.config.ssl.enabled && active.config.ssl.certificateId) {
+        const cert = await c.get("db").query.certificates.findFirst({
+          where: eq(certificates.id, active.config.ssl.certificateId),
+        });
+        if (cert && ["ready", "active"].includes(cert.status) && cert.notAfter && cert.notAfter > Date.now()) {
+          managerTls = {
+            status: "valid",
+            source: "acme",
+            certificate: {
+              hostname: active.config.primaryHostname,
+              subject: cert.sansJson,
+              issuer: cert.provider,
+              subjectAltName: (JSON.parse(cert.sansJson) as string[]).join(", "),
+              validFrom: cert.notBefore ?? 0,
+              validTo: cert.notAfter,
+              fingerprint256: cert.certFileChecksum,
+            },
+          };
+        } else {
+          managerTls = { status: "invalid", source: "acme", error: "Active manager certificate is missing or expired" };
+        }
+      } else if (
+        process.env.MANAGER_TLS_CERT_FILE
+        && process.env.MANAGER_TLS_KEY_FILE
+        && active.config.ssl.enabled
+      ) {
+        // Validate file cert against active primary (and aliases), not MANAGER_HOST env (R4).
+        try {
+          const hosts = [active.config.primaryHostname, ...active.config.aliases];
+          let info: ReturnType<typeof validateManagerTlsFiles> | null = null;
+          let lastError: unknown;
+          for (const hostname of hosts) {
+            try {
+              info = validateManagerTlsFiles({
+                hostname,
+                certificateFile: process.env.MANAGER_TLS_CERT_FILE,
+                privateKeyFile: process.env.MANAGER_TLS_KEY_FILE,
+              });
+              break;
+            } catch (error) {
+              lastError = error;
+            }
+          }
+          if (info) {
+            managerTls = { status: "valid", source: "file", certificate: info };
+          } else {
+            void lastError;
+            managerTls = {
+              status: "invalid",
+              source: "file",
+              error: "Mounted manager certificate is invalid; check expiry, SAN, and private key",
+            };
+          }
+        } catch {
+          managerTls = {
+            status: "invalid",
+            source: "file",
+            error: "Mounted manager certificate is invalid; check expiry, SAN, and private key",
+          };
+        }
+      } else {
+        managerTls = { status: "bound-http", source: "none" };
+      }
     } catch {
-      managerTls = { status: "invalid", error: "Mounted manager certificate is invalid; check expiry, SAN, and private key" };
+      managerTls = { status: "invalid", source: "none", error: "Unable to resolve manager TLS state" };
     }
   }
   return c.json({

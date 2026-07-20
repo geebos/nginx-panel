@@ -13,31 +13,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { refreshActiveRoot } from "./runtime-root.mjs";
 
-const DEFAULT_CERT_FILE = "/run/secrets/manager.crt";
-const DEFAULT_KEY_FILE = "/run/secrets/manager.key";
 const DEFAULT_MASTER_KEY_FILE = "/run/secrets/nginx_manager_master_key";
 const GENERATED_SECRETS_DIR = "/data/secrets";
 
-const requiredEnvironment = [
-  "MANAGER_HOST",
-  "MANAGER_URL",
-  "NGINX_LOG_DIR",
-];
+const requiredEnvironment = ["NGINX_LOG_DIR"];
 
 for (const name of requiredEnvironment) {
   if (!process.env[name]) throw new Error(`${name} is required`);
-}
-
-const managerHost = process.env.MANAGER_HOST;
-const managerUrl = new URL(process.env.MANAGER_URL);
-if (
-  managerUrl.protocol !== "https:" ||
-  managerUrl.hostname !== managerHost ||
-  !/^[a-z0-9.-]+$/.test(managerHost)
-) {
-  throw new Error("MANAGER_URL must be HTTPS and match the normalized MANAGER_HOST");
 }
 
 function isReadableNonEmpty(file) {
@@ -51,73 +34,6 @@ function isReadableNonEmpty(file) {
 
 function ensureGeneratedSecretsDir() {
   mkdirSync(GENERATED_SECRETS_DIR, { recursive: true, mode: 0o700 });
-}
-
-function generateTlsMaterial() {
-  ensureGeneratedSecretsDir();
-  const certFile = join(GENERATED_SECRETS_DIR, "manager.crt");
-  const keyFile = join(GENERATED_SECRETS_DIR, "manager.key");
-  if (isReadableNonEmpty(certFile) && isReadableNonEmpty(keyFile)) {
-    return { certFile, keyFile };
-  }
-
-  const result = spawnSync(
-    "openssl",
-    [
-      "req",
-      "-x509",
-      "-newkey",
-      "rsa:2048",
-      "-nodes",
-      "-days",
-      "825",
-      "-subj",
-      `/CN=${managerHost}`,
-      "-addext",
-      `subjectAltName=DNS:${managerHost}`,
-      "-keyout",
-      keyFile,
-      "-out",
-      certFile,
-    ],
-    { encoding: "utf8" },
-  );
-  if (result.status !== 0) {
-    throw new Error(
-      `Failed to generate manager TLS material\n${result.stdout ?? ""}${result.stderr ?? ""}`,
-    );
-  }
-  return { certFile, keyFile };
-}
-
-function resolveTlsFiles() {
-  const certFile = process.env.MANAGER_TLS_CERT_FILE || DEFAULT_CERT_FILE;
-  const keyFile = process.env.MANAGER_TLS_KEY_FILE || DEFAULT_KEY_FILE;
-  const certReady = isReadableNonEmpty(certFile);
-  const keyReady = isReadableNonEmpty(keyFile);
-
-  if (certReady && keyReady) {
-    return { certFile, keyFile };
-  }
-  if (certReady !== keyReady) {
-    throw new Error(
-      `Manager TLS secrets are incomplete: cert=${certReady ? "present" : "missing"}, key=${keyReady ? "present" : "missing"}`,
-    );
-  }
-
-  const usingDefaults =
-    certFile === DEFAULT_CERT_FILE && keyFile === DEFAULT_KEY_FILE;
-  if (!usingDefaults) {
-    throw new Error(`Required secret is missing: ${certReady ? keyFile : certFile}`);
-  }
-
-  console.warn(
-    `[supervisor] Manager TLS secrets not provided; generating a self-signed certificate for ${managerHost}`,
-  );
-  const generated = generateTlsMaterial();
-  process.env.MANAGER_TLS_CERT_FILE = generated.certFile;
-  process.env.MANAGER_TLS_KEY_FILE = generated.keyFile;
-  return generated;
 }
 
 function resolveMasterKeyFile() {
@@ -153,7 +69,28 @@ function resolveMasterKeyFile() {
   return generatedFile;
 }
 
-const tlsFiles = resolveTlsFiles();
+// Optional legacy TLS env for emergency override / migration — not required for greenfield.
+// Image ENV may default TLS paths to secret mounts that are empty; clear them so bootstrap HTTP can start.
+{
+  const certFile = process.env.MANAGER_TLS_CERT_FILE;
+  const keyFile = process.env.MANAGER_TLS_KEY_FILE;
+  if (certFile || keyFile) {
+    const certReady = certFile ? isReadableNonEmpty(certFile) : false;
+    const keyReady = keyFile ? isReadableNonEmpty(keyFile) : false;
+    if (certReady && keyReady) {
+      // keep as emergency / migration override
+    } else if (!certReady && !keyReady) {
+      delete process.env.MANAGER_TLS_CERT_FILE;
+      delete process.env.MANAGER_TLS_KEY_FILE;
+      console.warn("[supervisor] Manager TLS files not present; continuing with bootstrap HTTP only");
+    } else {
+      throw new Error(
+        `Manager TLS secrets are incomplete: cert=${certReady ? "present" : "missing"}, key=${keyReady ? "present" : "missing"}`,
+      );
+    }
+  }
+}
+
 resolveMasterKeyFile();
 
 const logDirectory = process.env.NGINX_LOG_DIR;
@@ -166,47 +103,44 @@ for (const directory of ["client", "fastcgi", "proxy", "scgi", "uwsgi"]) {
   mkdirSync(`/run/nginx/${directory}_temp`, { recursive: true });
 }
 
-const nginxTemplate = readFileSync(
-  "/etc/nginx/templates/nginx-manager.conf.template",
-  "utf8",
-);
-const nginxConfig = nginxTemplate.replace(
-  /\$\{(MANAGER_HOST|MANAGER_TLS_CERT_FILE|MANAGER_TLS_KEY_FILE)\}/g,
-  (_, name) => {
-    if (name === "MANAGER_TLS_CERT_FILE") return tlsFiles.certFile;
-    if (name === "MANAGER_TLS_KEY_FILE") return tlsFiles.keyFile;
-    return process.env[name];
-  },
-);
 const runtimeRoot = "/data/nginx";
 const revisionsRoot = join(runtimeRoot, "revisions");
 const bootstrapRoot = join(revisionsRoot, "bootstrap");
 const activePath = join(runtimeRoot, "active");
-mkdirSync(join(bootstrapRoot, "domains"), { recursive: true });
-writeFileSync(join(bootstrapRoot, "nginx.conf"), nginxConfig, { mode: 0o640 });
-try {
-  const activeStat = lstatSync(activePath);
-  if (!activeStat.isSymbolicLink()) throw new Error("Runtime active path must be a symlink");
-  const target = readlinkSync(activePath);
-  if (target.includes("..") || isAbsolute(target)) throw new Error("Runtime active symlink target is unsafe");
-} catch (error) {
-  if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-    const nextActive = join(runtimeRoot, ".active-bootstrap");
-    symlinkSync("revisions/bootstrap", nextActive);
-    renameSync(nextActive, activePath);
-  } else {
+
+function hasActiveSymlink() {
+  try {
+    const activeStat = lstatSync(activePath);
+    if (!activeStat.isSymbolicLink()) throw new Error("Runtime active path must be a symlink");
+    const target = readlinkSync(activePath);
+    if (target.includes("..") || isAbsolute(target)) throw new Error("Runtime active symlink target is unsafe");
+    return true;
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return false;
+    }
     throw error;
   }
 }
 
-refreshActiveRoot({
-  runtimeRoot,
-  rootConfig: nginxConfig,
-  validate: (candidateRoot) => {
-    const result = spawnSync("/usr/sbin/nginx", ["-p", `${candidateRoot}/`, "-t", "-c", "nginx.conf"], { stdio: "inherit" });
-    if (result.status !== 0) throw new Error("refreshed nginx configuration test failed");
-  },
-});
+const activeExists = hasActiveSymlink();
+
+if (!activeExists) {
+  // Contract A: only write bootstrap root when there is no active revision.
+  // Do NOT call refreshActiveRoot when active already exists — that would wipe published manager segments.
+  const nginxTemplate = readFileSync(
+    "/etc/nginx/templates/nginx-manager.conf.template",
+    "utf8",
+  );
+  mkdirSync(join(bootstrapRoot, "domains"), { recursive: true });
+  writeFileSync(join(bootstrapRoot, "nginx.conf"), nginxTemplate, { mode: 0o640 });
+  const nextActive = join(runtimeRoot, ".active-bootstrap");
+  symlinkSync("revisions/bootstrap", nextActive);
+  renameSync(nextActive, activePath);
+  console.log("[supervisor] wrote bootstrap root (no prior active revision)");
+} else {
+  console.log("[supervisor] active revision present; skipping root rewrite");
+}
 
 const configTest = spawnSync(
   "/usr/sbin/nginx",

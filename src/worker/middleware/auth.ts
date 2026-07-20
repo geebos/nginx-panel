@@ -1,10 +1,10 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
-import { sessions, users } from "@/shared/schemas";
+import { configVersions, domains, managerConfigSchema, managerUserHostnames, sessions, users } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { hashSessionToken, SESSION_COOKIE } from "@/worker/lib/auth";
-import { managerUrl } from "@/worker/lib/runtime/env";
+import { isOriginAllowed } from "@/worker/lib/auth-origin";
 
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   const token = getCookie(c, SESSION_COOKIE);
@@ -34,6 +34,24 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   await next();
 });
 
+async function loadActiveManagerUserHosts(db: AppEnv["Variables"]["db"]) {
+  try {
+    const manager = await db.query.domains.findFirst({
+      where: and(eq(domains.type, "manager"), isNull(domains.deletedAt)),
+    });
+    if (!manager?.activeVersionId) return [] as string[];
+    const version = await db.query.configVersions.findFirst({
+      where: eq(configVersions.id, manager.activeVersionId),
+    });
+    if (!version) return [] as string[];
+    const snapshot = managerConfigSchema.safeParse(JSON.parse(version.snapshotJson));
+    if (!snapshot.success) return [] as string[];
+    return managerUserHostnames(snapshot.data);
+  } catch {
+    return [] as string[];
+  }
+}
+
 export const requireSameOrigin = createMiddleware<AppEnv>(async (c, next) => {
   if (["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
     await next();
@@ -41,19 +59,14 @@ export const requireSameOrigin = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   const origin = c.req.header("origin");
-  let allowed = false;
-  try {
-    if (origin && process.env.APP_ENV === "development") {
-      allowed = ["localhost", "127.0.0.1", "::1"].includes(new URL(origin).hostname);
-    } else if (origin) {
-      allowed = new URL(origin).origin === managerUrl()?.origin;
-    }
-  } catch (error) {
-    console.error("[auth] failed to validate request origin", error);
-    allowed = false;
+  // Restore pre-manager policy: mutating requests without Origin are rejected (H1).
+  // Non-browser automation must send an allowed Origin (bootstrap or bound host).
+  if (!origin) {
+    return c.json({ code: "INVALID_ORIGIN", message: "errors:invalidOrigin" }, 403);
   }
 
-  if (!allowed) {
+  const userHosts = await loadActiveManagerUserHosts(c.get("db"));
+  if (!isOriginAllowed(origin, userHosts)) {
     return c.json({ code: "INVALID_ORIGIN", message: "errors:invalidOrigin" }, 403);
   }
   await next();

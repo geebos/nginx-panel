@@ -29,7 +29,7 @@ function fixture() {
   };
   const snapshot = createSnapshot(config);
   db.insert(schema.users).values({ id: "user-1", username: "admin", passwordHash: "unused", createdAt: now, updatedAt: now }).run();
-  db.insert(schema.domains).values({ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "unknown", draftVersionId: "version-1", createdAt: now, updatedAt: now }).run();
+  db.insert(schema.domains).values({ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "unknown", draftVersionId: "version-1", createdAt: now, updatedAt: now }).run();
   db.insert(schema.domainAliases).values({ id: "alias-1", domainId: "domain-1", hostname: "www.example.com", displayHostname: "www.example.com" }).run();
   db.insert(schema.configVersions).values({ id: "version-1", domainId: "domain-1", versionNumber: 1, status: "draft", changeSummary: "enable ssl", snapshotJson: snapshot.json, snapshotChecksum: snapshot.checksum, createdBy: "user-1", createdAt: now, updatedAt: now }).run();
 

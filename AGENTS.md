@@ -201,23 +201,27 @@ image — the production configuration is also what local Docker runs use.
 Local application development (`pnpm dev`) stays on the host; use Docker to
 exercise the real hardened image.
 
-1. Copy `docker/.env.example` to `docker/.env` and set the real HTTPS manager
-   hostname and URL.
-2. Optionally place the manager certificate chain, matching private key, and a
-   stable 32-byte random master key at the paths documented in
-   `docker/secrets/README.md`. If omitted, the container generates a
-   self-signed manager certificate and a persistent master key under the
-   `generated_secrets` volume. Apply UID/GID `10001` ownership on native Linux
-   when providing host files. Never commit secret files.
+1. Optionally copy `docker/.env.example` to `docker/.env`. Greenfield installs
+   do **not** require `MANAGER_HOST` / `MANAGER_URL` or manager certificate
+   files; open `http://127.0.0.1` (or `localhost`) after start, complete Setup,
+   then bind a public hostname under **Settings → Manager**. Set
+   `MANAGER_HOST` only when seeding an upgrade from a previous env-based install.
+2. Optionally place a stable 32-byte master key (and, only if needed, emergency
+   manager TLS files) at the paths documented in `docker/secrets/README.md`.
+   If the master key is omitted, the container generates a persistent one under
+   the `generated_secrets` volume. Apply UID/GID `10001` ownership on native
+   Linux when providing host files. Never commit secret files.
 3. Build and start the stack:
 
 ```sh
 cd docker
 docker compose --env-file .env up -d --build
+# .env is optional for greenfield; you can also run without --env-file
 ```
 
 The stack publishes host ports 80/443 to the container's non-root 8080/8443
-listeners. SQLite, generated Nginx state, certificates, ACME state, Nginx logs,
+listeners. Bootstrap HTTP on `127.0.0.1` / `localhost` never redirects to
+HTTPS. SQLite, generated Nginx state, certificates, ACME state, Nginx logs,
 and auto-generated secrets use separate named volumes. The API port 8787 stays
 internal, the root filesystem is read-only, and the container drops all Linux
 capabilities.

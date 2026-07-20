@@ -35,7 +35,7 @@ domainsRoute.get("/domains", async (c) => {
 
   const query = parsed.data;
   const db = c.get("db");
-  const filters = [isNull(domains.deletedAt)];
+  const filters = [isNull(domains.deletedAt), eq(domains.type, "domain")];
   const search = query.search.toLowerCase();
   if (search) {
     filters.push(or(
@@ -126,6 +126,7 @@ domainsRoute.post("/domains", jsonValidator(createDomainSchema), async (c) => {
     version = db.transaction((tx) => {
       tx.insert(domains).values({
         id: domainId,
+        type: "domain",
         primaryHostname: config.primaryHostname,
         displayHostname: config.primaryHostname,
         enabled: true,
@@ -159,7 +160,8 @@ domainsRoute.get("/domains/:id", async (c) => {
   const domain = await db.query.domains.findFirst({
     where: and(eq(domains.id, c.req.param("id")), isNull(domains.deletedAt)),
   });
-  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
+  // Manager is not served via domain APIs (scheme A → 404, no leak).
+  if (!domain || domain.type === "manager") throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
 
   const [aliases, draftVersion, activeVersion, recentDeployments] = await Promise.all([
     db.select().from(domainAliases).where(eq(domainAliases.domainId, domain.id)),
@@ -261,7 +263,7 @@ domainsRoute.delete("/domains/:id", async (c) => {
   const domain = await db.query.domains.findFirst({
     where: and(eq(domains.id, c.req.param("id")), isNull(domains.deletedAt)),
   });
-  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
+  if (!domain || domain.type === "manager") throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   if (domain.activeVersionId) {
     throw new BusinessError(
       "errors:deploymentRequired",
@@ -270,9 +272,7 @@ domainsRoute.delete("/domains/:id", async (c) => {
     );
   }
 
-  await db
-    .update(domains)
-    .set({ deletedAt: Date.now(), updatedAt: Date.now() })
-    .where(eq(domains.id, domain.id));
+  const { softDeleteDomainWithTombstone } = await import("@/worker/lib/manager/service");
+  await softDeleteDomainWithTombstone(db, domain.id);
   return c.body(null, 204);
 });

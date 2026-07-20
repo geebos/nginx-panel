@@ -12,10 +12,12 @@ import {
   deployments,
   domainConfigSchema,
   domains,
+  managerConfigSchema,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
-import { renderDomainConfig, renderRootConfig } from "@/worker/lib/nginx/config";
+import { renderDomainConfig, renderManagerRoot, renderRootConfig } from "@/worker/lib/nginx/config";
+import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
 
 const execFileAsync = promisify(execFile);
 const activeConfigTests = new Set<Promise<void>>();
@@ -122,12 +124,18 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       isNull(domains.deletedAt),
       or(isNotNull(domains.activeVersionId), eq(domains.id, targetDomain.id)),
     ));
+    const isManagerTarget = targetDomain.type === "manager";
+    // Manager never writes domains/*.conf; only type=domain rows enter the conf set.
     const selected = domainRows
-      .map((domain) => ({ ...domain, sourceVersionId: domain.id === targetDomain.id ? targetVersion.id : domain.activeVersionId! }));
-    const versionRows = await db.select().from(configVersions).where(inArray(
-      configVersions.id,
-      selected.map((domain) => domain.sourceVersionId),
-    ));
+      .filter((domain) => domain.type !== "manager")
+      .map((domain) => ({ ...domain, sourceVersionId: domain.id === targetDomain.id ? targetVersion.id : domain.activeVersionId! }))
+      .filter((domain) => domain.sourceVersionId);
+    const versionRows = selected.length
+      ? await db.select().from(configVersions).where(inArray(
+        configVersions.id,
+        selected.map((domain) => domain.sourceVersionId),
+      ))
+      : [];
     const versionsById = new Map(versionRows.map((version) => [version.id, version]));
     const snapshotsByVersionId = new Map(versionRows.map((version) => [
       version.id,
@@ -144,7 +152,20 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
     const logsRoot = join(candidateRoot, "logs");
     await mkdir(join(candidateRoot, "domains"), { recursive: true });
     await mkdir(logsRoot, { recursive: true });
-    const rootConfig = renderRootConfig({ pidPath: join(candidateRoot, "nginx.pid") });
+    let rootConfig: string;
+    if (isManagerTarget || process.env.RUNTIME_MODE === "nginx-manager") {
+      const targetManager = isManagerTarget
+        ? managerConfigSchema.parse(JSON.parse(targetVersion.snapshotJson))
+        : undefined;
+      const rootInput = await buildManagerRootInput(db, { targetConfig: targetManager });
+      // Candidate test root uses a writable pid under the temp prefix.
+      rootConfig = renderManagerRoot(rootInput).replace(
+        "pid /run/nginx/nginx.pid;",
+        `pid ${join(candidateRoot, "nginx.pid")};`,
+      );
+    } else {
+      rootConfig = renderRootConfig({ pidPath: join(candidateRoot, "nginx.pid") });
+    }
     await writeFile(join(candidateRoot, "nginx.conf"), rootConfig);
     for (const domain of selected) {
       const version = versionsById.get(domain.sourceVersionId);

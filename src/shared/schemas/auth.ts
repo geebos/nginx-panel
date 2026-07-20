@@ -14,9 +14,51 @@ export const passwordSchema = z
   .min(12, "errors:validation.passwordMin")
   .max(128, "errors:validation.passwordMax");
 
+const optionalHostname = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") return undefined;
+    return value;
+  },
+  z
+    .string()
+    .trim()
+    .toLowerCase()
+    .transform((value) => value.replace(/\.$/, ""))
+    .pipe(
+      z
+        .string()
+        .max(253)
+        .regex(
+          /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
+          "errors:validation.hostnamePattern",
+        ),
+    )
+    .optional(),
+);
+
 export const setupAdminSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
+  managerPrimaryHostname: optionalHostname,
+  managerAliases: z
+    .array(
+      z
+        .string()
+        .trim()
+        .toLowerCase()
+        .transform((value) => value.replace(/\.$/, ""))
+        .pipe(
+          z
+            .string()
+            .max(253)
+            .regex(
+              /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
+              "errors:validation.hostnamePattern",
+            ),
+        ),
+    )
+    .max(100)
+    .optional(),
 });
 
 export const loginSchema = z.object({

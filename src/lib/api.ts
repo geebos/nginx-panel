@@ -612,11 +612,185 @@ export function getSetupStatus() {
   return requestJson<{ setupRequired: boolean }>("/api/setup/status");
 }
 
-export function setupAdmin(input: { username: string; password: string }) {
-  return requestJson<{ user: AuthUser }>("/api/setup/admin", {
+export function setupAdmin(input: {
+  username: string;
+  password: string;
+  managerPrimaryHostname?: string;
+  managerAliases?: string[];
+}) {
+  return requestJson<{ user: AuthUser; managerDomainId?: string | null }>("/api/setup/admin", {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export type ManagerSettingsResponse = {
+  status: "unconfigured" | "draft" | "bound" | "unbound";
+  domainId: string | null;
+  config: {
+    schemaVersion: 1;
+    bound: boolean;
+    primaryHostname: string;
+    aliases: string[];
+    ssl: {
+      enabled: boolean;
+      email: string;
+      autoRenew: boolean;
+      forceHttps: boolean;
+      environment: "staging" | "production";
+      validation: { method: "dns-01"; provider: "manual" | "cloudflare"; cloudflareCredentialId?: string };
+      certificateId?: string;
+    };
+  } | null;
+  draftVersion: ConfigVersionResponse | null;
+  activeVersion: ConfigVersionResponse | null;
+  versions: Array<{
+    id: string;
+    versionNumber: number;
+    status: string;
+    changeSummary: string | null;
+    createdAt: number;
+    bound: boolean;
+    primaryHostname: string;
+  }>;
+  localEntrypoints: string[];
+  canPublish: boolean;
+  canReset: boolean;
+};
+
+export function getManagerSettings() {
+  return requestJson<ManagerSettingsResponse>("/api/settings/manager");
+}
+
+export function updateManagerSettings(input: {
+  primaryHostname: string;
+  aliases?: string[];
+  ssl?: {
+    enabled?: boolean;
+    email?: string;
+    autoRenew?: boolean;
+    forceHttps?: boolean;
+    environment?: "staging" | "production";
+    validation?: { method: "dns-01"; provider: "manual" | "cloudflare"; cloudflareCredentialId?: string };
+  };
+}) {
+  return requestJson<{
+    domainId: string;
+    versionId: string;
+    versionNumber: number;
+    snapshotChecksum: string;
+    mode: "created" | "updated";
+    config: ManagerSettingsResponse["config"];
+  }>("/api/settings/manager", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export function publishManagerSettings(idempotencyKey = crypto.randomUUID()) {
+  return requestJson<{ deploymentId: string; statusUrl: string; preflightDeploymentId: string }>(
+    "/api/settings/manager/publish",
+    { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
+  );
+}
+
+export function rollbackManagerSettings(sourceVersionId: string, idempotencyKey = crypto.randomUUID()) {
+  return requestJson<{
+    deploymentId: string;
+    versionId: string | null;
+    versionNumber: number | null;
+    statusUrl: string;
+  }>("/api/settings/manager/rollback", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ sourceVersionId }),
+  });
+}
+
+export function resetManagerSettings() {
+  return requestJson<{
+    domainId: string;
+    versionId: string;
+    versionNumber: number;
+    snapshotChecksum: string;
+    config: ManagerSettingsResponse["config"];
+  }>("/api/settings/manager/reset", { method: "POST" });
+}
+
+export function getManagerCertificates() {
+  return requestJson<{ domainId: string; items: CertificateSummary[] }>("/api/settings/manager/certificate/certificates");
+}
+
+export function getManagerCertificateOrders() {
+  return requestJson<{ domainId: string; items: CertificateOrderSummary[] }>("/api/settings/manager/certificate/orders");
+}
+
+export function createManagerCertificateOrder(
+  input: {
+    accountEmail: string;
+    environment: "staging" | "production";
+    validation:
+      | { method: "dns-01"; provider: "manual" }
+      | { method: "dns-01"; provider: "cloudflare"; cloudflareCredentialId: string };
+  },
+  idempotencyKey = crypto.randomUUID(),
+) {
+  return requestJson<{ order: CertificateOrderSummary }>("/api/settings/manager/certificate/orders", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(input),
+  });
+}
+
+export function renewManagerCertificate(idempotencyKey = crypto.randomUUID()) {
+  return requestJson<{ order: CertificateOrderSummary }>("/api/settings/manager/certificate/renew", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+}
+
+export function getManagerCertificateOrder(orderId: string) {
+  return requestJson<{
+    order: CertificateOrderSummary;
+    challenges: Array<{
+      id: string;
+      hostname: string;
+      type: string;
+      status: string;
+      dnsRecordName: string | null;
+      dnsRecordValue: string | null;
+      expiresAt: number;
+    }>;
+    certificate: CertificateSummary | null;
+    activation: {
+      status: string;
+      configVersionId: string | null;
+      deploymentId: string | null;
+      errorMessage: string | null;
+    } | null;
+    deployment: (DeploymentSummary & { errorMessage: string | null }) | null;
+  }>(`/api/settings/manager/certificate/orders/${encodeURIComponent(orderId)}`);
+}
+
+export function recheckManagerCertificateOrder(orderId: string) {
+  return requestJson<{ order: CertificateOrderSummary; debounced: boolean }>(
+    `/api/settings/manager/certificate/orders/${encodeURIComponent(orderId)}/recheck`,
+    { method: "POST" },
+  );
+}
+
+export function cancelManagerCertificateOrder(orderId: string) {
+  return requestJson<{ order: CertificateOrderSummary }>(
+    `/api/settings/manager/certificate/orders/${encodeURIComponent(orderId)}/cancel`,
+    { method: "POST" },
+  );
+}
+
+export function retryManagerCertificateActivation(orderId: string) {
+  return requestJson<{ activation: { status: string }; deployment: DeploymentSummary | null }>(
+    `/api/settings/manager/certificate/orders/${encodeURIComponent(orderId)}/activation/retry`,
+    { method: "POST" },
+  );
 }
 
 export function login(input: { username: string; password: string; remember: boolean }) {

@@ -48,6 +48,7 @@ test("missing config-test target marks the queued deployment failed", async () =
   const now = Date.now();
   db.insert(schema.domains).values({
     id: "domain-1",
+    type: "domain",
     primaryHostname: "example.com",
     displayHostname: "example.com",
     enabled: true,
@@ -124,6 +125,7 @@ test("ssl-disabled draft passes nginx -t alongside an active HTTPS domain", asyn
   const now = Date.now();
   db.insert(schema.domains).values({
     id: "domain-1",
+    type: "domain",
     primaryHostname: "example.com",
     displayHostname: "example.com",
     enabled: true,

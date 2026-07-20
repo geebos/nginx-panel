@@ -29,6 +29,13 @@
       "when": 1784443926842,
       "tag": "0003_stale_diamondback",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784520000000,
+      "tag": "0004_manager_domain",
+      "breakpoints": true
     }
   ]
 }

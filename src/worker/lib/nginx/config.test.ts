@@ -6,7 +6,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import test from "node:test";
 import { domainConfigSchema, nginxLogSettingsInputSchema, parseAdvancedSnippet, type DomainConfig } from "@/shared/schemas";
-import { injectAccessLogFormat, renderDomainConfig, renderDomainPreview, renderRootConfig } from "@/worker/lib/nginx/config";
+import { injectAccessLogFormat, renderDomainConfig, renderDomainPreview, renderManagerRoot, renderRootConfig } from "@/worker/lib/nginx/config";
 import { checksum, createRuntimeManifest } from "@/worker/lib/runtime/manifest";
 
 const execFileAsync = promisify(execFile);
@@ -85,6 +85,29 @@ test("root config keeps temp paths under the nginx prefix", () => {
   assert.match(rootConfig, /scgi_temp_path scgi_temp;/);
   assert.match(rootConfig, /uwsgi_temp_path uwsgi_temp;/);
   assert.doesNotMatch(rootConfig, /\/var\/cache\/nginx/);
+});
+
+test("manager root splits bootstrap and bound servers and never 308 localhost", () => {
+  const bootstrapOnly = renderManagerRoot({ userHostnames: [] });
+  assert.match(bootstrapOnly, /server_name 127\.0\.0\.1 localhost;/);
+  assert.match(bootstrapOnly, /X-Forwarded-Proto \$scheme;/);
+  assert.doesNotMatch(bootstrapOnly, /return 308 https:\/\/\$host\$request_uri;/);
+  assert.doesNotMatch(bootstrapOnly, /listen 8443 ssl;/);
+
+  const bound = renderManagerRoot({
+    userHostnames: ["panel.example.com"],
+    tls: { fullchainPath: "/data/certs/fullchain.pem", privateKeyPath: "/data/certs/key.pem" },
+    forceHttpsOnBound: true,
+  });
+  assert.match(bound, /server_name panel\.example\.com;/);
+  assert.match(bound, /return 308 https:\/\/\$host\$request_uri;/);
+  assert.match(bound, /listen 8443 ssl;/);
+  assert.match(bound, /ssl_certificate "\/data\/certs\/fullchain\.pem";/);
+  // bootstrap remains without 308
+  const bootstrapBlock = bound.slice(bound.indexOf("server_name 127.0.0.1 localhost;"));
+  const nextServer = bootstrapBlock.indexOf("\n  server {", 1);
+  const onlyBootstrap = nextServer > 0 ? bootstrapBlock.slice(0, nextServer) : bootstrapBlock;
+  assert.doesNotMatch(onlyBootstrap, /return 308/);
 });
 
 test("certificate preview uses stable placeholders", () => {

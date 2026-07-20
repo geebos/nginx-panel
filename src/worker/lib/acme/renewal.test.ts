@@ -13,7 +13,7 @@ function fixture(input: { autoRenew?: boolean; enabled?: boolean } = {}) {
   const db = drizzle(connection, { schema });
   migrate(db, { migrationsFolder: "./drizzle" });
   const now = Date.now();
-  db.insert(schema.domains).values({ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: input.enabled ?? true, runtimeStatus: "running", createdAt: now, updatedAt: now }).run();
+  db.insert(schema.domains).values({ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: input.enabled ?? true, runtimeStatus: "running", createdAt: now, updatedAt: now }).run();
   db.insert(schema.domainAliases).values({ id: "alias-1", domainId: "domain-1", hostname: "www.example.com", displayHostname: "www.example.com" }).run();
   db.insert(schema.acmeOrders).values({ id: "source-order", domainId: "domain-1", validationMethod: "dns-01", dnsProvider: "manual", accountEmail: "original@example.com", environment: "production", status: "succeeded", identifiersJson: JSON.stringify(["example.com", "www.example.com"]), cleanupStatus: "succeeded", idempotencyKey: "source-key", createdAt: now, updatedAt: now }).run();
   db.insert(schema.certificates).values({ id: "certificate-1", domainId: "domain-1", acmeOrderId: "source-order", provider: "letsencrypt", environment: "production", status: "active", sansJson: JSON.stringify(["example.com", "www.example.com"]), certPath: "/cert.pem", keyPath: "/key.pem", certFileChecksum: "cert", publicKeySpkiChecksum: "key", notAfter: now + 10 * 24 * 60 * 60 * 1000, autoRenew: input.autoRenew ?? true, lastValidationMethod: "dns-01", lastDnsProvider: "manual", nextCheckAt: now - 1 }).run();

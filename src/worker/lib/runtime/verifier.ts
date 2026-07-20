@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { lstat, readFile, readdir, readlink } from "node:fs/promises";
 import { basename, isAbsolute, join, normalize, sep } from "node:path";
 import { promisify } from "node:util";
-import { inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { configVersions, domainConfigSchema, domains } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { createSnapshot } from "@/worker/lib/snapshot";
@@ -60,7 +60,8 @@ export async function verifyRuntime(
     activeRevision = safeActiveRevision(activeTarget, runtimeRoot);
     await assertRegularDirectory(join(runtimeRoot, activeTarget));
 
-    const domainRows = await db.select().from(domains).where(isNull(domains.deletedAt));
+    // Manager is root-only; conf expectation is type=domain only.
+    const domainRows = await db.select().from(domains).where(and(isNull(domains.deletedAt), eq(domains.type, "domain")));
     const activeDomains = domainRows.filter((domain) => domain.activeVersionId !== null);
     const logSettings = await getActiveLogSettings(db);
     const manifestPath = join(activeRoot, "manifest.json");

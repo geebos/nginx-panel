@@ -81,7 +81,7 @@ test("active runtime config returns verified source metadata and redacted config
   migrate(db, { migrationsFolder: "./drizzle" });
   const now = Date.now();
   const source = createSnapshot(snapshot);
-  db.insert(schema.domains).values({ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", createdAt: now, updatedAt: now }).run();
+  db.insert(schema.domains).values({ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", createdAt: now, updatedAt: now }).run();
   db.insert(schema.configVersions).values({ id: "version-1", domainId: "domain-1", versionNumber: 1, status: "active", changeSummary: "Initial", snapshotJson: source.json, snapshotChecksum: source.checksum, createdAt: now, updatedAt: now }).run();
   db.update(schema.domains).set({ activeVersionId: "version-1" }).run();
 

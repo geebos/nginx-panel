@@ -9,6 +9,7 @@ import { versionsRoute } from "@/worker/routes/versions";
 import { deploymentsRoute } from "@/worker/routes/deployments";
 import { logsRoute } from "@/worker/routes/logs";
 import { settingsRoute } from "@/worker/routes/settings";
+import { managerRoute } from "@/worker/routes/manager";
 import { acmeChallengeRoute, certificatesRoute } from "@/worker/routes/certificates";
 import { requireAuth, requireSameOrigin } from "@/worker/middleware/auth";
 import { createErrorHandler } from "@/worker/middleware/error";
@@ -61,6 +62,7 @@ export function createApp() {
   app.route("/api", deploymentsRoute);
   app.route("/api", logsRoute);
   app.route("/api", settingsRoute);
+  app.route("/api", managerRoute);
   app.route("/api", certificatesRoute);
 
   app.onError(createErrorHandler<AppEnv>());

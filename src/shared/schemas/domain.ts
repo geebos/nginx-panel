@@ -202,8 +202,11 @@ export const domainListQuerySchema = z.object({
   sort: z.enum(["updated_desc", "created_desc", "hostname_asc"]).default("updated_desc"),
 });
 
+export const domainTypeSchema = z.enum(["domain", "manager"]);
+
 export const domains = sqliteTable("domains", {
   id: text("id").primaryKey(),
+  type: text("type").notNull().default("domain"),
   primaryHostname: text("primary_hostname").notNull().unique(),
   displayHostname: text("display_hostname").notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
@@ -224,6 +227,7 @@ export const domainAliases = sqliteTable("domain_aliases", {
   displayHostname: text("display_hostname").notNull(),
 });
 
+export type DomainType = z.infer<typeof domainTypeSchema>;
 export type DomainConfig = z.infer<typeof domainConfigSchema>;
 export type RouteConfig = z.infer<typeof routeConfigSchema>;
 export type HeaderConfig = z.infer<typeof headerConfigSchema>;

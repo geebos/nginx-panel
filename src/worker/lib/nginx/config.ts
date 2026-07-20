@@ -1,5 +1,6 @@
 import { isAbsolute, join, normalize, sep } from "node:path";
 import {
+  BOOTSTRAP_HOSTS,
   domainConfigSchema,
   parseAdvancedSnippet,
   type AccessLogField,
@@ -289,3 +290,214 @@ http {
 }
 `;
 }
+
+export type RenderManagerRootInput = {
+  bootstrapHosts?: readonly string[];
+  userHostnames: string[];
+  listeners?: { http: number; https: number };
+  tls?: { fullchainPath: string; privateKeyPath: string };
+  forceHttpsOnBound?: boolean;
+  uiRoot?: string;
+  apiUpstream?: string;
+};
+
+function renderManagerLocations(input: {
+  uiRoot: string;
+  apiUpstream: string;
+  ssl: boolean;
+}) {
+  const apiLines = [
+    "location /api/ {",
+    `  proxy_pass ${input.apiUpstream};`,
+    "  proxy_set_header Host $host;",
+    "  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+    "  proxy_set_header X-Forwarded-Proto $scheme;",
+    "  proxy_set_header X-Request-Id $request_id;",
+    '  proxy_set_header X-Internal-Health-Check "";',
+    "}",
+  ];
+  const uiLines = [
+    "location / {",
+    "  index index.html;",
+    "  try_files $uri $uri/ $uri.html =404;",
+    "}",
+  ];
+  return [
+    "location = /internal/health {",
+    "  return 404;",
+    "}",
+    "",
+    ...apiLines,
+    "",
+    ...uiLines,
+  ];
+}
+
+function renderManagerServer(input: {
+  listen: string;
+  hostnames: string[];
+  uiRoot: string;
+  apiUpstream: string;
+  certificate?: { fullchainPath: string; privateKeyPath: string };
+  redirectHttps?: boolean;
+}) {
+  const lines = [
+    "server {",
+    `  listen ${input.listen};`,
+    `  server_name ${input.hostnames.join(" ")};`,
+  ];
+  if (input.certificate) {
+    lines.push(
+      `  ssl_certificate ${quote(input.certificate.fullchainPath)};`,
+      `  ssl_certificate_key ${quote(input.certificate.privateKeyPath)};`,
+    );
+  }
+  if (input.redirectHttps) {
+    lines.push("  return 308 https://$host$request_uri;");
+  } else {
+    lines.push(`  root ${quote(input.uiRoot)};`, "");
+    lines.push(...indent(renderManagerLocations({
+      uiRoot: input.uiRoot,
+      apiUpstream: input.apiUpstream,
+      ssl: Boolean(input.certificate),
+    })));
+  }
+  lines.push("}");
+  return lines;
+}
+
+/**
+ * Renders the full production root nginx.conf with split manager servers:
+ * bootstrap-http (localhost/127.0.0.1, never 308), optional bound-http, optional bound-ssl.
+ */
+export function renderManagerRoot(input: RenderManagerRootInput) {
+  const bootstrapHosts = [...(input.bootstrapHosts ?? BOOTSTRAP_HOSTS)];
+  const userHostnames = [...new Set(input.userHostnames.map((h) => h.toLowerCase().replace(/\.$/, "")))].filter(Boolean);
+  const listeners = input.listeners ?? { http: 8080, https: 8443 };
+  const uiRoot = input.uiRoot ?? "/opt/nginx-manager/ui";
+  const apiUpstream = input.apiUpstream ?? "http://127.0.0.1:8787";
+  const forceHttpsOnBound = input.forceHttpsOnBound ?? true;
+  const tls = input.tls;
+
+  for (const port of [listeners.http, listeners.https]) {
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Listen port out of range");
+  }
+  assertAbsolutePath(uiRoot, "UI root");
+  if (tls) {
+    assertAbsolutePath(tls.fullchainPath, "TLS fullchain");
+    assertAbsolutePath(tls.privateKeyPath, "TLS private key");
+  }
+
+  const sections: string[] = [];
+
+  // default_server HTTP
+  sections.push([
+    "server {",
+    `  listen ${listeners.http} default_server;`,
+    "  server_name _;",
+    "",
+    "  location ^~ /.well-known/acme-challenge/ {",
+    "    proxy_pass http://127.0.0.1:8787;",
+    "    proxy_set_header Host $host;",
+    "    proxy_pass_request_body off;",
+    "  }",
+    "",
+    "  location / { return 444; }",
+    "}",
+  ].join("\n"));
+
+  // bootstrap-http — never 308
+  sections.push(renderManagerServer({
+    listen: String(listeners.http),
+    hostnames: bootstrapHosts,
+    uiRoot,
+    apiUpstream,
+  }).join("\n"));
+
+  // bound-http
+  if (userHostnames.length > 0) {
+    sections.push(renderManagerServer({
+      listen: String(listeners.http),
+      hostnames: userHostnames,
+      uiRoot,
+      apiUpstream,
+      redirectHttps: Boolean(tls) && forceHttpsOnBound,
+    }).join("\n"));
+  }
+
+  // default_server HTTPS only when TLS material exists (nginx requires ssl_* on ssl listen)
+  if (tls) {
+    sections.push([
+      "server {",
+      `  listen ${listeners.https} ssl default_server;`,
+      "  server_name _;",
+      `  ssl_certificate ${quote(tls.fullchainPath)};`,
+      `  ssl_certificate_key ${quote(tls.privateKeyPath)};`,
+      "  return 444;",
+      "}",
+    ].join("\n"));
+
+    if (userHostnames.length > 0) {
+      sections.push(renderManagerServer({
+        listen: `${listeners.https} ssl`,
+        hostnames: userHostnames,
+        uiRoot,
+        apiUpstream,
+        certificate: tls,
+      }).join("\n"));
+    }
+  }
+
+  // internal health
+  sections.push([
+    "server {",
+    "  listen 127.0.0.1:8082;",
+    "  server_name _;",
+    "",
+    "  location = /internal/health {",
+    "    proxy_pass http://127.0.0.1:8787/internal/health;",
+    "    proxy_set_header Host 127.0.0.1;",
+    "    proxy_set_header X-Internal-Health-Check 1;",
+    "  }",
+    "}",
+  ].join("\n"));
+
+  return `worker_processes auto;
+pid /run/nginx/nginx.pid;
+error_log stderr warn;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+  access_log off;
+  sendfile on;
+  keepalive_timeout 65;
+  client_body_temp_path /run/nginx/client_temp;
+  fastcgi_temp_path /run/nginx/fastcgi_temp;
+  proxy_temp_path /run/nginx/proxy_temp;
+  scgi_temp_path /run/nginx/scgi_temp;
+  uwsgi_temp_path /run/nginx/uwsgi_temp;
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+  }
+
+  # nginx-manager:log-format:start
+  log_format domain_manager escape=json
+    '{"timestamp":"$time_iso8601","domain":"$host","method":"$request_method",'
+    '"path":"$uri","request_uri":"$request_uri","status":"$status",'
+    '"request_time":"$request_time"}';
+  # nginx-manager:log-format:end
+
+${sections.map((block) => indent(block.split("\n")).join("\n")).join("\n\n")}
+
+  include domains/*.conf;
+}
+`;
+}
+

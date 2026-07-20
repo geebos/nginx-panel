@@ -52,6 +52,7 @@ function createFixture(route: Hono<AppEnv>) {
   }).run();
   db.insert(schema.domains).values({
     id: "domain-1",
+    type: "domain",
     primaryHostname: "example.com",
     displayHostname: "example.com",
     enabled: true,

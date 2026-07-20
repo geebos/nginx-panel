@@ -18,7 +18,7 @@ import { assertAcceptingLogStreams, registerLogStream } from "@/worker/lib/servi
 export const logsRoute = new Hono<AppEnv>();
 
 logsRoute.get("/logs/domains", async (c) => {
-  const items = await c.get("db").select({ id: domains.id, hostname: domains.primaryHostname, enabled: domains.enabled, activeVersionId: domains.activeVersionId }).from(domains).where(isNull(domains.deletedAt)).orderBy(domains.primaryHostname);
+  const items = await c.get("db").select({ id: domains.id, hostname: domains.primaryHostname, enabled: domains.enabled, activeVersionId: domains.activeVersionId }).from(domains).where(and(isNull(domains.deletedAt), eq(domains.type, "domain"))).orderBy(domains.primaryHostname);
   return c.json({ items });
 });
 

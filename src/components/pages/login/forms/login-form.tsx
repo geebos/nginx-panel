@@ -43,13 +43,20 @@ export function LoginForm() {
         password: z.string().min(1, t("login:errors.passwordRequired")).max(128),
         confirmPassword: z.string().max(128),
         remember: z.boolean(),
+        managerPrimaryHostname: z.string().max(253),
       }),
     [t],
   );
   type LoginFormValues = z.infer<typeof formSchema>;
   const form = useForm<LoginFormValues>({
     resolver: localizedZodResolver(formSchema, t),
-    defaultValues: { username: "", password: "", confirmPassword: "", remember: false },
+    defaultValues: {
+      username: "",
+      password: "",
+      confirmPassword: "",
+      remember: false,
+      managerPrimaryHostname: "",
+    },
   });
 
   React.useEffect(() => {
@@ -76,7 +83,12 @@ export function LoginForm() {
 
     try {
       if (setupRequired) {
-        await setupAdmin({ username: values.username, password: values.password });
+        const managerPrimaryHostname = values.managerPrimaryHostname.trim() || undefined;
+        await setupAdmin({
+          username: values.username,
+          password: values.password,
+          managerPrimaryHostname,
+        });
       } else {
         await login({ username: values.username, password: values.password, remember: values.remember });
       }
@@ -164,19 +176,35 @@ export function LoginForm() {
         </Field>
 
         {setupRequired ? (
-          <Field data-invalid={Boolean(form.formState.errors.confirmPassword)}>
-            <FieldLabel htmlFor="confirmPassword">{t("login:confirmPassword")}</FieldLabel>
-            <InputGroup>
-              <InputGroupInput
-                id="confirmPassword"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                aria-invalid={Boolean(form.formState.errors.confirmPassword)}
-                {...form.register("confirmPassword")}
-              />
-            </InputGroup>
-            <FieldError errors={[form.formState.errors.confirmPassword]} />
-          </Field>
+          <>
+            <Field data-invalid={Boolean(form.formState.errors.confirmPassword)}>
+              <FieldLabel htmlFor="confirmPassword">{t("login:confirmPassword")}</FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(form.formState.errors.confirmPassword)}
+                  {...form.register("confirmPassword")}
+                />
+              </InputGroup>
+              <FieldError errors={[form.formState.errors.confirmPassword]} />
+            </Field>
+            <Field data-invalid={Boolean(form.formState.errors.managerPrimaryHostname)}>
+              <FieldLabel htmlFor="managerPrimaryHostname">{t("login:managerHostname")}</FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="managerPrimaryHostname"
+                  autoComplete="off"
+                  placeholder="panel.example.com"
+                  aria-invalid={Boolean(form.formState.errors.managerPrimaryHostname)}
+                  {...form.register("managerPrimaryHostname")}
+                />
+              </InputGroup>
+              <FieldDescription>{t("login:managerHostnameDescription")}</FieldDescription>
+              <FieldError errors={[form.formState.errors.managerPrimaryHostname]} />
+            </Field>
+          </>
         ) : (
           <Controller
             control={form.control}

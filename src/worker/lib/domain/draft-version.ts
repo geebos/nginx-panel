@@ -7,6 +7,7 @@ import {
   domains,
   type ConfigVersion,
   type DomainConfig,
+  type ManagerConfig,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
@@ -18,7 +19,7 @@ export function saveDraftVersion(
   tx: AppTransaction,
   input: {
     domainId: string;
-    config: DomainConfig;
+    config: DomainConfig | ManagerConfig;
     snapshot: { json: string; checksum: string };
     changeSummary: string;
     createdBy?: string;

@@ -28,7 +28,7 @@ function fixture(certificateSans = ["example.com", "www.example.com"]) {
   const now = Date.now();
   const active = createSnapshot(activeConfig);
   const draft = createSnapshot({ ...activeConfig, routes: [{ ...activeConfig.routes[0], target: "https://draft.example" }] });
-  db.insert(schema.domains).values({ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", activeVersionId: "version-active", draftVersionId: "version-draft", createdAt: now, updatedAt: now }).run();
+  db.insert(schema.domains).values({ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", activeVersionId: "version-active", draftVersionId: "version-draft", createdAt: now, updatedAt: now }).run();
   db.insert(schema.domainAliases).values({ id: "alias-1", domainId: "domain-1", hostname: "www.example.com", displayHostname: "www.example.com" }).run();
   db.insert(schema.configVersions).values([
     { id: "version-active", domainId: "domain-1", versionNumber: 1, status: "active", changeSummary: "active", snapshotJson: active.json, snapshotChecksum: active.checksum, createdAt: now, updatedAt: now },

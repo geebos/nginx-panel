@@ -1,18 +1,33 @@
 {
   "language": {
-    "label": { "en": "Language", "zh-CN": "语言" },
-    "en": { "en": "English", "zh-CN": "English" },
-    "zh-CN": { "en": "简体中文", "zh-CN": "简体中文" }
+    "label": {
+      "en": "Language",
+      "zh-CN": "语言"
+    },
+    "en": {
+      "en": "English",
+      "zh-CN": "English"
+    },
+    "zh-CN": {
+      "en": "简体中文",
+      "zh-CN": "简体中文"
+    }
   },
   "settings": {
     "general": {
-      "title": { "en": "General", "zh-CN": "通用" },
+      "title": {
+        "en": "General",
+        "zh-CN": "通用"
+      },
       "description": {
         "en": "Manage general preferences such as display language.",
         "zh-CN": "管理显示语言等通用偏好。"
       },
       "language": {
-        "title": { "en": "Language", "zh-CN": "语言" },
+        "title": {
+          "en": "Language",
+          "zh-CN": "语言"
+        },
         "description": {
           "en": "Choose the display language for this panel.",
           "zh-CN": "选择面板的显示语言。"
@@ -20,65 +35,155 @@
       }
     },
     "breadcrumbs": {
-      "settings": { "en": "Settings", "zh-CN": "设置" }
+      "settings": {
+        "en": "Settings",
+        "zh-CN": "设置"
+      }
     },
     "logs": {
-      "title": { "en": "Log Settings", "zh-CN": "日志设置" },
+      "title": {
+        "en": "Log Settings",
+        "zh-CN": "日志设置"
+      },
       "description": {
         "en": "Configure instance-level structured log fields, error level, and safe rotation policies.",
         "zh-CN": "配置实例级结构化日志字段、error level 和安全轮动策略。"
       },
-      "breadcrumb": { "en": "Logs", "zh-CN": "日志" },
-      "loadFailed": { "en": "Failed to load log settings", "zh-CN": "日志设置加载失败" },
-      "applying": { "en": "Log settings are being applied", "zh-CN": "日志设置正在应用" },
-      "viewDeployment": { "en": "View Deployment", "zh-CN": "查看 Deployment" },
-      "operationFailed": { "en": "Operation failed", "zh-CN": "操作失败" },
-      "logRootNotConfigured": { "en": "Log directory not configured", "zh-CN": "日志目录未配置" },
+      "breadcrumb": {
+        "en": "Logs",
+        "zh-CN": "日志"
+      },
+      "loadFailed": {
+        "en": "Failed to load log settings",
+        "zh-CN": "日志设置加载失败"
+      },
+      "applying": {
+        "en": "Log settings are being applied",
+        "zh-CN": "日志设置正在应用"
+      },
+      "viewDeployment": {
+        "en": "View Deployment",
+        "zh-CN": "查看 Deployment"
+      },
+      "operationFailed": {
+        "en": "Operation failed",
+        "zh-CN": "操作失败"
+      },
+      "logRootNotConfigured": {
+        "en": "Log directory not configured",
+        "zh-CN": "日志目录未配置"
+      },
       "logRootNotConfiguredDescription": {
         "en": "Set NGINX_LOG_DIR and restart the runtime before applying log policies.",
         "zh-CN": "设置 NGINX_LOG_DIR 并重启 runtime 后才能应用日志策略。"
       },
       "accessFields": {
-        "title": { "en": "Access log fields", "zh-CN": "Access log 字段" },
+        "title": {
+          "en": "Access log fields",
+          "zh-CN": "Access log 字段"
+        },
         "description": {
           "en": "Core fields cannot be removed; optional fields are injected via a fixed Nginx variable whitelist and custom format strings are not accepted.",
           "zh-CN": "核心字段不可移除；可选字段会通过固定 Nginx 变量白名单注入，不接受自定义 format 字符串。"
         },
-        "legend": { "en": "Structured fields", "zh-CN": "结构化字段" },
-        "required": { "en": " (required)", "zh-CN": "（必需）" },
+        "legend": {
+          "en": "Structured fields",
+          "zh-CN": "结构化字段"
+        },
+        "required": {
+          "en": " (required)",
+          "zh-CN": "（必需）"
+        },
         "fields": {
-          "timestamp": { "en": "Timestamp", "zh-CN": "Timestamp" },
-          "domain": { "en": "Domain / Host", "zh-CN": "Domain / Host" },
-          "method": { "en": "HTTP Method", "zh-CN": "HTTP Method" },
-          "path": { "en": "Path", "zh-CN": "Path" },
-          "request_uri": { "en": "Request URI", "zh-CN": "Request URI" },
-          "status": { "en": "Status", "zh-CN": "Status" },
-          "request_time": { "en": "Request time", "zh-CN": "Request time" },
-          "client_ip": { "en": "Client IP", "zh-CN": "Client IP" },
-          "upstream_addr": { "en": "Upstream address", "zh-CN": "Upstream address" },
-          "upstream_status": { "en": "Upstream status", "zh-CN": "Upstream status" },
-          "upstream_time": { "en": "Upstream time", "zh-CN": "Upstream time" }
+          "timestamp": {
+            "en": "Timestamp",
+            "zh-CN": "Timestamp"
+          },
+          "domain": {
+            "en": "Domain / Host",
+            "zh-CN": "Domain / Host"
+          },
+          "method": {
+            "en": "HTTP Method",
+            "zh-CN": "HTTP Method"
+          },
+          "path": {
+            "en": "Path",
+            "zh-CN": "Path"
+          },
+          "request_uri": {
+            "en": "Request URI",
+            "zh-CN": "Request URI"
+          },
+          "status": {
+            "en": "Status",
+            "zh-CN": "Status"
+          },
+          "request_time": {
+            "en": "Request time",
+            "zh-CN": "Request time"
+          },
+          "client_ip": {
+            "en": "Client IP",
+            "zh-CN": "Client IP"
+          },
+          "upstream_addr": {
+            "en": "Upstream address",
+            "zh-CN": "Upstream address"
+          },
+          "upstream_status": {
+            "en": "Upstream status",
+            "zh-CN": "Upstream status"
+          },
+          "upstream_time": {
+            "en": "Upstream time",
+            "zh-CN": "Upstream time"
+          }
         }
       },
       "rotation": {
-        "title": { "en": "Error and rotation policy", "zh-CN": "Error 与轮动策略" },
+        "title": {
+          "en": "Error and rotation policy",
+          "zh-CN": "Error 与轮动策略"
+        },
         "description": {
           "en": "Checked every 30 seconds after the size threshold is reached, using rename + Nginx reopen; retained count excludes the current file.",
           "zh-CN": "达到大小阈值后每 30 秒检查一次，采用 rename + Nginx reopen，保留数量不含当前文件。"
         },
-        "errorLogLevel": { "en": "Error log level", "zh-CN": "Error log level" },
-        "maxFileSize": { "en": "Max file size (MiB)", "zh-CN": "单文件大小上限（MiB）" },
-        "maxFileSizeDescription": { "en": "Range 1–1024 MiB.", "zh-CN": "范围 1–1024 MiB。" },
-        "retainedFiles": { "en": "Retained file count", "zh-CN": "保留文件数量" },
+        "errorLogLevel": {
+          "en": "Error log level",
+          "zh-CN": "Error log level"
+        },
+        "maxFileSize": {
+          "en": "Max file size (MiB)",
+          "zh-CN": "单文件大小上限（MiB）"
+        },
+        "maxFileSizeDescription": {
+          "en": "Range 1–1024 MiB.",
+          "zh-CN": "范围 1–1024 MiB。"
+        },
+        "retainedFiles": {
+          "en": "Retained file count",
+          "zh-CN": "保留文件数量"
+        },
         "retainedFilesDescription": {
           "en": "Range 1–30, excluding the current access.log/error.log.",
           "zh-CN": "范围 1–30，不包含当前 access.log/error.log。"
         },
-        "rotateNow": { "en": "Rotate all logs now", "zh-CN": "立即轮动全部日志" },
-        "saveAndApply": { "en": "Save and apply", "zh-CN": "保存并应用" }
+        "rotateNow": {
+          "en": "Rotate all logs now",
+          "zh-CN": "立即轮动全部日志"
+        },
+        "saveAndApply": {
+          "en": "Save and apply",
+          "zh-CN": "保存并应用"
+        }
       },
       "preview": {
-        "title": { "en": "Current Nginx preview", "zh-CN": "当前 Nginx 预览" },
+        "title": {
+          "en": "Current Nginx preview",
+          "zh-CN": "当前 Nginx 预览"
+        },
         "description": {
           "en": "Active revision {{revision}}; will not change until the save task succeeds.",
           "zh-CN": "Active revision {{revision}}，保存任务成功前不会改变。"
@@ -86,22 +191,43 @@
       }
     },
     "diagnostics": {
-      "title": { "en": "Diagnostics", "zh-CN": "Diagnostics" },
+      "title": {
+        "en": "Diagnostics",
+        "zh-CN": "Diagnostics"
+      },
       "description": {
         "en": "Check consistency between the active revision and the SQLite runtime projection.",
         "zh-CN": "检查 Active revision 与 SQLite 运行投影的一致性。"
       },
-      "breadcrumb": { "en": "Diagnostics", "zh-CN": "Diagnostics" },
-      "loadFailed": { "en": "Failed to load diagnostics", "zh-CN": "Diagnostics 加载失败" },
-      "operationFailed": { "en": "Diagnostics operation failed", "zh-CN": "Diagnostics 操作失败" },
+      "breadcrumb": {
+        "en": "Diagnostics",
+        "zh-CN": "Diagnostics"
+      },
+      "loadFailed": {
+        "en": "Failed to load diagnostics",
+        "zh-CN": "Diagnostics 加载失败"
+      },
+      "operationFailed": {
+        "en": "Diagnostics operation failed",
+        "zh-CN": "Diagnostics 操作失败"
+      },
       "consistency": {
-        "title": { "en": "Runtime consistency", "zh-CN": "Runtime consistency" },
+        "title": {
+          "en": "Runtime consistency",
+          "zh-CN": "Runtime consistency"
+        },
         "description": {
           "en": "On startup, validates consistency across the SQLite projection, manifest, config file set, checksums, and nginx -t.",
           "zh-CN": "启动时对 SQLite 投影、manifest、配置文件集合、checksum 和 nginx -t 进行一致性校验。"
         },
-        "driftTitle": { "en": "Runtime configuration drift detected", "zh-CN": "检测到运行配置漂移" },
-        "issueItem": { "en": "{{message}} ({{code}})", "zh-CN": "{{message}}（{{code}}）" },
+        "driftTitle": {
+          "en": "Runtime configuration drift detected",
+          "zh-CN": "检测到运行配置漂移"
+        },
+        "issueItem": {
+          "en": "{{message}} ({{code}})",
+          "zh-CN": "{{message}}（{{code}}）"
+        },
         "healthy": {
           "en": "The current Active revision matches the database source.",
           "zh-CN": "当前 Active revision 与数据库来源一致。"
@@ -110,98 +236,230 @@
           "en": "Worker PID {{pid}}, uptime {{minutes}} minutes",
           "zh-CN": "Worker PID {{pid}}，已运行 {{minutes}} 分钟"
         },
-        "runNginxTest": { "en": "Run nginx -t", "zh-CN": "运行 nginx -t" }
+        "runNginxTest": {
+          "en": "Run nginx -t",
+          "zh-CN": "运行 nginx -t"
+        }
       },
       "storage": {
-        "title": { "en": "Storage and mounts", "zh-CN": "存储与挂载" },
+        "title": {
+          "en": "Storage and mounts",
+          "zh-CN": "存储与挂载"
+        },
         "description": {
           "en": "Business paths use stable placeholders; the log root is shown as-is for migration diagnostics.",
           "zh-CN": "业务路径使用稳定占位符；日志根目录因迁移诊断需要按原值显示。"
         },
-        "columnRegion": { "en": "Region", "zh-CN": "区域" },
-        "columnStatus": { "en": "Status", "zh-CN": "状态" },
-        "columnPath": { "en": "Path", "zh-CN": "路径" },
-        "columnSize": { "en": "Content size", "zh-CN": "内容大小" },
-        "columnAvailable": { "en": "Available space", "zh-CN": "可用空间" },
-        "notAvailable": { "en": "N/A", "zh-CN": "N/A" },
-        "historicalTitle": { "en": "Historical log roots detected", "zh-CN": "检测到历史日志根目录" },
+        "columnRegion": {
+          "en": "Region",
+          "zh-CN": "区域"
+        },
+        "columnStatus": {
+          "en": "Status",
+          "zh-CN": "状态"
+        },
+        "columnPath": {
+          "en": "Path",
+          "zh-CN": "路径"
+        },
+        "columnSize": {
+          "en": "Content size",
+          "zh-CN": "内容大小"
+        },
+        "columnAvailable": {
+          "en": "Available space",
+          "zh-CN": "可用空间"
+        },
+        "notAvailable": {
+          "en": "N/A",
+          "zh-CN": "N/A"
+        },
+        "historicalTitle": {
+          "en": "Historical log roots detected",
+          "zh-CN": "检测到历史日志根目录"
+        },
         "historicalDescription": {
           "en": "The product only reads the current log root and does not migrate old logs automatically. Migrate manually before cleaning related revisions.",
           "zh-CN": "产品只读取当前日志根目录，不会自动迁移旧日志。请在清理相关 revision 前手动迁移。"
         },
-        "readable": { "en": "readable", "zh-CN": "可读取" },
-        "unreadable": { "en": "unreadable", "zh-CN": "不可读取" }
+        "readable": {
+          "en": "readable",
+          "zh-CN": "可读取"
+        },
+        "unreadable": {
+          "en": "unreadable",
+          "zh-CN": "不可读取"
+        }
       },
       "activeDomain": {
-        "title": { "en": "Active Domain config", "zh-CN": "Active Domain 配置" },
+        "title": {
+          "en": "Active Domain config",
+          "zh-CN": "Active Domain 配置"
+        },
         "description": {
           "en": "Reads the actual server file in the current revision and verifies source and file checksums. Absolute sensitive paths are redacted.",
           "zh-CN": "读取当前 revision 中的实际 server 文件，并核对 source 与文件 checksum。绝对敏感路径已脱敏。"
         },
-        "domainLabel": { "en": "Domain", "zh-CN": "Domain" },
-        "emptyPublished": { "en": "No published Domain", "zh-CN": "没有已发布的 Domain" },
-        "loadingDomains": { "en": "Loading Domains", "zh-CN": "正在加载 Domain" },
-        "selectDomain": { "en": "Select a published Domain", "zh-CN": "选择已发布 Domain" },
-        "configLoadFailed": { "en": "Failed to load config", "zh-CN": "配置读取失败" },
-        "readingRevision": { "en": "Reading Active revision", "zh-CN": "正在读取 Active revision" },
-        "revisionFile": { "en": "Revision file", "zh-CN": "Revision file" },
-        "sourceVersion": { "en": "Source version", "zh-CN": "Source version" },
-        "sourceChecksum": { "en": "Source checksum", "zh-CN": "Source checksum" },
-        "configChecksum": { "en": "Config checksum", "zh-CN": "Config checksum" },
-        "routesBadge": { "en": "{{count}} routes", "zh-CN": "{{count}} routes" },
-        "headersBadge": { "en": "{{count}} headers", "zh-CN": "{{count}} headers" },
-        "logsBadge": { "en": "logs r{{revision}}", "zh-CN": "logs r{{revision}}" },
-        "enabled": { "en": "enabled", "zh-CN": "enabled" },
-        "disabled": { "en": "disabled", "zh-CN": "disabled" },
+        "domainLabel": {
+          "en": "Domain",
+          "zh-CN": "Domain"
+        },
+        "emptyPublished": {
+          "en": "No published Domain",
+          "zh-CN": "没有已发布的 Domain"
+        },
+        "loadingDomains": {
+          "en": "Loading Domains",
+          "zh-CN": "正在加载 Domain"
+        },
+        "selectDomain": {
+          "en": "Select a published Domain",
+          "zh-CN": "选择已发布 Domain"
+        },
+        "configLoadFailed": {
+          "en": "Failed to load config",
+          "zh-CN": "配置读取失败"
+        },
+        "readingRevision": {
+          "en": "Reading Active revision",
+          "zh-CN": "正在读取 Active revision"
+        },
+        "revisionFile": {
+          "en": "Revision file",
+          "zh-CN": "Revision file"
+        },
+        "sourceVersion": {
+          "en": "Source version",
+          "zh-CN": "Source version"
+        },
+        "sourceChecksum": {
+          "en": "Source checksum",
+          "zh-CN": "Source checksum"
+        },
+        "configChecksum": {
+          "en": "Config checksum",
+          "zh-CN": "Config checksum"
+        },
+        "routesBadge": {
+          "en": "{{count}} routes",
+          "zh-CN": "{{count}} routes"
+        },
+        "headersBadge": {
+          "en": "{{count}} headers",
+          "zh-CN": "{{count}} headers"
+        },
+        "logsBadge": {
+          "en": "logs r{{revision}}",
+          "zh-CN": "logs r{{revision}}"
+        },
+        "enabled": {
+          "en": "enabled",
+          "zh-CN": "enabled"
+        },
+        "disabled": {
+          "en": "disabled",
+          "zh-CN": "disabled"
+        },
         "selectHint": {
           "en": "Select a published Domain to view the current runtime config.",
           "zh-CN": "选择一个已发布 Domain 查看当前运行配置。"
         }
       },
       "managerTls": {
-        "title": { "en": "Manager TLS", "zh-CN": "管理端 TLS" },
+        "title": {
+          "en": "Manager TLS",
+          "zh-CN": "管理端 TLS"
+        },
         "description": {
           "en": "Validates the mounted certificate expiry, SAN, and private-key match, then safely reloads Nginx.",
           "zh-CN": "校验部署方挂载的证书有效期、SAN 与私钥匹配关系，再安全重新加载 Nginx。"
         },
-        "validTo": { "en": "Valid until {{date}}", "zh-CN": "有效期至 {{date}}" },
-        "hostname": { "en": "Hostname", "zh-CN": "Hostname" },
-        "san": { "en": "SAN", "zh-CN": "SAN" },
-        "sha256": { "en": "SHA-256", "zh-CN": "SHA-256" },
-        "certCheckFailed": { "en": "Certificate validation failed", "zh-CN": "证书校验失败" },
+        "validTo": {
+          "en": "Valid until {{date}}",
+          "zh-CN": "有效期至 {{date}}"
+        },
+        "hostname": {
+          "en": "Hostname",
+          "zh-CN": "Hostname"
+        },
+        "san": {
+          "en": "SAN",
+          "zh-CN": "SAN"
+        },
+        "sha256": {
+          "en": "SHA-256",
+          "zh-CN": "SHA-256"
+        },
+        "certCheckFailed": {
+          "en": "Certificate validation failed",
+          "zh-CN": "证书校验失败"
+        },
         "notManaged": {
           "en": "The current runtime mode does not manage TLS.",
           "zh-CN": "当前运行模式不管理 TLS。"
         },
-        "reload": { "en": "Validate and reload certificate", "zh-CN": "校验并重新加载证书" }
+        "reload": {
+          "en": "Validate and reload certificate",
+          "zh-CN": "校验并重新加载证书"
+        }
       },
       "rebuild": {
-        "title": { "en": "Rebuild Active revision from SQLite", "zh-CN": "按 SQLite 重建 Active revision" },
+        "title": {
+          "en": "Rebuild Active revision from SQLite",
+          "zh-CN": "按 SQLite 重建 Active revision"
+        },
         "description": {
           "en": "Available only in degraded state. Rebuild does not create a Config Version and does not change any Domain's Active Version.",
           "zh-CN": "只在 degraded 状态可用。重建不会创建 Config Version，也不会改变任何 Domain 的 Active Version。"
         },
-        "passwordLabel": { "en": "Current admin password", "zh-CN": "当前管理员密码" },
+        "passwordLabel": {
+          "en": "Current admin password",
+          "zh-CN": "当前管理员密码"
+        },
         "passwordDescription": {
           "en": "After confirmation, a candidate is fully generated from the trusted SQLite snapshot, then nginx -t, atomic activation, and reload are performed.",
           "zh-CN": "确认后将从受信任的 SQLite 快照全量生成 candidate，并执行 nginx -t、原子激活和 reload。"
         },
-        "submit": { "en": "Rebuild Active revision", "zh-CN": "重建 Active revision" }
+        "submit": {
+          "en": "Rebuild Active revision",
+          "zh-CN": "重建 Active revision"
+        }
       }
     },
     "cloudflare": {
-      "title": { "en": "Cloudflare DNS", "zh-CN": "Cloudflare DNS" },
+      "title": {
+        "en": "Cloudflare DNS",
+        "zh-CN": "Cloudflare DNS"
+      },
       "description": {
         "en": "Manage least-privilege API tokens used for DNS-01 automated verification.",
         "zh-CN": "管理 DNS-01 自动验证使用的最小权限 API Token。"
       },
-      "breadcrumb": { "en": "Cloudflare DNS", "zh-CN": "Cloudflare DNS" },
-      "operationFailed": { "en": "Cloudflare credential operation failed", "zh-CN": "Cloudflare 凭据操作失败" },
-      "saved": { "en": "Cloudflare credential saved", "zh-CN": "Cloudflare 凭据已保存" },
-      "tokenReplaced": { "en": "Token replaced", "zh-CN": "Token 已替换" },
-      "deleted": { "en": "Credential deleted", "zh-CN": "凭据已删除" },
+      "breadcrumb": {
+        "en": "Cloudflare DNS",
+        "zh-CN": "Cloudflare DNS"
+      },
+      "operationFailed": {
+        "en": "Cloudflare credential operation failed",
+        "zh-CN": "Cloudflare 凭据操作失败"
+      },
+      "saved": {
+        "en": "Cloudflare credential saved",
+        "zh-CN": "Cloudflare 凭据已保存"
+      },
+      "tokenReplaced": {
+        "en": "Token replaced",
+        "zh-CN": "Token 已替换"
+      },
+      "deleted": {
+        "en": "Credential deleted",
+        "zh-CN": "凭据已删除"
+      },
       "addToken": {
-        "title": { "en": "Add API Token", "zh-CN": "添加 API Token" },
+        "title": {
+          "en": "Add API Token",
+          "zh-CN": "添加 API Token"
+        },
         "description": {
           "en": "The token is verified online first, then stored encrypted with AES-256-GCM; it is never displayed again after saving.",
           "zh-CN": "Token 会先在线验证，再使用 AES-256-GCM 加密保存；保存后不再回显。"
@@ -226,38 +484,83 @@
           "en": "The Account and Zone selected in Cloudflare are already written into the Token permission scope; Account ID does not need to be copied here. The Token secret is shown only once — paste and save it immediately after creation.",
           "zh-CN": "Cloudflare 中选择的 Account 和 Zone 已写入 Token 权限范围；Account ID 无需复制到这里。Token secret 只显示一次，请创建后立即粘贴并保存。"
         },
-        "createToken": { "en": "Create API Token", "zh-CN": "创建 API Token" },
-        "viewDocs": { "en": "View official docs", "zh-CN": "查看官方文档" },
-        "nameLabel": { "en": "Credential name", "zh-CN": "凭据名称" },
-        "namePlaceholder": { "en": "Production DNS", "zh-CN": "Production DNS" },
-        "tokenLabel": { "en": "Cloudflare API Token", "zh-CN": "Cloudflare API Token" },
+        "createToken": {
+          "en": "Create API Token",
+          "zh-CN": "创建 API Token"
+        },
+        "viewDocs": {
+          "en": "View official docs",
+          "zh-CN": "查看官方文档"
+        },
+        "nameLabel": {
+          "en": "Credential name",
+          "zh-CN": "凭据名称"
+        },
+        "namePlaceholder": {
+          "en": "Production DNS",
+          "zh-CN": "Production DNS"
+        },
+        "tokenLabel": {
+          "en": "Cloudflare API Token",
+          "zh-CN": "Cloudflare API Token"
+        },
         "tokenDescription": {
           "en": "Requires Zone Read and DNS Edit permissions, and must cover the Zones of domains to be issued.",
           "zh-CN": "需要 Zone Read 与 DNS Edit 权限，且必须覆盖待签发域名的 Zone。"
         },
-        "submit": { "en": "Verify and save", "zh-CN": "验证并保存" }
+        "submit": {
+          "en": "Verify and save",
+          "zh-CN": "验证并保存"
+        }
       },
       "card": {
         "tokenZones": {
           "en": "Token •••• {{last4}} · {{count}} zones",
           "zh-CN": "Token •••• {{last4}} · {{count}} zones"
         },
-        "replaceToken": { "en": "Replace Token", "zh-CN": "替换 Token" },
-        "tokenPlaceholder": { "en": "Enter new Token", "zh-CN": "输入新 Token" },
-        "lastVerified": { "en": "Last verified: {{date}}", "zh-CN": "最近验证：{{date}}" },
-        "neverVerified": { "en": "Last verified: not yet", "zh-CN": "最近验证：尚未验证" },
-        "delete": { "en": "Delete", "zh-CN": "删除" },
-        "verifyAndReplace": { "en": "Verify and replace", "zh-CN": "验证并替换" }
+        "replaceToken": {
+          "en": "Replace Token",
+          "zh-CN": "替换 Token"
+        },
+        "tokenPlaceholder": {
+          "en": "Enter new Token",
+          "zh-CN": "输入新 Token"
+        },
+        "lastVerified": {
+          "en": "Last verified: {{date}}",
+          "zh-CN": "最近验证：{{date}}"
+        },
+        "neverVerified": {
+          "en": "Last verified: not yet",
+          "zh-CN": "最近验证：尚未验证"
+        },
+        "delete": {
+          "en": "Delete",
+          "zh-CN": "删除"
+        },
+        "verifyAndReplace": {
+          "en": "Verify and replace",
+          "zh-CN": "验证并替换"
+        }
       }
     },
     "security": {
-      "title": { "en": "Security", "zh-CN": "安全" },
+      "title": {
+        "en": "Security",
+        "zh-CN": "安全"
+      },
       "description": {
         "en": "Manage admin password and active sessions.",
         "zh-CN": "管理管理员密码与已登录会话。"
       },
-      "breadcrumb": { "en": "Security", "zh-CN": "安全" },
-      "operationFailed": { "en": "Security settings operation failed", "zh-CN": "安全设置操作失败" },
+      "breadcrumb": {
+        "en": "Security",
+        "zh-CN": "安全"
+      },
+      "operationFailed": {
+        "en": "Security settings operation failed",
+        "zh-CN": "安全设置操作失败"
+      },
       "passwordChanged": {
         "en": "Admin password changed; other sessions have been revoked",
         "zh-CN": "管理员密码已修改，其他会话已撤销"
@@ -266,38 +569,77 @@
         "en": "Session lifetime policy saved",
         "zh-CN": "会话有效期策略已保存"
       },
-      "showPassword": { "en": "Show password", "zh-CN": "显示密码" },
-      "hidePassword": { "en": "Hide password", "zh-CN": "隐藏密码" },
-      "cancel": { "en": "Cancel", "zh-CN": "取消" },
+      "showPassword": {
+        "en": "Show password",
+        "zh-CN": "显示密码"
+      },
+      "hidePassword": {
+        "en": "Hide password",
+        "zh-CN": "隐藏密码"
+      },
+      "cancel": {
+        "en": "Cancel",
+        "zh-CN": "取消"
+      },
       "changePassword": {
-        "title": { "en": "Change admin password", "zh-CN": "修改管理员密码" },
+        "title": {
+          "en": "Change admin password",
+          "zh-CN": "修改管理员密码"
+        },
         "description": {
           "en": "Current password must be verified. After 3 consecutive failures, this operation is paused for 30 minutes for the same admin and Client IP.",
           "zh-CN": "必须验证当前密码。连续失败 3 次后，同一管理员与 Client IP 将暂停此操作 30 分钟。"
         },
-        "currentPassword": { "en": "Current password", "zh-CN": "当前密码" },
-        "newPassword": { "en": "New password", "zh-CN": "新密码" },
-        "confirmPassword": { "en": "Confirm new password", "zh-CN": "确认新密码" },
+        "currentPassword": {
+          "en": "Current password",
+          "zh-CN": "当前密码"
+        },
+        "newPassword": {
+          "en": "New password",
+          "zh-CN": "新密码"
+        },
+        "confirmPassword": {
+          "en": "Confirm new password",
+          "zh-CN": "确认新密码"
+        },
         "newPasswordDescription": {
           "en": "At least 12 characters; the current browser session will be safely rotated after a successful change.",
           "zh-CN": "至少 12 个字符；修改成功后当前浏览器会话将安全轮换。"
         },
-        "submit": { "en": "Change password", "zh-CN": "修改密码" }
+        "submit": {
+          "en": "Change password",
+          "zh-CN": "修改密码"
+        }
       },
       "sessionPolicy": {
-        "title": { "en": "Session lifetime", "zh-CN": "会话有效期" },
+        "title": {
+          "en": "Session lifetime",
+          "zh-CN": "会话有效期"
+        },
         "description": {
           "en": "Controls the maximum lifetime of newly issued Sessions for normal login and when “Stay signed in” is checked.",
           "zh-CN": "分别控制普通登录与勾选“保持登录”后新签发 Session 的最长有效时间。"
         },
-        "standardDays": { "en": "Standard session (days)", "zh-CN": "普通会话（天）" },
-        "standardDaysAddon": { "en": "1–7 days", "zh-CN": "1–7 天" },
+        "standardDays": {
+          "en": "Standard session (days)",
+          "zh-CN": "普通会话（天）"
+        },
+        "standardDaysAddon": {
+          "en": "1–7 days",
+          "zh-CN": "1–7 天"
+        },
         "standardDaysDescription": {
           "en": "Used when the user does not check “Stay signed in”.",
           "zh-CN": "用户未勾选“保持登录”时使用。"
         },
-        "rememberDays": { "en": "Stay signed in (days)", "zh-CN": "保持登录（天）" },
-        "rememberDaysAddon": { "en": "7–90 days", "zh-CN": "7–90 天" },
+        "rememberDays": {
+          "en": "Stay signed in (days)",
+          "zh-CN": "保持登录（天）"
+        },
+        "rememberDaysAddon": {
+          "en": "7–90 days",
+          "zh-CN": "7–90 天"
+        },
         "rememberDaysDescription": {
           "en": "Used when the user checks “Stay signed in”.",
           "zh-CN": "用户勾选“保持登录”时使用。"
@@ -306,65 +648,122 @@
           "en": "The policy only affects Sessions issued after saving; existing Session expiry times are not extended or shortened.",
           "zh-CN": "策略仅影响保存后新签发的 Session；现有 Session 的到期时间不会被延长或缩短。"
         },
-        "submit": { "en": "Save session policy", "zh-CN": "保存会话策略" }
+        "submit": {
+          "en": "Save session policy",
+          "zh-CN": "保存会话策略"
+        }
       },
       "logout": {
-        "title": { "en": "Sign out current session", "zh-CN": "退出当前会话" },
+        "title": {
+          "en": "Sign out current session",
+          "zh-CN": "退出当前会话"
+        },
         "description": {
           "en": "Signs out the current browser session; other devices are unaffected.",
           "zh-CN": "退出当前浏览器的登录会话，其他设备不受影响。"
         },
-        "button": { "en": "Sign out", "zh-CN": "退出登录" },
-        "confirmTitle": { "en": "Confirm sign out?", "zh-CN": "确认退出登录？" },
+        "button": {
+          "en": "Sign out",
+          "zh-CN": "退出登录"
+        },
+        "confirmTitle": {
+          "en": "Confirm sign out?",
+          "zh-CN": "确认退出登录？"
+        },
         "confirmDescription": {
           "en": "The current browser session will be signed out and you will be redirected to the login page.",
           "zh-CN": "将退出当前浏览器会话并跳转到登录页。"
         },
-        "confirmAction": { "en": "Confirm sign out", "zh-CN": "确认退出" }
+        "confirmAction": {
+          "en": "Confirm sign out",
+          "zh-CN": "确认退出"
+        }
       },
       "revokeAll": {
-        "title": { "en": "Sign out all sessions", "zh-CN": "退出全部会话" },
+        "title": {
+          "en": "Sign out all sessions",
+          "zh-CN": "退出全部会话"
+        },
         "description": {
           "en": "Revokes this admin’s sessions on all browsers and devices, including the current session. Re-login is required afterward.",
           "zh-CN": "撤销该管理员在所有浏览器和设备上的会话，包含当前会话。完成后需要重新登录。"
         },
-        "button": { "en": "Sign out all sessions", "zh-CN": "退出全部会话" },
-        "confirmTitle": { "en": "Confirm sign out all sessions?", "zh-CN": "确认退出全部会话？" },
+        "button": {
+          "en": "Sign out all sessions",
+          "zh-CN": "退出全部会话"
+        },
+        "confirmTitle": {
+          "en": "Confirm sign out all sessions?",
+          "zh-CN": "确认退出全部会话？"
+        },
         "confirmDescription": {
           "en": "All signed-in devices will be invalidated immediately, and this page will redirect to the login page.",
           "zh-CN": "所有已登录设备会立即失效，当前页面将跳转到登录页。"
         },
-        "confirmAction": { "en": "Confirm sign out", "zh-CN": "确认退出" }
+        "confirmAction": {
+          "en": "Confirm sign out",
+          "zh-CN": "确认退出"
+        }
       }
     },
     "nginx": {
-      "title": { "en": "Nginx", "zh-CN": "Nginx" },
+      "title": {
+        "en": "Nginx",
+        "zh-CN": "Nginx"
+      },
       "description": {
         "en": "View runtime paths, health status, and manage runtime artifacts capacity.",
         "zh-CN": "查看运行路径、健康状态并管理 runtime artifacts 容量。"
       },
-      "breadcrumb": { "en": "Nginx", "zh-CN": "Nginx" },
-      "loadFailed": { "en": "Failed to load Nginx settings", "zh-CN": "Nginx 设置加载失败" },
-      "notCheckedYet": { "en": "Not checked yet", "zh-CN": "尚未检查" },
+      "breadcrumb": {
+        "en": "Nginx",
+        "zh-CN": "Nginx"
+      },
+      "loadFailed": {
+        "en": "Failed to load Nginx settings",
+        "zh-CN": "Nginx 设置加载失败"
+      },
+      "notCheckedYet": {
+        "en": "Not checked yet",
+        "zh-CN": "尚未检查"
+      },
       "capacitySaved": {
         "en": "Runtime artifacts capacity limit saved and cleanup completed",
         "zh-CN": "Runtime artifacts 容量上限已保存并完成清理"
       },
-      "saveFailed": { "en": "Failed to save settings", "zh-CN": "设置保存失败" },
-      "capacityLockedTitle": { "en": "Insufficient capacity for new revision", "zh-CN": "新 revision 容量不足" },
+      "saveFailed": {
+        "en": "Failed to save settings",
+        "zh-CN": "设置保存失败"
+      },
+      "capacityLockedTitle": {
+        "en": "Insufficient capacity for new revision",
+        "zh-CN": "新 revision 容量不足"
+      },
       "capacityLockedDescription": {
         "en": "Capacity or disk space precheck for the next publish did not pass. Raise the limit or free disk space before publishing.",
         "zh-CN": "下一次发布的容量或磁盘空间预检未通过。请提高上限或释放磁盘空间后再发布。"
       },
       "artifacts": {
-        "title": { "en": "Runtime artifacts", "zh-CN": "Runtime artifacts" },
+        "title": {
+          "en": "Runtime artifacts",
+          "zh-CN": "Runtime artifacts"
+        },
         "description": {
           "en": "Retention cleanup runs immediately after saving; Nginx is not reloaded.",
           "zh-CN": "保存后立即执行 retention cleanup，不会 reload Nginx。"
         },
-        "capacityLocked": { "en": "Capacity limited", "zh-CN": "容量受限" },
-        "publishable": { "en": "Publishable", "zh-CN": "可发布" },
-        "currentUsage": { "en": "Current usage", "zh-CN": "当前用量" },
+        "capacityLocked": {
+          "en": "Capacity limited",
+          "zh-CN": "容量受限"
+        },
+        "publishable": {
+          "en": "Publishable",
+          "zh-CN": "可发布"
+        },
+        "currentUsage": {
+          "en": "Current usage",
+          "zh-CN": "当前用量"
+        },
         "usageAria": {
           "en": "Runtime artifacts used {{percent}}%",
           "zh-CN": "Runtime artifacts 已使用 {{percent}}%"
@@ -373,26 +772,50 @@
           "en": "Retaining {{count}} revisions, of which {{protected}} are protected.",
           "zh-CN": "保留 {{count}} 个 revision，其中 {{protected}} 个受保护。"
         },
-        "capacityLimit": { "en": "Capacity limit", "zh-CN": "容量上限" },
+        "capacityLimit": {
+          "en": "Capacity limit",
+          "zh-CN": "容量上限"
+        },
         "capacityLimitDescription": {
           "en": "Allowed range 512–20480 MiB. Protected revisions currently require at least {{min}}.",
           "zh-CN": "允许范围 512–20480 MiB。受保护 revision 当前至少需要 {{min}}。"
         },
-        "saveCapacity": { "en": "Save capacity limit", "zh-CN": "保存容量上限" }
+        "saveCapacity": {
+          "en": "Save capacity limit",
+          "zh-CN": "保存容量上限"
+        }
       },
       "runtimeInfo": {
-        "title": { "en": "Nginx runtime info", "zh-CN": "Nginx 运行信息" },
+        "title": {
+          "en": "Nginx runtime info",
+          "zh-CN": "Nginx 运行信息"
+        },
         "description": {
           "en": "Provided by the current container and read-only deployment environment.",
           "zh-CN": "由当前容器和只读部署环境提供。"
         },
-        "version": { "en": "Version", "zh-CN": "版本" },
-        "unavailable": { "en": "Unavailable", "zh-CN": "不可用" },
-        "configRoot": { "en": "Config root", "zh-CN": "配置根目录" },
-        "staticAllowedRoots": { "en": "Static file allowed roots", "zh-CN": "静态文件允许根目录" }
+        "version": {
+          "en": "Version",
+          "zh-CN": "版本"
+        },
+        "unavailable": {
+          "en": "Unavailable",
+          "zh-CN": "不可用"
+        },
+        "configRoot": {
+          "en": "Config root",
+          "zh-CN": "配置根目录"
+        },
+        "staticAllowedRoots": {
+          "en": "Static file allowed roots",
+          "zh-CN": "静态文件允许根目录"
+        }
       },
       "health": {
-        "title": { "en": "Latest health check", "zh-CN": "最近健康检查" },
+        "title": {
+          "en": "Latest health check",
+          "zh-CN": "最近健康检查"
+        },
         "description": {
           "en": "Reflects the most recent runtime validation of the Active revision.",
           "zh-CN": "反映 Active revision 的最近一次运行校验。"
@@ -401,39 +824,401 @@
           "en": "Active revision: {{id}}",
           "zh-CN": "Active revision：{{id}}"
         },
-        "notActivated": { "en": "Not activated yet", "zh-CN": "尚未激活" }
+        "notActivated": {
+          "en": "Not activated yet",
+          "zh-CN": "尚未激活"
+        }
+      }
+    },
+    "manager": {
+      "title": {
+        "en": "Manager",
+        "zh-CN": "管理端"
+      },
+      "description": {
+        "en": "Bind the control-plane hostname, publish root nginx changes, and reset to local-only access.",
+        "zh-CN": "绑定控制面域名、发布 root nginx 变更，并重置为仅本地访问。"
+      },
+      "breadcrumb": {
+        "en": "Manager",
+        "zh-CN": "管理端"
+      },
+      "loadFailed": {
+        "en": "Failed to load manager settings",
+        "zh-CN": "管理端设置加载失败"
+      },
+      "operationFailed": {
+        "en": "Operation failed",
+        "zh-CN": "操作失败"
+      },
+      "statusTitle": {
+        "en": "Status",
+        "zh-CN": "状态"
+      },
+      "statusDescription": {
+        "en": "Local bootstrap entrypoints stay available on HTTP. Bound hostnames are rendered as separate nginx servers.",
+        "zh-CN": "本地 bootstrap 入口始终可通过 HTTP 访问；绑定域名以独立 nginx server 渲染。"
+      },
+      "status": {
+        "unconfigured": {
+          "en": "Unconfigured",
+          "zh-CN": "未配置"
+        },
+        "draft": {
+          "en": "Draft",
+          "zh-CN": "草稿"
+        },
+        "bound": {
+          "en": "Bound",
+          "zh-CN": "已绑定"
+        },
+        "unbound": {
+          "en": "Local only",
+          "zh-CN": "仅本地"
+        }
+      },
+      "localEntrypoints": {
+        "en": "Local entrypoints",
+        "zh-CN": "本地入口"
+      },
+      "boundAs": {
+        "en": "Bound as",
+        "zh-CN": "已绑定为"
+      },
+      "unconfiguredHint": {
+        "en": "No manager hostname is bound yet. Create a bind below, then publish.",
+        "zh-CN": "尚未绑定管理端域名。请在下方创建绑定后发布。"
+      },
+      "deploymentRunning": {
+        "en": "Deployment running",
+        "zh-CN": "部署进行中"
+      },
+      "bindTitle": {
+        "en": "Create bind",
+        "zh-CN": "创建绑定"
+      },
+      "bindDescription": {
+        "en": "Save a draft hostname binding. Publish applies it to the root nginx configuration.",
+        "zh-CN": "保存域名绑定草稿。发布后写入 root nginx 配置。"
+      },
+      "rebindTitle": {
+        "en": "Rebind hostname",
+        "zh-CN": "重新绑定域名"
+      },
+      "rebindDescription": {
+        "en": "Same-entity rebind only. History is preserved for version rollback.",
+        "zh-CN": "仅支持同实体 Rebind；历史版本可回滚。"
+      },
+      "primaryHostname": {
+        "en": "Primary hostname",
+        "zh-CN": "主域名"
+      },
+      "primaryHostnameDesc": {
+        "en": "Public hostname for the panel. Must not conflict with business domains or localhost.",
+        "zh-CN": "面板公网域名，不可与业务域名或 localhost 冲突。"
+      },
+      "aliases": {
+        "en": "Aliases",
+        "zh-CN": "别名"
+      },
+      "aliasesDesc": {
+        "en": "Comma or newline separated.",
+        "zh-CN": "逗号或换行分隔。"
+      },
+      "forceHttps": {
+        "en": "Force HTTPS on bound host",
+        "zh-CN": "绑定域名强制 HTTPS"
+      },
+      "forceHttpsDesc": {
+        "en": "Applies only to the bound host server when a certificate is present. Local bootstrap never redirects.",
+        "zh-CN": "仅在有证书时作用于绑定域名 server；本地 bootstrap 永不跳转。"
+      },
+      "saveDraft": {
+        "en": "Save draft",
+        "zh-CN": "保存草稿"
+      },
+      "publish": {
+        "en": "Publish",
+        "zh-CN": "发布"
+      },
+      "draftSaved": {
+        "en": "Manager draft saved",
+        "zh-CN": "管理端草稿已保存"
+      },
+      "saveFailed": {
+        "en": "Failed to save manager draft",
+        "zh-CN": "保存管理端草稿失败"
+      },
+      "publishing": {
+        "en": "Publishing manager configuration…",
+        "zh-CN": "正在发布管理端配置…"
+      },
+      "publishSucceeded": {
+        "en": "Manager configuration published",
+        "zh-CN": "管理端配置已发布"
+      },
+      "publishFailed": {
+        "en": "Failed to publish manager configuration",
+        "zh-CN": "发布管理端配置失败"
+      },
+      "versionsTitle": {
+        "en": "Version history",
+        "zh-CN": "版本历史"
+      },
+      "versionsDescription": {
+        "en": "Rollback restores a previous bound or unbound snapshot via root deploy.",
+        "zh-CN": "回滚通过 root 部署恢复到先前绑定或未绑定快照。"
+      },
+      "noVersions": {
+        "en": "No versions yet.",
+        "zh-CN": "暂无版本。"
+      },
+      "rollback": {
+        "en": "Rollback",
+        "zh-CN": "回滚"
+      },
+      "rollingBack": {
+        "en": "Rolling back…",
+        "zh-CN": "正在回滚…"
+      },
+      "rollbackFailed": {
+        "en": "Rollback failed",
+        "zh-CN": "回滚失败"
+      },
+      "activeBadge": {
+        "en": "Active",
+        "zh-CN": "当前"
+      },
+      "resetTitle": {
+        "en": "Reset to local only",
+        "zh-CN": "重置为仅本地"
+      },
+      "resetDescription": {
+        "en": "Creates a draft with bound=false. Publish it to keep only 127.0.0.1 / localhost. Certificates remain on disk.",
+        "zh-CN": "创建 bound=false 的草稿；发布后仅保留 127.0.0.1 / localhost。证书文件保留在磁盘。"
+      },
+      "resetAction": {
+        "en": "Reset to local only",
+        "zh-CN": "重置为仅本地"
+      },
+      "resetConfirmTitle": {
+        "en": "Reset manager binding?",
+        "zh-CN": "重置管理端绑定？"
+      },
+      "resetConfirmDescription": {
+        "en": "A new draft will unbind the public hostname. Publish to apply. History stays available for rollback.",
+        "zh-CN": "新草稿将解绑公网域名。发布后生效。历史版本仍可回滚。"
+      },
+      "resetDraftCreated": {
+        "en": "Reset draft created — publish to apply",
+        "zh-CN": "已创建重置草稿 — 发布后生效"
+      },
+      "resetFailed": {
+        "en": "Failed to create reset draft",
+        "zh-CN": "创建重置草稿失败"
+      },
+      "cancel": {
+        "en": "Cancel",
+        "zh-CN": "取消"
+      },
+      "sslTitle": {
+        "en": "HTTPS (DNS-01)",
+        "zh-CN": "HTTPS（DNS-01）"
+      },
+      "sslDescription": {
+        "en": "Manager certificates use DNS-01 only (manual or Cloudflare). HTTP-01 is not allowed on the control plane.",
+        "zh-CN": "管理端证书仅支持 DNS-01（手动或 Cloudflare）。控制面禁止 HTTP-01。"
+      },
+      "sslEmail": {
+        "en": "ACME account email",
+        "zh-CN": "ACME 账户邮箱"
+      },
+      "sslEnvironment": {
+        "en": "Environment",
+        "zh-CN": "环境"
+      },
+      "sslEnvironmentProduction": {
+        "en": "Production",
+        "zh-CN": "生产"
+      },
+      "sslEnvironmentStaging": {
+        "en": "Staging",
+        "zh-CN": "预发"
+      },
+      "sslValidation": {
+        "en": "DNS validation",
+        "zh-CN": "DNS 校验"
+      },
+      "sslValidationManual": {
+        "en": "Manual DNS",
+        "zh-CN": "手动 DNS"
+      },
+      "sslValidationCloudflare": {
+        "en": "Cloudflare",
+        "zh-CN": "Cloudflare"
+      },
+      "sslCloudflareCredential": {
+        "en": "Cloudflare credential",
+        "zh-CN": "Cloudflare 凭证"
+      },
+      "sslIssue": {
+        "en": "Issue certificate",
+        "zh-CN": "签发证书"
+      },
+      "sslRenew": {
+        "en": "Renew",
+        "zh-CN": "续期"
+      },
+      "sslOrderCreated": {
+        "en": "Certificate order created",
+        "zh-CN": "证书订单已创建"
+      },
+      "sslOrderFailed": {
+        "en": "Failed to create certificate order",
+        "zh-CN": "创建证书订单失败"
+      },
+      "sslOrdersTitle": {
+        "en": "Orders",
+        "zh-CN": "订单"
+      },
+      "sslNoOrders": {
+        "en": "No certificate orders yet.",
+        "zh-CN": "暂无证书订单。"
+      },
+      "sslDnsRecords": {
+        "en": "Publish these TXT records, then recheck.",
+        "zh-CN": "发布以下 TXT 记录后点击复查。"
+      },
+      "sslRecheck": {
+        "en": "Recheck DNS",
+        "zh-CN": "复查 DNS"
+      },
+      "sslCancel": {
+        "en": "Cancel order",
+        "zh-CN": "取消订单"
+      },
+      "sslRetryActivation": {
+        "en": "Retry activation",
+        "zh-CN": "重试激活"
+      },
+      "sslCertsTitle": {
+        "en": "Certificates",
+        "zh-CN": "证书"
+      },
+      "sslNoCerts": {
+        "en": "No certificates yet.",
+        "zh-CN": "暂无证书。"
+      },
+      "sslBoundRequired": {
+        "en": "Bind and publish a manager hostname before issuing HTTPS.",
+        "zh-CN": "请先绑定并发布管理端域名，再签发 HTTPS。"
       }
     }
   },
   "nav": {
-    "brand": { "en": "Nginx Manager", "zh-CN": "Nginx Manager" },
-    "dashboard": { "en": "Dashboard", "zh-CN": "仪表盘" },
-    "domains": { "en": "Domains", "zh-CN": "域名" },
-    "certificates": { "en": "Certificates", "zh-CN": "证书" },
-    "deployments": { "en": "Deployments", "zh-CN": "部署任务" },
-    "logs": { "en": "Logs", "zh-CN": "日志" },
-    "settings": { "en": "Settings", "zh-CN": "设置" },
-    "more": { "en": "More", "zh-CN": "更多" },
+    "brand": {
+      "en": "Nginx Manager",
+      "zh-CN": "Nginx Manager"
+    },
+    "dashboard": {
+      "en": "Dashboard",
+      "zh-CN": "仪表盘"
+    },
+    "domains": {
+      "en": "Domains",
+      "zh-CN": "域名"
+    },
+    "certificates": {
+      "en": "Certificates",
+      "zh-CN": "证书"
+    },
+    "deployments": {
+      "en": "Deployments",
+      "zh-CN": "部署任务"
+    },
+    "logs": {
+      "en": "Logs",
+      "zh-CN": "日志"
+    },
+    "settings": {
+      "en": "Settings",
+      "zh-CN": "设置"
+    },
+    "more": {
+      "en": "More",
+      "zh-CN": "更多"
+    },
     "nginxStatus": {
-      "label": { "en": "Nginx status", "zh-CN": "Nginx 状态" },
-      "checking": { "en": "checking", "zh-CN": "检查中" },
-      "unavailable": { "en": "unavailable", "zh-CN": "不可用" }
+      "label": {
+        "en": "Nginx status",
+        "zh-CN": "Nginx 状态"
+      },
+      "checking": {
+        "en": "checking",
+        "zh-CN": "检查中"
+      },
+      "unavailable": {
+        "en": "unavailable",
+        "zh-CN": "不可用"
+      }
     }
   },
   "status": {
-    "active": { "en": "Active", "zh-CN": "运行中" },
-    "succeeded": { "en": "Success", "zh-CN": "成功" },
-    "draft": { "en": "Draft", "zh-CN": "草稿" },
-    "pending": { "en": "Pending", "zh-CN": "待处理" },
-    "queued": { "en": "Queued", "zh-CN": "排队中" },
-    "running": { "en": "Running", "zh-CN": "运行中" },
-    "testing": { "en": "Testing", "zh-CN": "测试中" },
-    "disabled": { "en": "Disabled", "zh-CN": "已禁用" },
-    "failed": { "en": "Failed", "zh-CN": "失败" },
-    "unknown": { "en": "Unknown", "zh-CN": "未知" },
-    "ready": { "en": "Ready", "zh-CN": "就绪" },
-    "expiring": { "en": "Expiring", "zh-CN": "即将过期" },
-    "expired": { "en": "Expired", "zh-CN": "已过期" },
-    "superseded": { "en": "Superseded", "zh-CN": "已取代" }
+    "active": {
+      "en": "Active",
+      "zh-CN": "运行中"
+    },
+    "succeeded": {
+      "en": "Success",
+      "zh-CN": "成功"
+    },
+    "draft": {
+      "en": "Draft",
+      "zh-CN": "草稿"
+    },
+    "pending": {
+      "en": "Pending",
+      "zh-CN": "待处理"
+    },
+    "queued": {
+      "en": "Queued",
+      "zh-CN": "排队中"
+    },
+    "running": {
+      "en": "Running",
+      "zh-CN": "运行中"
+    },
+    "testing": {
+      "en": "Testing",
+      "zh-CN": "测试中"
+    },
+    "disabled": {
+      "en": "Disabled",
+      "zh-CN": "已禁用"
+    },
+    "failed": {
+      "en": "Failed",
+      "zh-CN": "失败"
+    },
+    "unknown": {
+      "en": "Unknown",
+      "zh-CN": "未知"
+    },
+    "ready": {
+      "en": "Ready",
+      "zh-CN": "就绪"
+    },
+    "expiring": {
+      "en": "Expiring",
+      "zh-CN": "即将过期"
+    },
+    "expired": {
+      "en": "Expired",
+      "zh-CN": "已过期"
+    },
+    "superseded": {
+      "en": "Superseded",
+      "zh-CN": "已取代"
+    }
   }
 }

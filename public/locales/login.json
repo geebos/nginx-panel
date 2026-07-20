@@ -1,7 +1,13 @@
 {
   "title": {
-    "setup": { "en": "Initialize admin", "zh-CN": "初始化管理员" },
-    "login": { "en": "Sign in to Nginx Manager", "zh-CN": "登录 Nginx Manager" }
+    "setup": {
+      "en": "Initialize admin",
+      "zh-CN": "初始化管理员"
+    },
+    "login": {
+      "en": "Sign in to Nginx Manager",
+      "zh-CN": "登录 Nginx Manager"
+    }
   },
   "description": {
     "setup": {
@@ -13,36 +19,80 @@
       "zh-CN": "登录后管理域名、配置版本和发布任务。"
     }
   },
-  "username": { "en": "Username", "zh-CN": "用户名" },
+  "username": {
+    "en": "Username",
+    "zh-CN": "用户名"
+  },
   "usernameDescription": {
     "en": "Use lowercase letters, numbers, dots, underscores, or hyphens.",
     "zh-CN": "使用小写字母、数字、点、下划线或连字符。"
   },
-  "password": { "en": "Password", "zh-CN": "密码" },
-  "passwordMinLength": { "en": "At least 12 characters.", "zh-CN": "至少 12 个字符。" },
-  "confirmPassword": { "en": "Confirm password", "zh-CN": "确认密码" },
-  "remember": { "en": "Stay signed in", "zh-CN": "保持登录" },
+  "password": {
+    "en": "Password",
+    "zh-CN": "密码"
+  },
+  "passwordMinLength": {
+    "en": "At least 12 characters.",
+    "zh-CN": "至少 12 个字符。"
+  },
+  "confirmPassword": {
+    "en": "Confirm password",
+    "zh-CN": "确认密码"
+  },
+  "remember": {
+    "en": "Stay signed in",
+    "zh-CN": "保持登录"
+  },
   "rememberDescription": {
     "en": "Extend the session on this device per the instance security policy.",
     "zh-CN": "按实例安全策略延长此设备的会话。"
   },
-  "showPassword": { "en": "Show password", "zh-CN": "显示密码" },
-  "hidePassword": { "en": "Hide password", "zh-CN": "隐藏密码" },
-  "submit": {
-    "setup": { "en": "Create admin", "zh-CN": "创建管理员" },
-    "login": { "en": "Sign in", "zh-CN": "登录" }
+  "showPassword": {
+    "en": "Show password",
+    "zh-CN": "显示密码"
   },
-  "setupFailed": { "en": "Setup failed", "zh-CN": "初始化失败" },
-  "loginFailed": { "en": "Sign-in failed", "zh-CN": "登录失败" },
+  "hidePassword": {
+    "en": "Hide password",
+    "zh-CN": "隐藏密码"
+  },
+  "submit": {
+    "setup": {
+      "en": "Create admin",
+      "zh-CN": "创建管理员"
+    },
+    "login": {
+      "en": "Sign in",
+      "zh-CN": "登录"
+    }
+  },
+  "setupFailed": {
+    "en": "Setup failed",
+    "zh-CN": "初始化失败"
+  },
+  "loginFailed": {
+    "en": "Sign-in failed",
+    "zh-CN": "登录失败"
+  },
   "apiConnectFailed": {
     "en": "Unable to connect to management API",
     "zh-CN": "无法连接管理 API"
   },
   "errors": {
-    "passwordRequired": { "en": "Please enter your password", "zh-CN": "请输入密码" },
+    "passwordRequired": {
+      "en": "Please enter your password",
+      "zh-CN": "请输入密码"
+    },
     "passwordMismatch": {
       "en": "The passwords do not match",
       "zh-CN": "两次输入的密码不一致"
     }
+  },
+  "managerHostname": {
+    "en": "Manager hostname (optional)",
+    "zh-CN": "管理端域名（可选）"
+  },
+  "managerHostnameDescription": {
+    "en": "Skip to use only http://127.0.0.1 / localhost. You can bind later under Settings → Manager.",
+    "zh-CN": "可跳过，仅使用 http://127.0.0.1 / localhost。之后可在 设置 → 管理端 绑定。"
   }
 }

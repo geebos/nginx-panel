@@ -11,3 +11,12 @@ test("docker/nginx/nginx.conf.template rejects requests for unknown hosts", asyn
   assert.notEqual(defaultServerEnd, -1);
   assert.match(config.slice(defaultServerStart, defaultServerEnd), /server_name _;[\s\S]*return 444;/);
 });
+
+test("bootstrap template serves localhost without 308 and forwards $scheme", async () => {
+  const config = await readFile("docker/nginx/nginx.conf.template", "utf8");
+  assert.match(config, /server_name 127\.0\.0\.1 localhost;/);
+  assert.match(config, /proxy_set_header X-Forwarded-Proto \$scheme;/);
+  assert.doesNotMatch(config, /X-Forwarded-Proto https;/);
+  assert.doesNotMatch(config, /return 308 https:\/\//);
+  assert.doesNotMatch(config, /\$\{MANAGER_HOST\}/);
+});

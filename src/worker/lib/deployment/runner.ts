@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, readlink, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readlink, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -19,7 +19,7 @@ import {
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { getActiveLogSettings, logSettingsChecksum } from "@/worker/lib/log-settings";
-import { injectAccessLogFormat, renderDomainConfig } from "@/worker/lib/nginx/config";
+import { injectAccessLogFormat, renderDomainConfig, renderManagerRoot } from "@/worker/lib/nginx/config";
 import { checksum, createRuntimeManifest } from "@/worker/lib/runtime/manifest";
 import { assertRuntimeMutable, getRuntimeState, setRuntimeDegraded, setRuntimeHealthy } from "@/worker/lib/runtime/state";
 import { createSnapshot } from "@/worker/lib/snapshot";
@@ -27,6 +27,8 @@ import { BusinessError } from "@/worker/lib/errors";
 import { validateManagerTlsEnvironment } from "@/worker/lib/runtime/manager-tls";
 import { assertRuntimeStorageCapacity, cleanupRuntimeStorage } from "@/worker/lib/runtime/storage";
 import { touchJobRunnerHeartbeat } from "@/worker/lib/service-lifecycle";
+import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
+import { managerConfigSchema, type ManagerConfig } from "@/shared/schemas";
 
 const execFileAsync = promisify(execFile);
 const stepNames = ["Generate candidate config", "Validate files and targets", "Run nginx -t", "Activate revision", "Reload Nginx", "Run health checks", "Commit active version"];
@@ -52,14 +54,13 @@ async function updateStep(db: AppEnv["Variables"]["db"], deploymentId: string, s
   }).where(and(eq(deploymentSteps.deploymentId, deploymentId), eq(deploymentSteps.sequence, sequence)));
 }
 
-async function renderRuntimeRoot(logSettings: Awaited<ReturnType<typeof getActiveLogSettings>>) {
-  const templatePath = process.env.NGINX_TEMPLATE_FILE || "/etc/nginx/templates/nginx-manager.conf.template";
-  let rendered = await readFile(templatePath, "utf8");
-  if (process.env.APP_ENV !== "development") {
-    const required = ["MANAGER_HOST", "MANAGER_TLS_CERT_FILE", "MANAGER_TLS_KEY_FILE"] as const;
-    for (const name of required) if (!process.env[name]) throw new Error(`${name} is not set`);
-    rendered = rendered.replace(/\$\{(MANAGER_HOST|MANAGER_TLS_CERT_FILE|MANAGER_TLS_KEY_FILE)\}/g, (_, name: typeof required[number]) => process.env[name]!);
-  }
+async function renderRuntimeRoot(
+  db: AppEnv["Variables"]["db"],
+  logSettings: Awaited<ReturnType<typeof getActiveLogSettings>>,
+  targetManagerConfig?: ManagerConfig,
+) {
+  const rootInput = await buildManagerRootInput(db, { targetConfig: targetManagerConfig });
+  const rendered = renderManagerRoot(rootInput);
   return injectAccessLogFormat(rendered, logSettings);
 }
 
@@ -426,18 +427,28 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
         ? and(isNull(domains.deletedAt), isNotNull(domains.activeVersionId))
         : and(isNull(domains.deletedAt), or(isNotNull(domains.activeVersionId), eq(domains.id, deployment.domainId!))),
     );
-    const selected = domainRows.map((domain) => ({
+    // Manager never produces domains/<id>.conf; only type=domain rows enter the conf set.
+    const businessRows = domainRows.filter((domain) => domain.type !== "manager");
+    const managerTarget = domainRows.find((domain) => domain.type === "manager" && domain.id === deployment.domainId);
+    let targetManagerConfig: ManagerConfig | undefined;
+    if (managerTarget && deployment.configVersionId) {
+      const managerVersion = await db.query.configVersions.findFirst({ where: eq(configVersions.id, deployment.configVersionId) });
+      if (managerVersion) targetManagerConfig = managerConfigSchema.parse(JSON.parse(managerVersion.snapshotJson));
+    }
+    const selected = businessRows.map((domain) => ({
       ...domain,
       sourceVersionId: !appliesLogSettings && !rebuildActive && domain.id === deployment.domainId ? deployment.configVersionId! : domain.activeVersionId!,
-    }));
-    const versions = await db.select().from(configVersions).where(inArray(configVersions.id, selected.map((item) => item.sourceVersionId)));
+    })).filter((domain) => domain.sourceVersionId);
+    const versions = selected.length
+      ? await db.select().from(configVersions).where(inArray(configVersions.id, selected.map((item) => item.sourceVersionId)))
+      : [];
     const byId = new Map(versions.map((version) => [version.id, version]));
     const snapshots = new Map(versions.map((version) => [version.id, domainConfigSchema.parse(JSON.parse(version.snapshotJson))]));
     const certificateIds = [...new Set([...snapshots.values()].map((snapshot) => snapshot.ssl.certificateId).filter((value): value is string => Boolean(value)))];
     const certificateRows = certificateIds.length ? await db.select().from(certificates).where(inArray(certificates.id, certificateIds)) : [];
     const certificatesById = new Map(certificateRows.map((certificate) => [certificate.id, certificate]));
     await mkdir(join(candidate, "domains"), { recursive: true });
-    const rootConfig = await renderRuntimeRoot(logSettings);
+    const rootConfig = await renderRuntimeRoot(db, logSettings, targetManagerConfig);
     await writeFile(join(candidate, "nginx.conf"), rootConfig, { mode: 0o640 });
     const manifestDomains: Record<string, { sourceVersionId: string; snapshotChecksum: string; enabled: boolean; certificateId: string | null; configChecksum: string }> = {};
     for (const domain of selected) {
@@ -487,8 +498,20 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
         const activatedAt = Date.now();
         tx.update(configVersions).set({ status: "superseded" }).where(and(eq(configVersions.domainId, deployment.domainId!), eq(configVersions.status, "active"))).run();
         tx.update(configVersions).set({ status: "active" }).where(eq(configVersions.id, deployment.configVersionId!)).run();
-        tx.update(domains).set({ activeVersionId: deployment.configVersionId, ...(!certificateActivation ? { draftVersionId: null, enabled: true } : {}), runtimeStatus: "running", updatedAt: activatedAt }).where(eq(domains.id, deployment.domainId!)).run();
-        const committedSnapshot = snapshots.get(deployment.configVersionId!);
+        // Certificate activation for business domains may keep an unrelated draft.
+        // Manager SSL drafts must be cleared after activation so Publish cannot strip TLS (C7).
+        const targetDomain = tx.select({ type: domains.type }).from(domains).where(eq(domains.id, deployment.domainId!)).get();
+        const clearDraft = !certificateActivation || targetDomain?.type === "manager";
+        tx.update(domains).set({
+          activeVersionId: deployment.configVersionId,
+          ...(clearDraft ? { draftVersionId: null, enabled: true } : {}),
+          runtimeStatus: "running",
+          updatedAt: activatedAt,
+        }).where(eq(domains.id, deployment.domainId!)).run();
+        const committedSnapshot = snapshots.get(deployment.configVersionId!)
+          ?? (targetManagerConfig && deployment.configVersionId
+            ? targetManagerConfig
+            : undefined);
         if (committedSnapshot?.ssl.certificateId) {
           tx.update(certificates).set({ autoRenew: committedSnapshot.ssl.autoRenew }).where(eq(certificates.id, committedSnapshot.ssl.certificateId)).run();
         }

@@ -2,7 +2,15 @@ import { randomUUID } from "node:crypto";
 import { count, eq } from "drizzle-orm";
 import { deleteCookie, getCookie } from "hono/cookie";
 import { Hono } from "hono";
-import { loginSchema, sessions, setupAdminSchema, users } from "@/shared/schemas";
+import {
+  configVersions,
+  deployments,
+  domains,
+  loginSchema,
+  sessions,
+  setupAdminSchema,
+  users,
+} from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import {
   assertLoginAllowed,
@@ -19,6 +27,10 @@ import {
 import { BusinessError } from "@/worker/lib/errors";
 import { jsonValidator } from "@/worker/lib/validator";
 import { requireAuth, requireSameOrigin } from "@/worker/middleware/auth";
+import { createManagerDraftFromSetupInTx } from "@/worker/lib/manager/service";
+import { assertHostnamesAvailable } from "@/worker/lib/domain/validation";
+import { createConfigTestDeployment, runConfigTest } from "@/worker/lib/deployment/config-test";
+import { createPublishDeployment, enqueuePublish } from "@/worker/lib/deployment/runner";
 
 function clientIp(headers: Headers) {
   return headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -46,16 +58,85 @@ authRoute.post("/setup/admin", jsonValidator(setupAdminSchema), async (c) => {
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
+
+  // Preflight hostname availability before writing the admin row so a reserved
+  // hostname failure does not permanently complete setup (H2).
+  if (input.managerPrimaryHostname) {
+    const existingManager = await db.query.domains.findFirst({
+      where: eq(domains.type, "manager"),
+    });
+    await assertHostnamesAvailable(
+      db,
+      [input.managerPrimaryHostname, ...(input.managerAliases ?? [])],
+      existingManager?.id,
+    );
+  }
+
+  let managerDomainId: string | null = null;
+  let managerDraftVersionId: string | null = null;
+  let managerSnapshotChecksum: string | null = null;
+
+  // Single transaction: admin + optional manager draft. Failure rolls back both.
   db.transaction((tx) => {
     const result = tx.select({ count: count() }).from(users).get();
     if ((result?.count ?? 0) > 0) {
       throw new BusinessError("errors:setupAlreadyCompleted", 409, "SETUP_ALREADY_COMPLETED");
     }
     tx.insert(users).values(user).run();
+
+    if (input.managerPrimaryHostname) {
+      const created = createManagerDraftFromSetupInTx(tx, {
+        primaryHostname: input.managerPrimaryHostname,
+        aliases: input.managerAliases,
+        userId: user.id,
+      });
+      managerDomainId = created.domainId;
+      managerDraftVersionId = created.versionId;
+      managerSnapshotChecksum = created.snapshotChecksum;
+    }
   });
+
+  // Enqueue root deploy after commit so a deploy failure keeps the draft for Settings retry.
+  if (managerDomainId && managerDraftVersionId && managerSnapshotChecksum && process.env.RUNTIME_MODE === "nginx-manager") {
+    try {
+      const version = await db.query.configVersions.findFirst({
+        where: eq(configVersions.id, managerDraftVersionId),
+      });
+      if (version) {
+        const preflight = await createConfigTestDeployment(db, {
+          domainId: managerDomainId,
+          versionId: version.id,
+          requestedBy: user.id,
+          idempotencyKey: `setup-manager:${version.id}:test`,
+          expectedSnapshotChecksum: version.snapshotChecksum,
+        });
+        await runConfigTest(db, preflight.id);
+        const preflightAfter = await db.query.deployments.findFirst({
+          where: eq(deployments.id, preflight.id),
+        });
+        if (preflightAfter?.status === "succeeded") {
+          const deployment = await createPublishDeployment(db, {
+            domainId: managerDomainId,
+            versionId: version.id,
+            requestedBy: user.id,
+            idempotencyKey: `setup-manager:${version.id}:deploy`,
+            expectedSnapshotChecksum: version.snapshotChecksum,
+            preflightDeploymentId: preflight.id,
+          });
+          void enqueuePublish(db, deployment.id);
+        }
+      }
+    } catch (error) {
+      console.error("[setup] manager deploy enqueue failed; draft retained for retry", error);
+    }
+  }
+
   const session = await createSession(db, user, true);
   setSessionCookie(c, session.token, session.expiresAt);
-  return c.json({ user: { id: user.id, username: user.username } }, 201);
+  return c.json({
+    user: { id: user.id, username: user.username },
+    managerDomainId,
+  }, 201);
 });
 
 authRoute.post("/auth/login", jsonValidator(loginSchema), async (c) => {

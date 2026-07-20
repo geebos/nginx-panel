@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { label: "General", slug: "general" },
+  { label: "Manager", slug: "manager" },
   { label: "Nginx", slug: "nginx" },
   { label: "Security", slug: "security" },
   { label: "Cloudflare DNS", slug: "cloudflare" },

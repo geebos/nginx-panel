@@ -49,7 +49,7 @@ test("runtime verifier accepts a complete revision and rejects source projection
 
   const saved = createSnapshot(snapshot);
   const versionRows: Array<typeof schema.configVersions.$inferSelect> = [{ id: "version-1", domainId: "domain-1", versionNumber: 1, status: "active", sourceVersionId: null, sourceCertificateId: null, changeSummary: "test", snapshotJson: saved.json, snapshotChecksum: saved.checksum, createdBy: null, createdAt: 1, updatedAt: 1 }];
-  const domainRows: Array<typeof schema.domains.$inferSelect> = [{ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", activeVersionId: "version-1", draftVersionId: null, createdAt: 1, updatedAt: 1, deletedAt: null }];
+  const domainRows: Array<typeof schema.domains.$inferSelect> = [{ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", activeVersionId: "version-1", draftVersionId: null, createdAt: 1, updatedAt: 1, deletedAt: null }];
   const db = createDb(domainRows, versionRows);
 
   const rootConfig = "events {}\nhttp { include domains/*.conf; }\n";

@@ -29,7 +29,7 @@ function fixture() {
   const v1 = createSnapshot(config);
   const v2 = createSnapshot({ ...config, aliases: ["www.example.com"] });
   db.insert(schema.users).values({ id: "user-1", username: "admin", passwordHash: "unused", createdAt: now, updatedAt: now }).run();
-  db.insert(schema.domains).values({ id: "domain-1", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", activeVersionId: "version-2", createdAt: now, updatedAt: now }).run();
+  db.insert(schema.domains).values({ id: "domain-1", type: "domain", primaryHostname: "example.com", displayHostname: "example.com", enabled: true, runtimeStatus: "running", activeVersionId: "version-2", createdAt: now, updatedAt: now }).run();
   db.insert(schema.configVersions).values([
     { id: "version-1", domainId: "domain-1", versionNumber: 1, status: "superseded", changeSummary: "initial", snapshotJson: v1.json, snapshotChecksum: v1.checksum, createdBy: "user-1", createdAt: now, updatedAt: now },
     { id: "version-2", domainId: "domain-1", versionNumber: 2, status: "active", changeSummary: "add alias", snapshotJson: v2.json, snapshotChecksum: v2.checksum, createdBy: "user-1", createdAt: now, updatedAt: now },

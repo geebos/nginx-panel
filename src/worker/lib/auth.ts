@@ -6,6 +6,7 @@ import { authAttempts, sessions, type User } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { getSessionPolicy } from "@/worker/lib/session-policy";
+import { effectiveRequestScheme } from "@/worker/lib/runtime/env";
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_BLOCK_MS = 15 * 60 * 1000;
@@ -207,9 +208,11 @@ export function setSessionCookie(
   token: string,
   expiresAt: number,
 ) {
+  const scheme = effectiveRequestScheme(c.req.raw.headers);
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.APP_ENV !== "development",
+    // Cookie Secure follows the effective request scheme (R4), not APP_ENV.
+    secure: scheme === "https",
     sameSite: "Lax",
     path: "/",
     expires: new Date(expiresAt),

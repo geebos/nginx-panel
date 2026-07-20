@@ -28,7 +28,8 @@ const httpChallengeStatuses = ["pending", "presented", "propagating", "ready"];
 
 async function domainOrThrow(db: AppEnv["Variables"]["db"], id: string) {
   const domain = await db.query.domains.findFirst({ where: and(eq(domains.id, id), isNull(domains.deletedAt)) });
-  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
+  // Manager is not exposed via domain certificate paths (use /api/settings/manager/certificate/*).
+  if (!domain || domain.type === "manager") throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   return domain;
 }
 
@@ -83,6 +84,7 @@ certificatesRoute.get("/certificates", async (c) => {
     .select({ certificate: certificates, domain: domains })
     .from(certificates)
     .innerJoin(domains, eq(certificates.domainId, domains.id))
+    .where(eq(domains.type, "domain"))
     .orderBy(desc(certificates.issuedAt));
   return c.json({ items: items.map(({ certificate, domain }) => publicCertificate(certificate, domain)) });
 });

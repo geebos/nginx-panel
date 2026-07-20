@@ -140,9 +140,9 @@ src/
 ├── components/
 │   ├── ui/             # shadcn/ui component library, do not edit directly
 │   ├── layout/         # Layout / Page / Navigate
-│   └── pages/          # Page-specific components, grouped by route
-│       └── <page>/     # One folder per route (e.g. index/, todo/, test/)
-│           ├── *.tsx   # Page-specific non-form components
+│   └── pages/          # Optional extracted components used by a specific page
+│       └── <page>/     # Create only when the page has components worth extracting
+│           ├── *.tsx   # Complex or independently meaningful page-specific components
 │           └── forms/  # Form components for the page
 │               └── <name>-form.tsx
 ├── hooks/              # React hooks
@@ -175,6 +175,8 @@ components.json         # shadcn config
 - Reuse existing components whenever possible.
 - Create new components **only if no suitable implementation exists**.
 - **Do not** use native HTML elements when an equivalent component exists in `components/ui/`.
+- Do not place complete page-level JSX under `src/components/`. Keep the overall page structure and page-level composition in `src/pages/`.
+- Use `src/components/pages/<page>/` only for complex, shared, or clearly scoped page-specific components, as well as form components.
 
 ## Schemas
 

@@ -1,14 +1,11 @@
 import * as React from "react";
-import { useRouter } from "next/router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/api";
 import { safeRedirectPath } from "@/lib/safe-redirect";
-import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n/utils";
+import { useRouter } from "@/hooks/use-router";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const locale = useLocale();
   const [authenticated, setAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
@@ -21,12 +18,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       .catch(() => {
         if (!active) return;
         const redirect = safeRedirectPath(router.asPath);
-        void router.replace(localizePath(`/login?redirect=${encodeURIComponent(redirect)}`, locale));
+        void router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
       });
     return () => {
       active = false;
     };
-  }, [router, locale]);
+  }, [router]);
 
   if (!authenticated) {
     return (

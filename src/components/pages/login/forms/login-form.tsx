@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { useTranslation } from "react-i18next";
 import { Controller, useForm } from "react-hook-form";
 import { localizedZodResolver } from "@/lib/i18n/form";
@@ -28,13 +28,10 @@ import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { passwordSchema, usernameSchema } from "@/shared/schemas";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n/utils";
 
 export function LoginForm() {
   const { t } = useTranslation(["common", "login"]);
   const router = useRouter();
-  const locale = useLocale();
   const setupQuery = useApiQuery(getSetupStatus);
   const [showPassword, setShowPassword] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -58,9 +55,9 @@ export function LoginForm() {
   React.useEffect(() => {
     if (!router.isReady) return;
     void getCurrentUser()
-      .then(() => router.replace(localizePath("/dashboard", locale)))
+      .then(() => router.replace("/dashboard"))
       .catch(() => undefined);
-  }, [router, locale]);
+  }, [router]);
 
   const submit = form.handleSubmit(async (values) => {
     setServerError(null);
@@ -83,7 +80,7 @@ export function LoginForm() {
       } else {
         await login({ username: values.username, password: values.password, remember: values.remember });
       }
-      await router.replace(localizePath(safeRedirectPath(router.query.redirect), locale));
+      await router.replace(safeRedirectPath(router.query.redirect));
     } catch (error) {
       setServerError(formatErrorMessage(t, error, "login:loginFailed"));
     }

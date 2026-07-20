@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { useTranslation } from "react-i18next";
 import { ActivityIcon, AlertTriangleIcon, ServerCogIcon, ShieldCheckIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,7 +15,6 @@ import { getActiveRuntimeConfig, getDomains, rebuildActiveRuntime, reloadManager
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
 import { formatErrorMessage, formatMessageKey } from "@/lib/i18n/error";
-import { localizePath } from "@/lib/i18n/utils";
 
 function formatBytes(value: number | null, notAvailable: string) {
   if (value === null) return notAvailable;
@@ -52,7 +51,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setSubmitting(true);
     try {
       const result = await rebuildActiveRuntime(currentPassword);
-      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(formatErrorMessage(t, caught, "errors:runtimeConfigRebuildFailed"));
       setSubmitting(false);
@@ -64,7 +63,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setReloadingTls(true);
     try {
       const result = await reloadManagerTls();
-      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(formatErrorMessage(t, caught, "errors:tlsReloadFailed"));
       setReloadingTls(false);
@@ -76,7 +75,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setTestingNginx(true);
     try {
       const result = await runDiagnosticNginxTest();
-      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(formatErrorMessage(t, caught, "errors:nginxConfigTestFailed"));
       setTestingNginx(false);

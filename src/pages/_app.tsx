@@ -2,7 +2,7 @@ import "@/styles/globals.css";
 import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import type { AppProps } from "next/app";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import i18next from "i18next";
 import { I18nextProvider, initReactI18next } from "react-i18next";

@@ -2,7 +2,7 @@ import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { ArrowLeftIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";

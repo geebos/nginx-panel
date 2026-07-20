@@ -2,7 +2,7 @@ import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { Globe2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import {
@@ -64,7 +64,6 @@ import { deleteDomain, getDomains, type DomainListItem } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n/utils";
 
 function queryValue(value: string | string[] | undefined, fallback: string) {
   return typeof value === "string" ? value : fallback;
@@ -182,7 +181,7 @@ function DomainList() {
   const pageHref = (nextPage: number) => {
     const next = new URLSearchParams(params);
     next.set("page", String(nextPage));
-    return localizePath(`/domains?${next.toString()}`, locale);
+    return `/domains?${next.toString()}`;
   };
 
   return (
@@ -362,7 +361,7 @@ function DomainList() {
                   variant="outline"
                   onClick={() => {
                     setSearch("");
-                    void router.replace(localizePath("/domains", locale));
+                    void router.replace("/domains");
                   }}
                 >
                   {t("domains:list.empty.clearFilters")}

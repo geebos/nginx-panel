@@ -2,7 +2,7 @@ import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { EyeIcon, GitCompareArrowsIcon, HistoryIcon, LoaderCircleIcon, RefreshCwIcon, RotateCcwIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,7 +17,6 @@ import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { TextDiff } from "@/components/pages/shared/text-diff";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n/utils";
 import { getDomain, getDomainVersionDiff, getDomainVersions, rollbackDomainVersion, type ConfigVersionResponse } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
 
@@ -69,7 +68,7 @@ function DomainHistory({ domainId }: { domainId: string }) {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={rollingBack}>{t("domains:common.actions.cancel")}</AlertDialogCancel>
-            <AlertDialogAction disabled={rollingBack || !rollbackDiff || Boolean(rollbackError)} onClick={(event) => { event.preventDefault(); if (!rollbackTarget) return; setRollingBack(true); setRollbackError(""); void rollbackDomainVersion(domainId, rollbackTarget.id).then((result) => router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale))).catch((error: Error) => { setRollbackError(formatErrorMessage(t, error)); setRollingBack(false); }); }}>
+            <AlertDialogAction disabled={rollingBack || !rollbackDiff || Boolean(rollbackError)} onClick={(event) => { event.preventDefault(); if (!rollbackTarget) return; setRollingBack(true); setRollbackError(""); void rollbackDomainVersion(domainId, rollbackTarget.id).then((result) => router.push(`/deployments/detail?id=${result.deploymentId}`)).catch((error: Error) => { setRollbackError(formatErrorMessage(t, error)); setRollingBack(false); }); }}>
               {rollingBack ? <LoaderCircleIcon className="animate-spin" /> : <RotateCcwIcon />}{t("domains:history.rollbackDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>

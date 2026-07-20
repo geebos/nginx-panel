@@ -1,7 +1,7 @@
 import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import {
   CheckCircle2Icon,
   Globe2Icon,

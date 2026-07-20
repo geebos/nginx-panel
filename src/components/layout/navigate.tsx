@@ -1,5 +1,4 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import {
   Sidebar as SidebarPrimitive,
@@ -22,8 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getDashboard } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { useLocale } from "@/hooks/use-locale";
-import { localizePath } from "@/lib/i18n/utils";
+import { useRouter } from "@/hooks/use-router";
 import { EllipsisIcon, FileTextIcon, GaugeIcon, Globe2Icon, RocketIcon, SettingsIcon, ShieldCheckIcon, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
@@ -127,7 +125,6 @@ export function Sidebar() {
 
 export function Tabbar() {
   const router = useRouter();
-  const locale = useLocale();
   const { t } = useTranslation(["common"]);
   const pathname = router.pathname.replace(/^\/\[locale\]/, "");
   const primaryItems = navItems.filter((item) => ["/dashboard", "/domains", "/logs"].includes(item.href));
@@ -151,7 +148,7 @@ export function Tabbar() {
               if (event.pointerType === "mouse" || isActiveItem) return;
 
               event.preventDefault();
-              void router.push(localizePath(item.href, locale));
+              void router.push(item.href);
             }}
             className={cn(
               "flex flex-1 flex-col items-center gap-1 py-2 transition-colors",

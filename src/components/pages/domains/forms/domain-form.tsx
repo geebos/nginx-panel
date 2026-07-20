@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, LoaderCircleIcon } from "lucide-react";
@@ -22,9 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { hostnameSchema, type DomainConfig, type RouteConfig } from "@/shared/schemas";
 import { ApiError, createDomain } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useLocale } from "@/hooks/use-locale";
 import { formatErrorMessage, formatMessageKey } from "@/lib/i18n/error";
-import { localizePath } from "@/lib/i18n/utils";
 import { localizedZodResolver } from "@/lib/i18n/form";
 
 function buildFormSchema(t: TFunction) {
@@ -107,7 +105,6 @@ function buildRoute(values: DomainFormValues): RouteConfig[] {
 export function DomainForm() {
   const { t } = useTranslation(["common", "domains"]);
   const router = useRouter();
-  const locale = useLocale();
   const [step, setStep] = React.useState(0);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const formSchema = React.useMemo(() => buildFormSchema(t), [t]);
@@ -174,7 +171,7 @@ export function DomainForm() {
 
     try {
       const result = await createDomain({ config });
-      await router.push(localizePath(`/domains/overview?id=${result.domainId}&created=1`, locale));
+      await router.push(`/domains/overview?id=${result.domainId}&created=1`);
     } catch (error) {
       if (error instanceof ApiError) {
         setServerError(formatErrorMessage(t, error));
@@ -425,7 +422,7 @@ export function DomainForm() {
         <Button
           type="button"
           variant="ghost"
-          onClick={() => (step === 0 ? void router.push(localizePath("/domains", locale)) : setStep((current) => current - 1))}
+          onClick={() => (step === 0 ? void router.push("/domains") : setStep((current) => current - 1))}
         >
           <ArrowLeftIcon data-icon="inline-start" />
           {step === 0 ? t("domains:forms.domainForm.cancel") : t("domains:common.actions.previousStep")}

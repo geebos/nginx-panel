@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { RefreshCwIcon, SearchIcon, ShieldCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,6 @@ import { useLocale } from "@/hooks/use-locale";
 import { getCertificates, renewCertificate, type CertificateSummary } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
 import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
-import { localizePath } from "@/lib/i18n/utils";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -76,7 +75,7 @@ function CertificateList() {
     try {
       const result = await renewCertificate(certificate.domainId);
       toast.success(t("certificates:renewalOrderCreated"));
-      await router.push(localizePath(`/domains/ssl?id=${certificate.domainId}&orderId=${result.order.id}`, locale));
+      await router.push(`/domains/ssl?id=${certificate.domainId}&orderId=${result.order.id}`);
     } catch (error) {
       toast.error(formatErrorMessage(t, error, "certificates:renewalOrderFailed"));
       setRenewingId(undefined);

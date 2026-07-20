@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { localizedZodResolver } from "@/lib/i18n/form";
@@ -24,15 +24,12 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { changePassword, getSessionPolicy, logout, revokeAllSessions, updateSessionPolicy } from "@/lib/api";
-import { useLocale } from "@/hooks/use-locale";
 import { formatErrorMessage } from "@/lib/i18n/error";
-import { localizePath } from "@/lib/i18n/utils";
 import { changePasswordSchema, sessionPolicySchema, type ChangePasswordInput, type SessionPolicy } from "@/shared/schemas";
 
 export function SecuritySettingsForm() {
   const { t } = useTranslation(["common"]);
   const router = useRouter();
-  const locale = useLocale();
   const [showPasswords, setShowPasswords] = React.useState(false);
   const [serverError, setServerError] = React.useState<string>();
   const [policyError, setPolicyError] = React.useState<string>();
@@ -68,7 +65,7 @@ export function SecuritySettingsForm() {
     setServerError(undefined);
     try {
       await revokeAllSessions();
-      await router.replace(localizePath("/login", locale));
+      await router.replace("/login");
     } catch (error) {
       setServerError(formatErrorMessage(t, error, "errors:sessionRevokeFailed"));
       setRevoking(false);
@@ -80,7 +77,7 @@ export function SecuritySettingsForm() {
     setServerError(undefined);
     try {
       await logout();
-      await router.replace(localizePath("/login", locale));
+      await router.replace("/login");
     } catch (error) {
       setServerError(formatErrorMessage(t, error, "errors:logoutFailed"));
       setLoggingOut(false);

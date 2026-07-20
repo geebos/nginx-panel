@@ -1,11 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
-import { useRouter } from "next/router";
-import {
-  DEFAULT_LOCALE,
-  isSupportedLocale,
-  type AppLocale,
-} from "@/i18n/settings";
+import type { AppLocale } from "@/i18n/settings";
+import { useLocale } from "@/hooks/use-locale";
 import { localizePath } from "@/lib/i18n/utils";
 
 type LocalizedLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
@@ -20,13 +16,8 @@ export function LocalizedLink({
   children,
   ...props
 }: LocalizedLinkProps) {
-  const router = useRouter();
-  const routeLocale =
-    typeof router.query.locale === "string" &&
-    isSupportedLocale(router.query.locale)
-      ? router.query.locale
-      : DEFAULT_LOCALE;
-  const locale = requestedLocale ?? routeLocale;
+  const currentLocale = useLocale();
+  const locale = requestedLocale ?? currentLocale;
 
   return (
     <Link href={localizePath(href, locale)} {...props}>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "@/hooks/use-router";
 import { useTranslation } from "react-i18next";
 import { RotateCwIcon, SaveIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,9 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { nginxLogSettingsInputSchema, requiredAccessLogFields, type AccessLogField, type NginxLogSettings } from "@/shared/schemas";
 import { rotateLogs, updateLogSettings } from "@/lib/api";
-import { useLocale } from "@/hooks/use-locale";
 import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n/error";
-import { localizePath } from "@/lib/i18n/utils";
 
 const allFieldValues: AccessLogField[] = [
   "timestamp",
@@ -32,7 +30,6 @@ const allFieldValues: AccessLogField[] = [
 export function LogSettingsForm({ active, preview, logRootConfigured }: { active: NginxLogSettings; preview: string; logRootConfigured: boolean }) {
   const { t } = useTranslation(["common"]);
   const router = useRouter();
-  const locale = useLocale();
   const [accessFields, setAccessFields] = React.useState<AccessLogField[]>(active.accessFields);
   const [errorLevel, setErrorLevel] = React.useState(active.errorLevel);
   const [maxFileSizeMiB, setMaxFileSizeMiB] = React.useState(String(active.maxFileSizeMiB));
@@ -58,7 +55,7 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
     setSubmitting(true);
     try {
       const result = await updateLogSettings(parsed.data);
-      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(formatErrorMessage(t, caught, "errors:requestFailed"));
       setSubmitting(false);
@@ -70,7 +67,7 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
     setError(undefined);
     try {
       const result = await rotateLogs();
-      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
+      await router.push(`/deployments/detail?id=${result.deploymentId}`);
     } catch (caught) {
       setError(formatErrorMessage(t, caught, "errors:requestFailed"));
       setRotating(false);

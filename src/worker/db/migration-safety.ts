@@ -25,6 +25,6 @@ export function assertNoDuplicateDrafts(connection: Database.Database) {
     .map(({ domainId, draftCount }) => `${domainId} (${draftCount} Drafts)`)
     .join(", ");
   throw new Error(
-    `数据库迁移无法继续：以下 Domain 存在重复 Draft，请先修复历史数据：${details}`,
+    `Database migration cannot continue: the following Domains have duplicate Drafts; fix the historical data first: ${details}`,
   );
 }

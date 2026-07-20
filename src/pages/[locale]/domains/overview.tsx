@@ -1,5 +1,6 @@
 import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
 import {
   CheckCircle2Icon,
@@ -28,16 +29,19 @@ import { DomainTabs } from "@/components/pages/domains/domain-tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { getDomain } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
-
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+import { useLocale } from "@/hooks/use-locale";
+import { formatErrorMessage } from "@/lib/i18n-error";
 
 function DomainOverview({ domainId, created }: { domainId: string; created: boolean }) {
+  const { t } = useTranslation(["common", "domains"]);
+  const locale = useLocale();
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const load = React.useCallback(() => getDomain(domainId), [domainId]);
   const query = useApiQuery(load);
 
@@ -54,23 +58,23 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
               <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
             </span>
           ) : (
-            "Domain Overview"
+            t("domains:overview.titleFallback")
           )
         }
         description={
           domain
-            ? `${query.data?.activeVersion ? `v${query.data.activeVersion.versionNumber} Active` : "尚未发布"}，${query.data?.draftVersion ? `v${query.data.draftVersion.versionNumber} Draft` : "无草稿"}`
-            : "读取域名概览。"
+            ? `${query.data?.activeVersion ? `v${query.data.activeVersion.versionNumber} ${t("domains:overview.activeSuffix")}` : t("domains:overview.notPublished")}，${query.data?.draftVersion ? `v${query.data.draftVersion.versionNumber} ${t("domains:overview.draftSuffix")}` : t("domains:overview.noDraft")}`
+            : t("domains:overview.descriptionFallback")
         }
         breadcrumbs={[
-          { label: "Domains", href: "/domains" },
-          { label: domain?.primaryHostname ?? "Overview" },
+          { label: t("domains:common.breadcrumbs.domains"), href: "/domains" },
+          { label: domain?.primaryHostname ?? t("domains:overview.breadcrumbFallback") },
         ]}
         action={
           <>
             <Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}>
               <RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />
-              刷新
+              {t("domains:common.actions.refresh")}
             </Button>
             <DomainPageActions domainId={domainId} data={data} />
           </>
@@ -81,15 +85,15 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
         {created ? (
           <Alert>
             <CheckCreatedIcon />
-            <AlertTitle>v1 草稿已创建</AlertTitle>
-            <AlertDescription>线上 Nginx 尚未改变。可先测试草稿，安全发布将在 runtime image spike 完成后接入。</AlertDescription>
+            <AlertTitle>{t("domains:overview.createdAlertTitle")}</AlertTitle>
+            <AlertDescription>{t("domains:overview.createdAlertDescription")}</AlertDescription>
           </Alert>
         ) : null}
 
         {query.error ? (
           <Alert variant="destructive">
-            <AlertTitle>域名概览加载失败</AlertTitle>
-            <AlertDescription>{query.error.message}</AlertDescription>
+            <AlertTitle>{t("domains:overview.loadFailed")}</AlertTitle>
+            <AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -103,64 +107,64 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="border border-border">
               <CardHeader>
-                <CardTitle>运行概况</CardTitle>
-                <CardDescription>当前线上版本和最近运行状态。</CardDescription>
+                <CardTitle>{t("domains:overview.runtimeCard.title")}</CardTitle>
+                <CardDescription>{t("domains:overview.runtimeCard.description")}</CardDescription>
                 <CardAction><Globe2Icon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Nginx status</p>
+                  <p className="text-xs text-muted-foreground">{t("domains:overview.runtimeCard.nginxStatus")}</p>
                   <div className="mt-1"><StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} /></div>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Active version</p>
+                  <p className="text-xs text-muted-foreground">{t("domains:overview.runtimeCard.activeVersion")}</p>
                   <p className="mt-1 font-mono text-sm">
-                    {data.activeVersion ? `v${data.activeVersion.versionNumber}` : "Not published"}
+                    {data.activeVersion ? `v${data.activeVersion.versionNumber}` : t("domains:overview.runtimeCard.notPublished")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Last deployment</p>
+                  <p className="text-xs text-muted-foreground">{t("domains:overview.runtimeCard.lastDeployment")}</p>
                   <p className="mt-1 text-sm">
                     {data.recentDeployments[0]
                       ? dateFormatter.format(data.recentDeployments[0].createdAt)
-                      : "None"}
+                      : t("domains:overview.runtimeCard.none")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Config validation</p>
-                  <p className="mt-1 text-sm">Not tested</p>
+                  <p className="text-xs text-muted-foreground">{t("domains:overview.runtimeCard.configValidation")}</p>
+                  <p className="mt-1 text-sm">{t("domains:overview.runtimeCard.notTested")}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border border-border">
               <CardHeader>
-                <CardTitle>域名信息</CardTitle>
-                <CardDescription>主域名、别名和运行投影。</CardDescription>
+                <CardTitle>{t("domains:overview.infoCard.title")}</CardTitle>
+                <CardDescription>{t("domains:overview.infoCard.description")}</CardDescription>
                 <CardAction><NetworkIcon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Primary Domain</p>
+                  <p className="text-xs text-muted-foreground">{t("domains:overview.infoCard.primaryDomain")}</p>
                   <p className="mt-1 font-medium">{domain.primaryHostname}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Aliases</p>
+                  <p className="text-xs text-muted-foreground">{t("domains:overview.infoCard.aliases")}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {domain.aliases.length ? domain.aliases.map((alias) => <Badge variant="secondary" key={alias}>{alias}</Badge>) : <span className="text-sm text-muted-foreground">None</span>}
+                    {domain.aliases.length ? domain.aliases.map((alias) => <Badge variant="secondary" key={alias}>{alias}</Badge>) : <span className="text-sm text-muted-foreground">{t("domains:common.status.none")}</span>}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-xs text-muted-foreground">Created</p><p className="mt-1 text-sm">{dateFormatter.format(domain.createdAt)}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Enabled</p><p className="mt-1 text-sm">{domain.enabled ? "Yes" : "No"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">{t("domains:overview.infoCard.created")}</p><p className="mt-1 text-sm">{dateFormatter.format(domain.createdAt)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">{t("domains:overview.infoCard.enabled")}</p><p className="mt-1 text-sm">{domain.enabled ? t("domains:common.status.yes") : t("domains:common.status.no")}</p></div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border border-border">
               <CardHeader>
-                <CardTitle>草稿变更</CardTitle>
-                <CardDescription>当前草稿可继续编辑，发布后冻结为不可变版本。</CardDescription>
+                <CardTitle>{t("domains:overview.draftCard.title")}</CardTitle>
+                <CardDescription>{t("domains:overview.draftCard.description")}</CardDescription>
                 <CardAction><HistoryIcon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -174,19 +178,19 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
                       <StatusBadge status="draft" />
                     </div>
                     <p className="break-all font-mono text-xs text-muted-foreground">
-                      SHA-256 {data.draftVersion.snapshotChecksum}
+                      {t("domains:overview.draftCard.shaLabel")} {data.draftVersion.snapshotChecksum}
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">线上配置已同步。</p>
+                  <p className="text-sm text-muted-foreground">{t("domains:overview.draftCard.synced")}</p>
                 )}
               </CardContent>
             </Card>
 
             <Card className="border border-border">
               <CardHeader>
-                <CardTitle>路由摘要</CardTitle>
-                <CardDescription>{config.routes.length} 条路由，按 Nginx 最长前缀匹配。</CardDescription>
+                <CardTitle>{t("domains:overview.routesCard.title")}</CardTitle>
+                <CardDescription>{t("domains:overview.routesCard.description", { count: config.routes.length })}</CardDescription>
                 <CardAction><NetworkIcon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -196,23 +200,23 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
                       <p className="truncate font-mono text-sm">{route.path}</p>
                       <p className="truncate text-xs text-muted-foreground">{route.type}</p>
                     </div>
-                    <Badge variant={route.enabled ? "outline" : "secondary"}>{route.enabled ? "Enabled" : "Disabled"}</Badge>
+                    <Badge variant={route.enabled ? "outline" : "secondary"}>{route.enabled ? t("domains:common.status.enabled") : t("domains:common.status.disabled")}</Badge>
                   </div>
-                )) : <p className="text-sm text-muted-foreground">尚未添加路由，发布后非 ACME 请求将返回 404。</p>}
+                )) : <p className="text-sm text-muted-foreground">{t("domains:overview.routesCard.empty")}</p>}
               </CardContent>
             </Card>
 
             <Card className="border border-border lg:col-span-2">
               <CardHeader>
-                <CardTitle>HTTPS</CardTitle>
-                <CardDescription>证书申请是独立流程，不由发布按钮隐式触发。</CardDescription>
+                <CardTitle>{t("domains:overview.httpsCard.title")}</CardTitle>
+                <CardDescription>{t("domains:overview.httpsCard.description")}</CardDescription>
                 <CardAction><ShieldCheckIcon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-4">
-                <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-1"><StatusBadge status={config.ssl.certificateId ? "active" : config.ssl.enabled ? "draft" : "disabled"} /></div></div>
-                <div><p className="text-xs text-muted-foreground">Environment</p><p className="mt-1 text-sm capitalize">{config.ssl.environment}</p></div>
-                <div><p className="text-xs text-muted-foreground">Auto renew</p><p className="mt-1 text-sm">{config.ssl.autoRenew ? "Enabled" : "Disabled"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Force HTTPS</p><p className="mt-1 text-sm">{config.ssl.forceHttps ? "Enabled" : "Disabled"}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.status")}</p><div className="mt-1"><StatusBadge status={config.ssl.certificateId ? "active" : config.ssl.enabled ? "draft" : "disabled"} /></div></div>
+                <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.environment")}</p><p className="mt-1 text-sm capitalize">{config.ssl.environment}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.autoRenew")}</p><p className="mt-1 text-sm">{config.ssl.autoRenew ? t("domains:common.status.enabled") : t("domains:common.status.disabled")}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.forceHttps")}</p><p className="mt-1 text-sm">{config.ssl.forceHttps ? t("domains:common.status.enabled") : t("domains:common.status.disabled")}</p></div>
               </CardContent>
             </Card>
           </div>
@@ -227,7 +231,7 @@ function CheckCreatedIcon() {
 }
 
 export const getStaticPaths = getLocaleStaticPaths;
-export const getStaticProps = makeStaticProps(["common"]);
+export const getStaticProps = makeStaticProps(["common", "domains"]);
 
 export default function DomainOverviewPage() {
   const router = useRouter();

@@ -60,7 +60,7 @@ async function start() {
           stopLogRotation.wait,
           stopRuntimeStorage.wait,
         ],
-        markInterrupted: async () => interruptRunningDeployments(db, "Worker 停止超时，任务已安全中断"),
+        markInterrupted: async () => interruptRunningDeployments(db, "Worker stop timed out; jobs safely interrupted"),
       });
       if (result.timedOut) console.error("[worker] shutdown drain timed out");
       else console.log("[worker] shutdown drain complete");

@@ -121,7 +121,7 @@ export const certificateActivations = sqliteTable("certificate_activations", {
 });
 
 export const createCertificateOrderSchema = z.object({
-  accountEmail: z.email("请输入有效邮箱").transform((value) => value.trim().toLowerCase()),
+  accountEmail: z.email("errors:validation.sslEmail").transform((value) => value.trim().toLowerCase()),
   environment: z.enum(["staging", "production"]),
   validation: z.union([
     z.object({ method: z.literal("http-01") }),
@@ -131,8 +131,8 @@ export const createCertificateOrderSchema = z.object({
 });
 
 export const cloudflareCredentialInputSchema = z.object({
-  name: z.string().trim().min(1, "请输入凭据名称").max(64, "凭据名称不能超过 64 个字符"),
-  token: z.string().trim().min(20, "请输入有效的 Cloudflare API Token").max(512, "Cloudflare API Token 过长"),
+  name: z.string().trim().min(1, "errors:validation.credentialNameRequired").max(64, "errors:validation.credentialNameMax"),
+  token: z.string().trim().min(20, "errors:validation.credentialTokenMin").max(512, "errors:validation.credentialTokenMax"),
 });
 
 export const replaceCloudflareCredentialTokenSchema = cloudflareCredentialInputSchema.pick({ token: true });

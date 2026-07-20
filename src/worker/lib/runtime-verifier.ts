@@ -55,7 +55,7 @@ export async function verifyRuntime(
   let activeRevision: string | null = null;
   try {
     const activeInfo = await lstat(activeRoot);
-    if (!activeInfo.isSymbolicLink()) return degraded(null, "ACTIVE_LINK_INVALID", "Active revision 链接无效");
+    if (!activeInfo.isSymbolicLink()) return degraded(null, "ACTIVE_LINK_INVALID", "Active revision link is invalid");
     const activeTarget = await readlink(activeRoot);
     activeRevision = safeActiveRevision(activeTarget, runtimeRoot);
     await assertRegularDirectory(join(runtimeRoot, activeTarget));
@@ -73,30 +73,30 @@ export async function verifyRuntime(
       if (code === "ENOENT" && activeDomains.length === 0 && logSettings.revision === 0) {
         await assertRegularDirectory(join(activeRoot, "domains"));
         if ((await readdir(join(activeRoot, "domains"))).length) {
-          return degraded(activeRevision, "DOMAIN_FILE_SET_MISMATCH", "Bootstrap Domain 配置目录不为空");
+          return degraded(activeRevision, "DOMAIN_FILE_SET_MISMATCH", "Bootstrap Domain config directory is not empty");
         }
         await (options.runNginxTest
           ? options.runNginxTest(activeRoot)
           : execFileAsync(options.nginxBin ?? process.env.NGINX_BIN ?? "/usr/sbin/nginx", ["-p", `${activeRoot}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000 }).then(() => undefined));
         return { status: "healthy", checkedAt: Date.now(), activeRevision, issues: [] };
       }
-      return degraded(activeRevision, "MANIFEST_MISSING", "Active manifest 缺失");
+      return degraded(activeRevision, "MANIFEST_MISSING", "Active manifest missing");
     }
 
     let manifestValue: unknown;
     try {
       manifestValue = JSON.parse(manifestRaw);
     } catch {
-      return degraded(activeRevision, "MANIFEST_INVALID", "Active manifest 格式无效");
+      return degraded(activeRevision, "MANIFEST_INVALID", "Active manifest format invalid");
     }
     const parsed = runtimeManifestSchema.safeParse(manifestValue);
-    if (!parsed.success) return degraded(activeRevision, "MANIFEST_INVALID", "Active manifest 格式无效");
+    if (!parsed.success) return degraded(activeRevision, "MANIFEST_INVALID", "Active manifest format invalid");
     const manifest = parsed.data;
     if (normalize(manifest.rootInputs.runtimeRoot) !== runtimeRoot || normalize(manifest.rootInputs.logsRoot) !== logsRoot) {
-      return degraded(activeRevision, "RUNTIME_INPUT_MISMATCH", "运行目录输入与 Active revision 不一致");
+      return degraded(activeRevision, "RUNTIME_INPUT_MISMATCH", "Runtime directory inputs do not match Active revision");
     }
     if (manifest.logSettings.revision !== logSettings.revision || manifest.logSettings.checksum !== logSettingsChecksum(logSettings)) {
-      return degraded(activeRevision, "LOG_SETTINGS_MISMATCH", "日志设置与 Active revision 不一致");
+      return degraded(activeRevision, "LOG_SETTINGS_MISMATCH", "Log settings do not match Active revision");
     }
 
     const versionIds = activeDomains.map((domain) => domain.activeVersionId!);
@@ -107,22 +107,22 @@ export async function verifyRuntime(
     const expectedIds = activeDomains.map((domain) => domain.id).sort();
     const manifestIds = Object.keys(manifest.domains).sort();
     if (JSON.stringify(expectedIds) !== JSON.stringify(manifestIds)) {
-      return degraded(activeRevision, "DOMAIN_SET_MISMATCH", "Active Domain 集合与 manifest 不一致");
+      return degraded(activeRevision, "DOMAIN_SET_MISMATCH", "Active Domain set does not match manifest");
     }
 
     for (const domain of activeDomains) {
       const version = versionsById.get(domain.activeVersionId!);
       const entry = manifest.domains[domain.id];
-      if (!version) return degraded(activeRevision, "SOURCE_VERSION_MISSING", "Active Version 缺失");
+      if (!version) return degraded(activeRevision, "SOURCE_VERSION_MISSING", "Active Version missing");
       let snapshot;
       try {
         const config = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
         snapshot = { ...createSnapshot(config), certificateId: config.ssl.certificateId ?? null };
       } catch {
-        return degraded(activeRevision, "SOURCE_SNAPSHOT_INVALID", "Active Version 快照校验失败");
+        return degraded(activeRevision, "SOURCE_SNAPSHOT_INVALID", "Active Version snapshot verification failed");
       }
       if (snapshot.checksum !== version.snapshotChecksum) {
-        return degraded(activeRevision, "SOURCE_SNAPSHOT_INVALID", "Active Version 快照校验失败");
+        return degraded(activeRevision, "SOURCE_SNAPSHOT_INVALID", "Active Version snapshot verification failed");
       }
       if (
         entry.sourceVersionId !== version.id
@@ -130,26 +130,26 @@ export async function verifyRuntime(
         || entry.enabled !== domain.enabled
         || entry.certificateId !== snapshot.certificateId
       ) {
-        return degraded(activeRevision, "SOURCE_PROJECTION_MISMATCH", "数据库运行投影与 manifest 不一致");
+        return degraded(activeRevision, "SOURCE_PROJECTION_MISMATCH", "Database runtime projection does not match manifest");
       }
     }
 
     await assertRegularFile(join(activeRoot, "nginx.conf"));
     if (checksum(await readFile(join(activeRoot, "nginx.conf"))) !== manifest.rootConfigChecksum) {
-      return degraded(activeRevision, "ROOT_CHECKSUM_MISMATCH", "根配置 checksum 不一致");
+      return degraded(activeRevision, "ROOT_CHECKSUM_MISMATCH", "Root config checksum mismatch");
     }
     await assertRegularDirectory(join(activeRoot, "domains"));
     const entries = await readdir(join(activeRoot, "domains"), { withFileTypes: true });
     const actualFiles = entries.map((entry) => entry.name).sort();
     const expectedFiles = expectedIds.map((id) => `${id}.conf`).sort();
     if (entries.some((entry) => !entry.isFile()) || JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
-      return degraded(activeRevision, "DOMAIN_FILE_SET_MISMATCH", "Domain 配置文件集合不一致");
+      return degraded(activeRevision, "DOMAIN_FILE_SET_MISMATCH", "Domain config file set mismatch");
     }
     for (const domainId of expectedIds) {
       const file = join(activeRoot, "domains", `${domainId}.conf`);
       await assertRegularFile(file);
       if (checksum(await readFile(file)) !== manifest.domains[domainId].configChecksum) {
-        return degraded(activeRevision, "DOMAIN_CHECKSUM_MISMATCH", "Domain 配置 checksum 不一致");
+        return degraded(activeRevision, "DOMAIN_CHECKSUM_MISMATCH", "Domain config checksum mismatch");
       }
     }
 
@@ -158,7 +158,7 @@ export async function verifyRuntime(
       : execFileAsync(options.nginxBin ?? process.env.NGINX_BIN ?? "/usr/sbin/nginx", ["-p", `${activeRoot}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000 }).then(() => undefined));
     return { status: "healthy", checkedAt: Date.now(), activeRevision, issues: [] };
   } catch {
-    const issue: RuntimeIssue = { code: "RUNTIME_VERIFICATION_FAILED", message: "Active revision 校验失败" };
+    const issue: RuntimeIssue = { code: "RUNTIME_VERIFICATION_FAILED", message: "Active revision verification failed" };
     return { status: "degraded", checkedAt: Date.now(), activeRevision, issues: [issue] };
   }
 }

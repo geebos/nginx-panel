@@ -5,14 +5,14 @@ export const usernameSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(3, "用户名至少需要 3 个字符")
-  .max(64, "用户名不能超过 64 个字符")
-  .regex(/^[a-z0-9][a-z0-9._-]*$/, "用户名只能包含字母、数字、点、下划线和连字符");
+  .min(3, "errors:validation.usernameMin")
+  .max(64, "errors:validation.usernameMax")
+  .regex(/^[a-z0-9][a-z0-9._-]*$/, "errors:validation.usernamePattern");
 
 export const passwordSchema = z
   .string()
-  .min(12, "密码至少需要 12 个字符")
-  .max(128, "密码不能超过 128 个字符");
+  .min(12, "errors:validation.passwordMin")
+  .max(128, "errors:validation.passwordMax");
 
 export const setupAdminSchema = z.object({
   username: usernameSchema,
@@ -21,18 +21,18 @@ export const setupAdminSchema = z.object({
 
 export const loginSchema = z.object({
   username: usernameSchema,
-  password: z.string().min(1, "请输入密码").max(128),
+  password: z.string().min(1, "errors:validation.passwordRequired").max(128),
   remember: z.boolean().default(false),
 });
 
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "请输入当前密码").max(128),
+    currentPassword: z.string().min(1, "errors:validation.currentPasswordRequired").max(128),
     newPassword: passwordSchema,
     confirmPassword: z.string().max(128),
   })
   .refine((input) => input.newPassword === input.confirmPassword, {
-    message: "两次输入的新密码不一致",
+    message: "errors:validation.passwordMismatch",
     path: ["confirmPassword"],
   });
 

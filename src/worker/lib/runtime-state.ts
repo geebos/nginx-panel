@@ -38,7 +38,7 @@ export function setRuntimeDegraded(issues: RuntimeIssue[], activeRevision: strin
 export function assertRuntimeMutable() {
   if (runtimeState.status !== "healthy") {
     throw new BusinessError(
-      runtimeState.status === "degraded" ? "运行配置不一致，请先在 Diagnostics 中重建" : "运行配置正在检查",
+      runtimeState.status === "degraded" ? "errors:runtimeDegraded" : "errors:runtimeChecking",
       409,
       runtimeState.status === "degraded" ? "RUNTIME_DEGRADED" : "RUNTIME_CHECKING",
     );

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "react-i18next";
 import { ActivityIcon, AlertTriangleIcon, ServerCogIcon, ShieldCheckIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getActiveRuntimeConfig, getDomains, rebuildActiveRuntime, reloadManagerTls, runDiagnosticNginxTest, type ActiveRuntimeConfig, type RuntimeDiagnostics } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
+import { formatErrorMessage, formatMessageKey } from "@/lib/i18n-error";
 import { localizePath } from "@/lib/i18n-utils";
 
-function formatBytes(value: number | null) {
-  if (value === null) return "N/A";
+function formatBytes(value: number | null, notAvailable: string) {
+  if (value === null) return notAvailable;
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
   let amount = value;
   let unit = 0;
@@ -28,6 +30,7 @@ function formatBytes(value: number | null) {
 }
 
 export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDiagnostics }) {
+  const { t } = useTranslation(["common"]);
   const router = useRouter();
   const locale = useLocale();
   const [currentPassword, setCurrentPassword] = React.useState("");
@@ -41,6 +44,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
   const [loadingRuntimeConfig, setLoadingRuntimeConfig] = React.useState(false);
   const loadDomains = React.useCallback(() => getDomains(new URLSearchParams({ page: "1", pageSize: "100", status: "all", sort: "hostname_asc" })), []);
   const domains = useApiQuery(loadDomains);
+  const notAvailable = t("common:settings.diagnostics.storage.notAvailable");
 
   const rebuild = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -50,7 +54,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
       const result = await rebuildActiveRuntime(currentPassword);
       await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "运行配置重建失败");
+      setError(formatErrorMessage(t, caught, "errors:runtimeConfigRebuildFailed"));
       setSubmitting(false);
     }
   };
@@ -62,7 +66,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
       const result = await reloadManagerTls();
       await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "管理端 TLS 重新加载失败");
+      setError(formatErrorMessage(t, caught, "errors:tlsReloadFailed"));
       setReloadingTls(false);
     }
   };
@@ -74,7 +78,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
       const result = await runDiagnosticNginxTest();
       await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Nginx 配置测试失败");
+      setError(formatErrorMessage(t, caught, "errors:nginxConfigTestFailed"));
       setTestingNginx(false);
     }
   };
@@ -89,7 +93,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     try {
       setRuntimeConfig(await getActiveRuntimeConfig(next));
     } catch (caught) {
-      setRuntimeConfigError(caught instanceof Error ? caught.message : "Active Domain 配置加载失败");
+      setRuntimeConfigError(formatErrorMessage(t, caught, "errors:activeDomainConfigLoadFailed"));
     } finally {
       setLoadingRuntimeConfig(false);
     }
@@ -98,11 +102,11 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
   const runtime = diagnostics.runtime;
   return (
     <form className="flex flex-col gap-6" onSubmit={rebuild}>
-      {error ? <Alert variant="destructive"><AlertTitle>Diagnostics 操作失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
+      {error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.diagnostics.operationFailed")}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>Runtime consistency</CardTitle>
-          <CardDescription>启动时对 SQLite 投影、manifest、配置文件集合、checksum 和 nginx -t 进行一致性校验。</CardDescription>
+          <CardTitle>{t("common:settings.diagnostics.consistency.title")}</CardTitle>
+          <CardDescription>{t("common:settings.diagnostics.consistency.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -112,40 +116,40 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
           {runtime.issues.length ? (
             <Alert variant="destructive">
               <AlertTriangleIcon />
-              <AlertTitle>检测到运行配置漂移</AlertTitle>
+              <AlertTitle>{t("common:settings.diagnostics.consistency.driftTitle")}</AlertTitle>
               <AlertDescription>
                 <ul className="flex list-disc flex-col gap-1 pl-4">
-                  {runtime.issues.map((issue) => <li key={issue.code}>{issue.message}（{issue.code}）</li>)}
+                  {runtime.issues.map((issue) => <li key={issue.code}>{t("common:settings.diagnostics.consistency.issueItem", { message: formatMessageKey(t, issue.message), code: issue.code })}</li>)}
                 </ul>
               </AlertDescription>
             </Alert>
-          ) : <p className="text-sm text-muted-foreground">当前 Active revision 与数据库来源一致。</p>}
+          ) : <p className="text-sm text-muted-foreground">{t("common:settings.diagnostics.consistency.healthy")}</p>}
         </CardContent>
         <CardFooter className="flex-wrap justify-between gap-3">
-          <span className="text-xs text-muted-foreground">Worker PID {diagnostics.worker.pid}，已运行 {Math.floor(diagnostics.worker.uptimeSeconds / 60)} 分钟</span>
+          <span className="text-xs text-muted-foreground">{t("common:settings.diagnostics.consistency.workerUptime", { pid: diagnostics.worker.pid, minutes: Math.floor(diagnostics.worker.uptimeSeconds / 60) })}</span>
           <Button type="button" variant="outline" disabled={testingNginx} onClick={() => void testNginx()}>
             {testingNginx ? <Spinner data-icon="inline-start" /> : <ActivityIcon data-icon="inline-start" />}
-            运行 nginx -t
+            {t("common:settings.diagnostics.consistency.runNginxTest")}
           </Button>
         </CardFooter>
       </Card>
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>存储与挂载</CardTitle>
-          <CardDescription>业务路径使用稳定占位符；日志根目录因迁移诊断需要按原值显示。</CardDescription>
+          <CardTitle>{t("common:settings.diagnostics.storage.title")}</CardTitle>
+          <CardDescription>{t("common:settings.diagnostics.storage.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
-            <TableHeader><TableRow><TableHead>区域</TableHead><TableHead>状态</TableHead><TableHead>路径</TableHead><TableHead className="text-right">内容大小</TableHead><TableHead className="text-right">可用空间</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>{t("common:settings.diagnostics.storage.columnRegion")}</TableHead><TableHead>{t("common:settings.diagnostics.storage.columnStatus")}</TableHead><TableHead>{t("common:settings.diagnostics.storage.columnPath")}</TableHead><TableHead className="text-right">{t("common:settings.diagnostics.storage.columnSize")}</TableHead><TableHead className="text-right">{t("common:settings.diagnostics.storage.columnAvailable")}</TableHead></TableRow></TableHeader>
             <TableBody>
               {diagnostics.storage.map((item) => (
                 <TableRow key={item.key}>
                   <TableCell className="font-medium">{item.label}</TableCell>
                   <TableCell><Badge variant={item.status === "available" ? "secondary" : item.status === "unconfigured" ? "outline" : "destructive"}>{item.status}</Badge></TableCell>
                   <TableCell className="max-w-72 truncate font-mono text-xs" title={item.path}>{item.path}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{formatBytes(item.itemBytes)}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{formatBytes(item.filesystem?.availableBytes ?? null)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs">{formatBytes(item.itemBytes, notAvailable)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs">{formatBytes(item.filesystem?.availableBytes ?? null, notAvailable)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -153,10 +157,10 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
           {diagnostics.logRoots.historical.length ? (
             <Alert className="mt-4">
               <AlertTriangleIcon />
-              <AlertTitle>检测到历史日志根目录</AlertTitle>
+              <AlertTitle>{t("common:settings.diagnostics.storage.historicalTitle")}</AlertTitle>
               <AlertDescription className="flex flex-col gap-2">
-                <p>产品只读取当前日志根目录，不会自动迁移旧日志。请在清理相关 revision 前手动迁移。</p>
-                {diagnostics.logRoots.historical.map((root) => <code key={root.path} className="break-all text-xs">{root.path} ({root.readable ? "可读取" : "不可读取"})</code>)}
+                <p>{t("common:settings.diagnostics.storage.historicalDescription")}</p>
+                {diagnostics.logRoots.historical.map((root) => <code key={root.path} className="break-all text-xs">{root.path} ({root.readable ? t("common:settings.diagnostics.storage.readable") : t("common:settings.diagnostics.storage.unreadable")})</code>)}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -165,87 +169,87 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>Active Domain 配置</CardTitle>
-          <CardDescription>读取当前 revision 中的实际 server 文件，并核对 source 与文件 checksum。绝对敏感路径已脱敏。</CardDescription>
+          <CardTitle>{t("common:settings.diagnostics.activeDomain.title")}</CardTitle>
+          <CardDescription>{t("common:settings.diagnostics.activeDomain.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Field>
-            <FieldLabel>Domain</FieldLabel>
+            <FieldLabel>{t("common:settings.diagnostics.activeDomain.domainLabel")}</FieldLabel>
             <Select
               options={(domains.data?.items ?? []).filter((domain) => domain.activeVersionId).map((domain) => ({ value: domain.id, label: domain.primaryHostname, description: domain.activeVersionId ?? undefined }))}
-              emptyText="没有已发布的 Domain"
-              placeholder={domains.loading ? "正在加载 Domain" : "选择已发布 Domain"}
+              emptyText={t("common:settings.diagnostics.activeDomain.emptyPublished")}
+              placeholder={domains.loading ? t("common:settings.diagnostics.activeDomain.loadingDomains") : t("common:settings.diagnostics.activeDomain.selectDomain")}
               value={domainId}
               onChange={(value) => void inspectRuntimeConfig(value)}
             />
-            {domains.error ? <FieldDescription>Domain 列表加载失败：{domains.error.message}</FieldDescription> : null}
+            {domains.error ? <FieldDescription>{t("errors:domainListLoadFailed")}：{formatErrorMessage(t, domains.error)}</FieldDescription> : null}
           </Field>
-          {runtimeConfigError ? <Alert variant="destructive"><AlertTriangleIcon /><AlertTitle>配置读取失败</AlertTitle><AlertDescription>{runtimeConfigError}</AlertDescription></Alert> : null}
-          {loadingRuntimeConfig ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner />正在读取 Active revision</div> : null}
+          {runtimeConfigError ? <Alert variant="destructive"><AlertTriangleIcon /><AlertTitle>{t("common:settings.diagnostics.activeDomain.configLoadFailed")}</AlertTitle><AlertDescription>{runtimeConfigError}</AlertDescription></Alert> : null}
+          {loadingRuntimeConfig ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner />{t("common:settings.diagnostics.activeDomain.readingRevision")}</div> : null}
           {runtimeConfig ? (
             <div className="flex flex-col gap-4">
               <div className="grid gap-3 text-sm md:grid-cols-2">
-                <div><p className="text-xs text-muted-foreground">Revision file</p><p className="break-all font-mono text-xs">{runtimeConfig.file}</p></div>
-                <div><p className="text-xs text-muted-foreground">Source version</p><p className="break-all font-mono text-xs">{runtimeConfig.inputs.sourceVersionId}</p></div>
-                <div><p className="text-xs text-muted-foreground">Source checksum</p><p className="break-all font-mono text-xs">{runtimeConfig.checksums.source}</p></div>
-                <div><p className="text-xs text-muted-foreground">Config checksum</p><p className="break-all font-mono text-xs">{runtimeConfig.checksums.config}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("common:settings.diagnostics.activeDomain.revisionFile")}</p><p className="break-all font-mono text-xs">{runtimeConfig.file}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("common:settings.diagnostics.activeDomain.sourceVersion")}</p><p className="break-all font-mono text-xs">{runtimeConfig.inputs.sourceVersionId}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("common:settings.diagnostics.activeDomain.sourceChecksum")}</p><p className="break-all font-mono text-xs">{runtimeConfig.checksums.source}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t("common:settings.diagnostics.activeDomain.configChecksum")}</p><p className="break-all font-mono text-xs">{runtimeConfig.checksums.config}</p></div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">{runtimeConfig.inputs.routes} routes</Badge>
-                <Badge variant="outline">{runtimeConfig.inputs.headers} headers</Badge>
-                <Badge variant="outline">logs r{runtimeConfig.inputs.logSettingsRevision}</Badge>
-                <Badge variant={runtimeConfig.inputs.enabled ? "secondary" : "outline"}>{runtimeConfig.inputs.enabled ? "enabled" : "disabled"}</Badge>
+                <Badge variant="outline">{t("common:settings.diagnostics.activeDomain.routesBadge", { count: runtimeConfig.inputs.routes })}</Badge>
+                <Badge variant="outline">{t("common:settings.diagnostics.activeDomain.headersBadge", { count: runtimeConfig.inputs.headers })}</Badge>
+                <Badge variant="outline">{t("common:settings.diagnostics.activeDomain.logsBadge", { revision: runtimeConfig.inputs.logSettingsRevision })}</Badge>
+                <Badge variant={runtimeConfig.inputs.enabled ? "secondary" : "outline"}>{runtimeConfig.inputs.enabled ? t("common:settings.diagnostics.activeDomain.enabled") : t("common:settings.diagnostics.activeDomain.disabled")}</Badge>
               </div>
               <pre className="max-h-[32rem] overflow-auto rounded-lg bg-muted p-4 font-mono text-xs leading-5"><code>{runtimeConfig.config}</code></pre>
             </div>
-          ) : !domainId && !domains.loading ? <p className="text-sm text-muted-foreground">选择一个已发布 Domain 查看当前运行配置。</p> : null}
+          ) : !domainId && !domains.loading ? <p className="text-sm text-muted-foreground">{t("common:settings.diagnostics.activeDomain.selectHint")}</p> : null}
         </CardContent>
       </Card>
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>管理端 TLS</CardTitle>
-          <CardDescription>校验部署方挂载的证书有效期、SAN 与私钥匹配关系，再安全重新加载 Nginx。</CardDescription>
+          <CardTitle>{t("common:settings.diagnostics.managerTls.title")}</CardTitle>
+          <CardDescription>{t("common:settings.diagnostics.managerTls.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant={diagnostics.managerTls.status === "valid" ? "secondary" : diagnostics.managerTls.status === "invalid" ? "destructive" : "outline"}>{diagnostics.managerTls.status}</Badge>
-            {diagnostics.managerTls.certificate ? <span className="font-mono text-xs text-muted-foreground">有效期至 {new Date(diagnostics.managerTls.certificate.validTo).toLocaleString("zh-CN")}</span> : null}
+            {diagnostics.managerTls.certificate ? <span className="font-mono text-xs text-muted-foreground">{t("common:settings.diagnostics.managerTls.validTo", { date: new Date(diagnostics.managerTls.certificate.validTo).toLocaleString(locale) })}</span> : null}
           </div>
           {diagnostics.managerTls.certificate ? (
             <dl className="grid gap-3 text-sm md:grid-cols-[140px_1fr]">
-              <dt className="text-muted-foreground">Hostname</dt><dd className="break-all font-mono">{diagnostics.managerTls.certificate.hostname}</dd>
-              <dt className="text-muted-foreground">SAN</dt><dd className="break-all font-mono">{diagnostics.managerTls.certificate.subjectAltName}</dd>
-              <dt className="text-muted-foreground">SHA-256</dt><dd className="break-all font-mono">{diagnostics.managerTls.certificate.fingerprint256}</dd>
+              <dt className="text-muted-foreground">{t("common:settings.diagnostics.managerTls.hostname")}</dt><dd className="break-all font-mono">{diagnostics.managerTls.certificate.hostname}</dd>
+              <dt className="text-muted-foreground">{t("common:settings.diagnostics.managerTls.san")}</dt><dd className="break-all font-mono">{diagnostics.managerTls.certificate.subjectAltName}</dd>
+              <dt className="text-muted-foreground">{t("common:settings.diagnostics.managerTls.sha256")}</dt><dd className="break-all font-mono">{diagnostics.managerTls.certificate.fingerprint256}</dd>
             </dl>
-          ) : diagnostics.managerTls.error ? <Alert variant="destructive"><AlertTriangleIcon /><AlertTitle>证书校验失败</AlertTitle><AlertDescription>{diagnostics.managerTls.error}</AlertDescription></Alert> : <p className="text-sm text-muted-foreground">当前运行模式不管理 TLS。</p>}
+          ) : diagnostics.managerTls.error ? <Alert variant="destructive"><AlertTriangleIcon /><AlertTitle>{t("common:settings.diagnostics.managerTls.certCheckFailed")}</AlertTitle><AlertDescription>{t(diagnostics.managerTls.error)}</AlertDescription></Alert> : <p className="text-sm text-muted-foreground">{t("common:settings.diagnostics.managerTls.notManaged")}</p>}
         </CardContent>
         <CardFooter className="justify-end">
           <Button type="button" variant="outline" disabled={diagnostics.managerTls.status === "unavailable" || reloadingTls} onClick={() => void reloadTls()}>
             {reloadingTls ? <Spinner data-icon="inline-start" /> : <ShieldCheckIcon data-icon="inline-start" />}
-            校验并重新加载证书
+            {t("common:settings.diagnostics.managerTls.reload")}
           </Button>
         </CardFooter>
       </Card>
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>按 SQLite 重建 Active revision</CardTitle>
-          <CardDescription>只在 degraded 状态可用。重建不会创建 Config Version，也不会改变任何 Domain 的 Active Version。</CardDescription>
+          <CardTitle>{t("common:settings.diagnostics.rebuild.title")}</CardTitle>
+          <CardDescription>{t("common:settings.diagnostics.rebuild.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup>
             <Field data-disabled={!diagnostics.rebuildAvailable || submitting || undefined}>
-              <FieldLabel htmlFor="rebuild-current-password">当前管理员密码</FieldLabel>
+              <FieldLabel htmlFor="rebuild-current-password">{t("common:settings.diagnostics.rebuild.passwordLabel")}</FieldLabel>
               <Input id="rebuild-current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} disabled={!diagnostics.rebuildAvailable || submitting} />
-              <FieldDescription>确认后将从受信任的 SQLite 快照全量生成 candidate，并执行 nginx -t、原子激活和 reload。</FieldDescription>
+              <FieldDescription>{t("common:settings.diagnostics.rebuild.passwordDescription")}</FieldDescription>
             </Field>
           </FieldGroup>
         </CardContent>
         <CardFooter className="justify-end">
           <Button type="submit" variant="destructive" disabled={!diagnostics.rebuildAvailable || !currentPassword || submitting}>
             {submitting ? <Spinner data-icon="inline-start" /> : <ServerCogIcon data-icon="inline-start" />}
-            重建 Active revision
+            {t("common:settings.diagnostics.rebuild.submit")}
           </Button>
         </CardFooter>
       </Card>

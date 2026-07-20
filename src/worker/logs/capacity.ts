@@ -10,7 +10,7 @@ export class LogStreamCapacity {
     const sessionCount = this.sessions.get(sessionId) ?? 0;
     if (this.active >= this.instanceLimit || sessionCount >= this.sessionLimit) {
       throw new BusinessError(
-        "实时日志连接已达上限，请先关闭已有连接",
+        "errors:logStreamCapacityExceeded",
         429,
         "LOG_STREAM_CAPACITY_EXCEEDED",
       );

@@ -146,7 +146,7 @@ test("an active order locks primary and alias hostnames without blocking unrelat
   await assert.doesNotReject(() => assertHostnamesMutable(db, "domain-1", ["example.com", "www.example.com"]));
   await assert.rejects(
     () => assertHostnamesMutable(db, "domain-1", ["example.com", "api.example.com"]),
-    (error: unknown) => error instanceof Error && error.message.includes("进行中的证书订单"),
+    (error: unknown) => error instanceof Error && error.message.includes("errors:domainHasActiveOrder"),
   );
   connection.close();
 });

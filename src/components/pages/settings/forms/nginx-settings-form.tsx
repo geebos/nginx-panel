@@ -1,5 +1,6 @@
 import * as React from "react";
 import { AlertTriangleIcon, CheckCircle2Icon, LoaderCircleIcon, SaveIcon, ServerCogIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,8 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Progress } from "@/components/ui/progress";
 import type { NginxSettingsResponse } from "@/lib/api";
 import { updateNginxSettings } from "@/lib/api";
+import { useLocale } from "@/hooks/use-locale";
+import { formatErrorMessage, formatMessageKey } from "@/lib/i18n-error";
 import { runtimeStorageSettingsSchema } from "@/shared/schemas";
 
 const MIB = 1024 * 1024;
@@ -19,11 +22,9 @@ function formatBytes(bytes: number) {
   return `${Math.round(bytes / MIB)} MiB`;
 }
 
-function formatTimestamp(value: number | null) {
-  return value ? new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "medium" }).format(value) : "尚未检查";
-}
-
 export function NginxSettingsForm({ settings, onSaved }: { settings: NginxSettingsResponse; onSaved: () => Promise<unknown> }) {
+  const { t } = useTranslation(["common"]);
+  const locale = useLocale();
   const [limitMiB, setLimitMiB] = React.useState(String(settings.storage.maxBytes / MIB));
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string>();
@@ -31,22 +32,28 @@ export function NginxSettingsForm({ settings, onSaved }: { settings: NginxSettin
     ? Math.min(100, (settings.storage.usedBytes / settings.storage.maxBytes) * 100)
     : 0;
 
+  const formatTimestamp = (value: number | null) => (
+    value
+      ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "medium" }).format(value)
+      : t("common:settings.nginx.notCheckedYet")
+  );
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(undefined);
     const limit = Number(limitMiB);
     const parsed = runtimeStorageSettingsSchema.safeParse({ revisionMaxBytes: limit * MIB });
     if (!Number.isInteger(limit) || !parsed.success) {
-      setError("容量上限必须是 512–20480 MiB 的整数值");
+      setError(t("errors:runtimeStorageInvalid"));
       return;
     }
     setSubmitting(true);
     try {
       await updateNginxSettings(parsed.data.revisionMaxBytes);
       await onSaved();
-      toast.success("Runtime artifacts 容量上限已保存并完成清理");
+      toast.success(t("common:settings.nginx.capacitySaved"));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Nginx 设置保存失败");
+      setError(formatErrorMessage(t, caught, "errors:requestFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -54,38 +61,38 @@ export function NginxSettingsForm({ settings, onSaved }: { settings: NginxSettin
 
   return (
     <form className="flex flex-col gap-6" onSubmit={submit}>
-      {error ? <Alert variant="destructive"><AlertTitle>设置保存失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
+      {error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.nginx.saveFailed")}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
       {settings.storage.locked ? (
         <Alert variant="destructive">
           <AlertTriangleIcon />
-          <AlertTitle>新 revision 容量不足</AlertTitle>
-          <AlertDescription>下一次发布的容量或磁盘空间预检未通过。请提高上限或释放磁盘空间后再发布。</AlertDescription>
+          <AlertTitle>{t("common:settings.nginx.capacityLockedTitle")}</AlertTitle>
+          <AlertDescription>{t("common:settings.nginx.capacityLockedDescription")}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>Runtime artifacts</CardTitle>
-          <CardDescription>保存后立即执行 retention cleanup，不会 reload Nginx。</CardDescription>
-          <CardAction><Badge variant={settings.storage.locked ? "destructive" : "secondary"}>{settings.storage.locked ? "容量受限" : "可发布"}</Badge></CardAction>
+          <CardTitle>{t("common:settings.nginx.artifacts.title")}</CardTitle>
+          <CardDescription>{t("common:settings.nginx.artifacts.description")}</CardDescription>
+          <CardAction><Badge variant={settings.storage.locked ? "destructive" : "secondary"}>{settings.storage.locked ? t("common:settings.nginx.artifacts.capacityLocked") : t("common:settings.nginx.artifacts.publishable")}</Badge></CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm text-muted-foreground">当前用量</span>
+              <span className="text-sm text-muted-foreground">{t("common:settings.nginx.artifacts.currentUsage")}</span>
               <span className="font-mono text-sm">{formatBytes(settings.storage.usedBytes)} / {formatBytes(settings.storage.maxBytes)}</span>
             </div>
-            <Progress value={usagePercent} aria-label={`Runtime artifacts 已使用 ${usagePercent.toFixed(0)}%`} />
-            <p className="text-xs text-muted-foreground">保留 {settings.storage.retainedRevisionCount} 个 revision，其中 {settings.storage.protectedRevisionIds.length} 个受保护。</p>
+            <Progress value={usagePercent} aria-label={t("common:settings.nginx.artifacts.usageAria", { percent: usagePercent.toFixed(0) })} />
+            <p className="text-xs text-muted-foreground">{t("common:settings.nginx.artifacts.retainedRevisions", { count: settings.storage.retainedRevisionCount, protected: settings.storage.protectedRevisionIds.length })}</p>
           </div>
           <FieldGroup>
             <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="revision-max-mib">容量上限</FieldLabel>
+              <FieldLabel htmlFor="revision-max-mib">{t("common:settings.nginx.artifacts.capacityLimit")}</FieldLabel>
               <InputGroup>
                 <InputGroupInput id="revision-max-mib" type="number" inputMode="numeric" min={512} max={20480} step={1} value={limitMiB} aria-invalid={Boolean(error)} onChange={(event) => { setLimitMiB(event.target.value); setError(undefined); }} />
                 <InputGroupAddon align="inline-end">MiB</InputGroupAddon>
               </InputGroup>
-              <FieldDescription>允许范围 512–20480 MiB。受保护 revision 当前至少需要 {formatBytes(settings.storage.minimumAllowedBytes)}。</FieldDescription>
+              <FieldDescription>{t("common:settings.nginx.artifacts.capacityLimitDescription", { min: formatBytes(settings.storage.minimumAllowedBytes) })}</FieldDescription>
               {error ? <FieldError>{error}</FieldError> : null}
             </Field>
           </FieldGroup>
@@ -93,7 +100,7 @@ export function NginxSettingsForm({ settings, onSaved }: { settings: NginxSettin
         <CardFooter className="justify-end">
           <Button type="submit" disabled={submitting || Number(limitMiB) * MIB === settings.storage.maxBytes}>
             {submitting ? <LoaderCircleIcon data-icon="inline-start" className="animate-spin" /> : <SaveIcon data-icon="inline-start" />}
-            保存容量上限
+            {t("common:settings.nginx.artifacts.saveCapacity")}
           </Button>
         </CardFooter>
       </Card>
@@ -101,29 +108,29 @@ export function NginxSettingsForm({ settings, onSaved }: { settings: NginxSettin
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border border-border">
           <CardHeader>
-            <CardTitle>Nginx 运行信息</CardTitle>
-            <CardDescription>由当前容器和只读部署环境提供。</CardDescription>
+            <CardTitle>{t("common:settings.nginx.runtimeInfo.title")}</CardTitle>
+            <CardDescription>{t("common:settings.nginx.runtimeInfo.description")}</CardDescription>
             <CardAction><ServerCogIcon className="text-muted-foreground" /></CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div><p className="text-xs text-muted-foreground">版本</p><p className="mt-1 font-mono text-sm">{settings.nginx.version ?? "不可用"}</p></div>
-            <div><p className="text-xs text-muted-foreground">配置根目录</p><code className="mt-1 block break-all text-sm">{settings.paths.configRoot}</code></div>
-            <div><p className="text-xs text-muted-foreground">静态文件允许根目录</p>{settings.paths.staticAllowedRoots.map((root) => <code className="mt-1 block break-all text-sm" key={root}>{root}</code>)}</div>
+            <div><p className="text-xs text-muted-foreground">{t("common:settings.nginx.runtimeInfo.version")}</p><p className="mt-1 font-mono text-sm">{settings.nginx.version ?? t("common:settings.nginx.runtimeInfo.unavailable")}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t("common:settings.nginx.runtimeInfo.configRoot")}</p><code className="mt-1 block break-all text-sm">{settings.paths.configRoot}</code></div>
+            <div><p className="text-xs text-muted-foreground">{t("common:settings.nginx.runtimeInfo.staticAllowedRoots")}</p>{settings.paths.staticAllowedRoots.map((root) => <code className="mt-1 block break-all text-sm" key={root}>{root}</code>)}</div>
           </CardContent>
         </Card>
 
         <Card className="border border-border">
           <CardHeader>
-            <CardTitle>最近健康检查</CardTitle>
-            <CardDescription>反映 Active revision 的最近一次运行校验。</CardDescription>
+            <CardTitle>{t("common:settings.nginx.health.title")}</CardTitle>
+            <CardDescription>{t("common:settings.nginx.health.description")}</CardDescription>
             <CardAction><Badge variant={settings.health.status === "healthy" ? "secondary" : settings.health.status === "degraded" ? "destructive" : "outline"}>{settings.health.status}</Badge></CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
               {settings.health.status === "healthy" ? <CheckCircle2Icon className="mt-0.5 text-muted-foreground" /> : <AlertTriangleIcon className="mt-0.5 text-muted-foreground" />}
-              <div><p className="text-sm font-medium">{formatTimestamp(settings.health.checkedAt)}</p><p className="mt-1 text-xs text-muted-foreground">Active revision：{settings.health.activeRevision ?? "尚未激活"}</p></div>
+              <div><p className="text-sm font-medium">{formatTimestamp(settings.health.checkedAt)}</p><p className="mt-1 text-xs text-muted-foreground">{t("common:settings.nginx.health.activeRevision", { id: settings.health.activeRevision ?? t("common:settings.nginx.health.notActivated") })}</p></div>
             </div>
-            {settings.health.issues.map((issue) => <Alert variant="destructive" key={issue.code}><AlertTitle>{issue.code}</AlertTitle><AlertDescription>{issue.message}</AlertDescription></Alert>)}
+            {settings.health.issues.map((issue) => <Alert variant="destructive" key={issue.code}><AlertTitle>{issue.code}</AlertTitle><AlertDescription>{formatMessageKey(t, issue.message)}</AlertDescription></Alert>)}
           </CardContent>
         </Card>
       </div>

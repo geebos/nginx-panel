@@ -160,7 +160,7 @@ test("a ready DNS challenge fails clearly when restart lost the ACME account key
   const { connection, db, orderId } = fixture("dns-01");
   const adapter = fakeAdapter({
     prepareOrder: async () => ({ orderUrl: "https://ca.test/order/lost-key", expiresAt: Date.now() + 60_000, challenges: ["example.com", "www.example.com"].map((hostname) => ({ hostname, type: "dns-01" as const, token: null, keyAuthorization: null, dnsRecordName: `_acme-challenge.${hostname}`, dnsRecordValue: `txt-${hostname}`, expiresAt: Date.now() + 60_000 })) }),
-    acknowledgeChallenges: async () => { throw new AcmeRecoveryError("ACME_ACCOUNT_KEY_MISSING", "ACME account key 不存在，无法恢复订单"); },
+    acknowledgeChallenges: async () => { throw new AcmeRecoveryError("ACME_ACCOUNT_KEY_MISSING", "ACME account key is missing; cannot recover order"); },
   });
   const visibleDns: DnsPropagationChecker = { check: async () => ({ authoritative: true, recursiveVisible: 2 }) };
   await runAcmeSchedulerOnce(db, adapter, { dns: visibleDns, certificates: unusedStore });

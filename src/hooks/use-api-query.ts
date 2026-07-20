@@ -18,7 +18,7 @@ export function useApiQuery<T>(load: () => Promise<T>) {
         if (requestId === requestRef.current) setData(nextData);
       } catch (nextError) {
         if (requestId === requestRef.current) {
-          setError(nextError instanceof Error ? nextError : new Error("请求失败"));
+          setError(nextError instanceof Error ? nextError : new Error("errors:requestFailed"));
         }
       } finally {
         if (requestId === requestRef.current) {

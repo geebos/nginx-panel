@@ -1,3 +1,6 @@
+import * as React from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -17,15 +20,17 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { HeaderConfig, RouteConfig } from "@/shared/schemas";
 
-const headerFormSchema = z.object({
-  name: z.string().regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/, "Header 名称格式无效"),
-  value: z.string().max(4096).refine((value) => !/[\r\n\0]/.test(value), "Header 值不能包含换行或 NUL"),
-  scope: z.string().min(1),
-  always: z.boolean(),
-  enabled: z.boolean(),
-});
+function buildHeaderFormSchema(t: TFunction) {
+  return z.object({
+    name: z.string().regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/, t("domains:forms.headerForm.validations.nameFormat")),
+    value: z.string().max(4096).refine((value) => !/[\r\n\0]/.test(value), t("domains:forms.headerForm.validations.valueInvalid")),
+    scope: z.string().min(1),
+    always: z.boolean(),
+    enabled: z.boolean(),
+  });
+}
 
-type HeaderFormValues = z.infer<typeof headerFormSchema>;
+type HeaderFormValues = z.infer<ReturnType<typeof buildHeaderFormSchema>>;
 
 export function HeaderForm({
   header,
@@ -44,6 +49,8 @@ export function HeaderForm({
   onCancel: () => void;
   onSubmit: (header: HeaderConfig) => Promise<void>;
 }) {
+  const { t } = useTranslation(["common", "domains"]);
+  const headerFormSchema = React.useMemo(() => buildHeaderFormSchema(t), [t]);
   const form = useForm<HeaderFormValues>({
     resolver: zodResolver(headerFormSchema),
     defaultValues: {
@@ -58,7 +65,7 @@ export function HeaderForm({
 
   const submit = form.handleSubmit(async (values) => {
     if (values.name.toLowerCase() === "strict-transport-security" && !sslEnabled) {
-      form.setError("name", { message: "启用 HTTPS 后才能添加 HSTS" });
+      form.setError("name", { message: t("domains:forms.headerForm.validations.hstsRequiresHttps") });
       return;
     }
     const routeId = values.scope.startsWith("route:") ? values.scope.slice(6) : null;
@@ -76,46 +83,46 @@ export function HeaderForm({
     <form className="flex flex-col gap-5" onSubmit={submit}>
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.name)}>
-          <FieldLabel htmlFor="headerName">Name</FieldLabel>
+          <FieldLabel htmlFor="headerName">{t("domains:forms.headerForm.name")}</FieldLabel>
           <Input id="headerName" aria-invalid={Boolean(form.formState.errors.name)} placeholder="X-Content-Type-Options" {...form.register("name")} />
           <FieldError errors={[form.formState.errors.name]} />
         </Field>
         <Field data-invalid={Boolean(form.formState.errors.value)}>
-          <FieldLabel htmlFor="headerValue">Value</FieldLabel>
+          <FieldLabel htmlFor="headerValue">{t("domains:forms.headerForm.value")}</FieldLabel>
           <Input id="headerValue" aria-invalid={Boolean(form.formState.errors.value)} placeholder="nosniff" {...form.register("value")} />
-          <FieldDescription>禁止换行和 NUL；Nginx 生成器会安全引用该值。</FieldDescription>
+          <FieldDescription>{t("domains:forms.headerForm.valueDesc")}</FieldDescription>
           <FieldError errors={[form.formState.errors.value]} />
         </Field>
         <Controller control={form.control} name="scope" render={({ field }) => (
           <Field>
-            <FieldLabel htmlFor="headerScope">Scope</FieldLabel>
+            <FieldLabel htmlFor="headerScope">{t("domains:forms.headerForm.scope")}</FieldLabel>
             <Select
               id="headerScope"
               options={[
-                { value: "server", label: "Server" },
-                ...routes.map((route) => ({ value: `route:${route.id}`, label: `Route ${route.path}` })),
+                { value: "server", label: t("domains:forms.headerForm.scopeServer") },
+                ...routes.map((route) => ({ value: `route:${route.id}`, label: t("domains:forms.headerForm.scopeRoute", { path: route.path }) })),
               ]}
               value={field.value}
               onChange={field.onChange}
             />
-            <FieldDescription>Server 应用于整个域名；Route 只写入指定 location。</FieldDescription>
+            <FieldDescription>{t("domains:forms.headerForm.scopeDesc")}</FieldDescription>
           </Field>
         )} />
         <Controller control={form.control} name="always" render={({ field }) => (
-          <Field orientation="horizontal"><FieldContent><FieldTitle>Always</FieldTitle><FieldDescription>在非成功响应中也添加该 Header。</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
+          <Field orientation="horizontal"><FieldContent><FieldTitle>{t("domains:forms.headerForm.always")}</FieldTitle><FieldDescription>{t("domains:forms.headerForm.alwaysDesc")}</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
         )} />
         <Controller control={form.control} name="enabled" render={({ field }) => (
-          <Field orientation="horizontal"><FieldContent><FieldTitle>Enabled</FieldTitle><FieldDescription>关闭后保留在快照中，但不生成 add_header。</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
+          <Field orientation="horizontal"><FieldContent><FieldTitle>{t("domains:forms.headerForm.enabled")}</FieldTitle><FieldDescription>{t("domains:forms.headerForm.enabledDesc")}</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
         )} />
       </FieldGroup>
       {name.toLowerCase() === "strict-transport-security" ? (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-foreground">
-          HSTS 会被浏览器长期缓存；使用 includeSubDomains 前请确认所有子域都支持 HTTPS。
+          {t("domains:forms.headerForm.hstsWarning")}
         </div>
       ) : null}
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>取消</Button>
-        <Button type="submit" disabled={submitting}>{submitting ? "保存中" : "保存到草稿"}</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>{t("domains:common.actions.cancel")}</Button>
+        <Button type="submit" disabled={submitting}>{submitting ? t("domains:common.actions.saving") : t("domains:forms.headerForm.saveToDraft")}</Button>
       </DialogFooter>
     </form>
   );

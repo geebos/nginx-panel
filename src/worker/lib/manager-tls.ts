@@ -29,13 +29,13 @@ export function validateManagerTlsFiles(input: {
     const validTo = Date.parse(certificate.validTo);
 
     if (!Number.isFinite(validFrom) || !Number.isFinite(validTo) || now < validFrom || now >= validTo) {
-      throw new ManagerTlsValidationError("管理端 TLS 证书不在有效期内");
+      throw new ManagerTlsValidationError("Manager TLS certificate is not within its validity period");
     }
     if (!certificate.checkHost(input.hostname)) {
-      throw new ManagerTlsValidationError("管理端 TLS 证书 SAN 不覆盖 MANAGER_HOST");
+      throw new ManagerTlsValidationError("Manager TLS certificate SAN does not cover MANAGER_HOST");
     }
     if (!certificate.checkPrivateKey(privateKey)) {
-      throw new ManagerTlsValidationError("管理端 TLS 证书与私钥不匹配");
+      throw new ManagerTlsValidationError("Manager TLS certificate does not match private key");
     }
 
     return {
@@ -49,7 +49,7 @@ export function validateManagerTlsFiles(input: {
     };
   } catch (error) {
     if (error instanceof ManagerTlsValidationError) throw error;
-    throw new ManagerTlsValidationError("管理端 TLS 证书或私钥无法读取或解析");
+    throw new ManagerTlsValidationError("Manager TLS certificate or private key cannot be read or parsed");
   }
 }
 
@@ -58,7 +58,7 @@ export function validateManagerTlsEnvironment() {
   const certificateFile = process.env.MANAGER_TLS_CERT_FILE;
   const privateKeyFile = process.env.MANAGER_TLS_KEY_FILE;
   if (!hostname || !certificateFile || !privateKeyFile) {
-    throw new Error("MANAGER_HOST、MANAGER_TLS_CERT_FILE 和 MANAGER_TLS_KEY_FILE 必须设置");
+    throw new Error("MANAGER_HOST, MANAGER_TLS_CERT_FILE, and MANAGER_TLS_KEY_FILE must be set");
   }
   return validateManagerTlsFiles({ hostname, certificateFile, privateKeyFile });
 }

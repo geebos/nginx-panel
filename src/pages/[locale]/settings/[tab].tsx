@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createCloudflareCredential, deleteCloudflareCredential, getCloudflareCredentials, getLogSettings, getNginxSettings, getRuntimeDiagnostics, replaceCloudflareCredentialToken } from "@/lib/api";
+import { formatErrorMessage } from "@/lib/i18n-error";
 import { toast } from "sonner";
 import { getI18nProps, SUPPORTED_LOCALES, type StaticPageContext } from "@/lib/i18n-static";
 
@@ -58,14 +59,15 @@ function GeneralSettingsPage() {
 }
 
 function LogSettingsPage() {
+  const { t } = useTranslation(["common"]);
   const query = useApiQuery(getLogSettings);
   return (
     <>
-      <PageHeader title="Log Settings" description="配置实例级结构化日志字段、error level 和安全轮动策略。" breadcrumbs={[{ label: "Settings", href: "/settings/nginx" }, { label: "Logs" }]} />
+      <PageHeader title={t("common:settings.logs.title")} description={t("common:settings.logs.description")} breadcrumbs={[{ label: t("common:settings.breadcrumbs.settings"), href: "/settings/nginx" }, { label: t("common:settings.logs.breadcrumb") }]} />
       <SettingsTabs active="logs" />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
-        {query.error ? <Alert variant="destructive"><AlertTitle>日志设置加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
-        {query.data?.pendingDeploymentId ? <Alert><AlertTitle>日志设置正在应用</AlertTitle><AlertDescription><LocalizedLink className="underline underline-offset-4" href={`/deployments/detail?id=${query.data.pendingDeploymentId}`}>查看 Deployment</LocalizedLink></AlertDescription></Alert> : null}
+        {query.error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.logs.loadFailed")}</AlertTitle><AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription></Alert> : null}
+        {query.data?.pendingDeploymentId ? <Alert><AlertTitle>{t("common:settings.logs.applying")}</AlertTitle><AlertDescription><LocalizedLink className="underline underline-offset-4" href={`/deployments/detail?id=${query.data.pendingDeploymentId}`}>{t("common:settings.logs.viewDeployment")}</LocalizedLink></AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-[640px]" /> : query.data ? <LogSettingsForm key={query.data.active.revision} active={query.data.active} preview={query.data.preview} logRootConfigured={query.data.logRootConfigured} /> : null}
       </div>
     </>
@@ -73,13 +75,14 @@ function LogSettingsPage() {
 }
 
 function DiagnosticsPage() {
+  const { t } = useTranslation(["common"]);
   const query = useApiQuery(getRuntimeDiagnostics);
   return (
     <>
-      <PageHeader title="Diagnostics" description="检查 Active revision 与 SQLite 运行投影的一致性。" breadcrumbs={[{ label: "Settings", href: "/settings/nginx" }, { label: "Diagnostics" }]} />
+      <PageHeader title={t("common:settings.diagnostics.title")} description={t("common:settings.diagnostics.description")} breadcrumbs={[{ label: t("common:settings.breadcrumbs.settings"), href: "/settings/nginx" }, { label: t("common:settings.diagnostics.breadcrumb") }]} />
       <SettingsTabs active="diagnostics" />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
-        {query.error ? <Alert variant="destructive"><AlertTitle>Diagnostics 加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
+        {query.error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.diagnostics.loadFailed")}</AlertTitle><AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-[520px]" /> : query.data ? <RuntimeDiagnosticsForm diagnostics={query.data} /> : null}
       </div>
     </>
@@ -87,32 +90,34 @@ function DiagnosticsPage() {
 }
 
 function CloudflareSettingsPage() {
+  const { t } = useTranslation(["common"]);
   const query = useApiQuery(getCloudflareCredentials);
   const [submittingId, setSubmittingId] = React.useState<string>();
   const [error, setError] = React.useState<string>();
   const run = async (id: string, action: () => Promise<unknown>, message: string) => {
     setSubmittingId(id); setError(undefined);
     try { await action(); toast.success(message); await query.refresh(); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Cloudflare 凭据操作失败"); throw caught; }
+    catch (caught) { setError(formatErrorMessage(t, caught, "common:settings.cloudflare.operationFailed")); throw caught; }
     finally { setSubmittingId(undefined); }
   };
   return (
     <>
-      <PageHeader title="Cloudflare DNS" description="管理 DNS-01 自动验证使用的最小权限 API Token。" breadcrumbs={[{ label: "Settings", href: "/settings/nginx" }, { label: "Cloudflare DNS" }]} />
+      <PageHeader title={t("common:settings.cloudflare.title")} description={t("common:settings.cloudflare.description")} breadcrumbs={[{ label: t("common:settings.breadcrumbs.settings"), href: "/settings/nginx" }, { label: t("common:settings.cloudflare.breadcrumb") }]} />
       <SettingsTabs active="cloudflare" />
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 md:px-8">
-        {error || query.error ? <Alert variant="destructive"><AlertTitle>Cloudflare 凭据操作失败</AlertTitle><AlertDescription>{error ?? query.error?.message}</AlertDescription></Alert> : null}
-        <CreateCloudflareCredentialForm submitting={submittingId === "new"} onSubmit={(input) => run("new", () => createCloudflareCredential(input), "Cloudflare 凭据已保存")} />
-        {query.loading && !query.data ? <Skeleton className="h-56" /> : query.data?.items.map((credential) => <CloudflareCredentialCard key={credential.id} credential={credential} submitting={submittingId === credential.id} onReplace={(token) => run(credential.id, () => replaceCloudflareCredentialToken(credential.id, token), "Token 已替换")} onDelete={() => run(credential.id, () => deleteCloudflareCredential(credential.id), "凭据已删除")} />)}
+        {error || query.error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.cloudflare.operationFailed")}</AlertTitle><AlertDescription>{error ?? (query.error ? formatErrorMessage(t, query.error) : null)}</AlertDescription></Alert> : null}
+        <CreateCloudflareCredentialForm submitting={submittingId === "new"} onSubmit={(input) => run("new", () => createCloudflareCredential(input), t("common:settings.cloudflare.saved"))} />
+        {query.loading && !query.data ? <Skeleton className="h-56" /> : query.data?.items.map((credential) => <CloudflareCredentialCard key={credential.id} credential={credential} submitting={submittingId === credential.id} onReplace={(token) => run(credential.id, () => replaceCloudflareCredentialToken(credential.id, token), t("common:settings.cloudflare.tokenReplaced"))} onDelete={() => run(credential.id, () => deleteCloudflareCredential(credential.id), t("common:settings.cloudflare.deleted"))} />)}
       </div>
     </>
   );
 }
 
 function SecuritySettingsPage() {
+  const { t } = useTranslation(["common"]);
   return (
     <>
-      <PageHeader title="Security" description="管理管理员密码与已登录会话。" breadcrumbs={[{ label: "Settings", href: "/settings/nginx" }, { label: "Security" }]} />
+      <PageHeader title={t("common:settings.security.title")} description={t("common:settings.security.description")} breadcrumbs={[{ label: t("common:settings.breadcrumbs.settings"), href: "/settings/nginx" }, { label: t("common:settings.security.breadcrumb") }]} />
       <SettingsTabs active="security" />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         <SecuritySettingsForm />
@@ -122,13 +127,14 @@ function SecuritySettingsPage() {
 }
 
 function NginxSettingsPage() {
+  const { t } = useTranslation(["common"]);
   const query = useApiQuery(getNginxSettings);
   return (
     <>
-      <PageHeader title="Nginx" description="查看运行路径、健康状态并管理 runtime artifacts 容量。" breadcrumbs={[{ label: "Settings", href: "/settings/nginx" }, { label: "Nginx" }]} />
+      <PageHeader title={t("common:settings.nginx.title")} description={t("common:settings.nginx.description")} breadcrumbs={[{ label: t("common:settings.breadcrumbs.settings"), href: "/settings/nginx" }, { label: t("common:settings.nginx.breadcrumb") }]} />
       <SettingsTabs active="nginx" />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
-        {query.error ? <Alert variant="destructive"><AlertTitle>Nginx 设置加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
+        {query.error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.nginx.loadFailed")}</AlertTitle><AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-[620px]" /> : query.data ? <NginxSettingsForm settings={query.data} onSaved={query.refresh} /> : null}
       </div>
     </>

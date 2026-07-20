@@ -38,10 +38,10 @@ export async function createRenewalOrder(
 ) {
   const now = input.now ?? Date.now();
   const certificate = await db.query.certificates.findFirst({ where: and(eq(certificates.id, input.certificateId), eq(certificates.status, "active")) });
-  if (!certificate) throw new BusinessError("Active Certificate 不存在", 404, "ACTIVE_CERTIFICATE_NOT_FOUND");
+  if (!certificate) throw new BusinessError("errors:activeCertificateNotFound", 404, "ACTIVE_CERTIFICATE_NOT_FOUND");
   const byKey = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.idempotencyKey, input.idempotencyKey) });
   if (byKey) {
-    if (byKey.domainId !== certificate.domainId || !byKey.replacesCertificateId) throw new BusinessError("Idempotency-Key 已用于其他操作", 409, "IDEMPOTENCY_KEY_REUSED");
+    if (byKey.domainId !== certificate.domainId || !byKey.replacesCertificateId) throw new BusinessError("errors:idempotencyKeyReused", 409, "IDEMPOTENCY_KEY_REUSED");
     return { order: byKey, created: false };
   }
   const [sourceOrder, domain, aliases] = await Promise.all([
@@ -49,10 +49,10 @@ export async function createRenewalOrder(
     db.query.domains.findFirst({ where: and(eq(domains.id, certificate.domainId), isNull(domains.deletedAt)) }),
     db.select({ hostname: domainAliases.hostname }).from(domainAliases).where(eq(domainAliases.domainId, certificate.domainId)),
   ]);
-  if (!sourceOrder || sourceOrder.status !== "succeeded" || !domain) throw new BusinessError("证书来源订单或 Domain 不可用", 409, "RENEWAL_SOURCE_UNAVAILABLE");
+  if (!sourceOrder || sourceOrder.status !== "succeeded" || !domain) throw new BusinessError("errors:renewalSourceUnavailable", 409, "RENEWAL_SOURCE_UNAVAILABLE");
   const identifiers = JSON.parse(certificate.sansJson) as string[];
   if (!sameHostnames([domain.primaryHostname, ...aliases.map((alias) => alias.hostname)], identifiers)) {
-    throw new BusinessError("当前 Domain hostname 与 Active Certificate SAN 不一致，请重新申请证书", 409, "CERTIFICATE_SAN_DRIFT");
+    throw new BusinessError("errors:certificateSanDrift", 409, "CERTIFICATE_SAN_DRIFT");
   }
   const existingOrder = await db.query.acmeOrders.findFirst({ where: and(
     eq(acmeOrders.domainId, certificate.domainId),
@@ -60,16 +60,16 @@ export async function createRenewalOrder(
   ) });
   if (existingOrder) {
     if (existingOrder.replacesCertificateId === certificate.id) return { order: existingOrder, created: false };
-    throw new BusinessError("该域名已有进行中的证书订单", 409, "DOMAIN_HAS_ACTIVE_ORDER");
+    throw new BusinessError("errors:domainHasActiveOrder", 409, "DOMAIN_HAS_ACTIVE_ORDER");
   }
   const completedOrder = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.replacesCertificateId, certificate.id), eq(acmeOrders.status, "succeeded")) });
   if (completedOrder) return { order: completedOrder, created: false };
   const credentialId = certificate.cloudflareCredentialId ?? sourceOrder.cloudflareCredentialId;
   let credentialName = sourceOrder.cloudflareCredentialName;
   if (sourceOrder.dnsProvider === "cloudflare") {
-    if (!credentialId) throw new BusinessError("续期使用的 Cloudflare 凭据关联已丢失", 409, "CLOUDFLARE_CREDENTIAL_INVALID");
+    if (!credentialId) throw new BusinessError("errors:cloudflareCredentialInvalid", 409, "CLOUDFLARE_CREDENTIAL_INVALID");
     const credential = await db.query.cloudflareCredentials.findFirst({ where: and(eq(cloudflareCredentials.id, credentialId), eq(cloudflareCredentials.status, "active")) });
-    if (!credential) throw new BusinessError("续期使用的 Cloudflare 凭据无效", 409, "CLOUDFLARE_CREDENTIAL_INVALID");
+    if (!credential) throw new BusinessError("errors:cloudflareCredentialInvalid", 409, "CLOUDFLARE_CREDENTIAL_INVALID");
     try {
       const token = await decryptCloudflareToken(credential.id, credential);
       await cloudflare.preflight(token, identifiers);
@@ -77,7 +77,7 @@ export async function createRenewalOrder(
       credentialName = credential.name;
     } catch (error) {
       if (error instanceof BusinessError) throw error;
-      throw new BusinessError("Cloudflare 续期预检失败", 422, "CLOUDFLARE_PREFLIGHT_FAILED", { cause: error instanceof Error ? error : undefined });
+      throw new BusinessError("errors:cloudflarePreflightFailed", 422, "CLOUDFLARE_PREFLIGHT_FAILED", { cause: error instanceof Error ? error : undefined });
     }
   }
 
@@ -87,7 +87,7 @@ export async function createRenewalOrder(
     const active = tx.select().from(acmeOrders).where(and(eq(acmeOrders.domainId, certificate.domainId), inArray(acmeOrders.status, ["preparing", "waiting_http", "waiting_dns", "validating", "validated", "downloading"]))).get();
     if (active) {
       if (active.replacesCertificateId === certificate.id) return { order: active, created: false };
-      throw new BusinessError("该域名已有进行中的证书订单", 409, "DOMAIN_HAS_ACTIVE_ORDER");
+      throw new BusinessError("errors:domainHasActiveOrder", 409, "DOMAIN_HAS_ACTIVE_ORDER");
     }
     const completed = tx.select().from(acmeOrders).where(and(eq(acmeOrders.replacesCertificateId, certificate.id), eq(acmeOrders.status, "succeeded"))).get();
     if (completed) return { order: completed, created: false };

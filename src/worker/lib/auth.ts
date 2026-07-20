@@ -29,7 +29,7 @@ async function getAuthAttemptKey() {
   } catch (error) {
     if (process.env.APP_ENV !== "development") {
       throw new BusinessError(
-        "认证主密钥不可用",
+        "errors:secretMasterKeyUnavailable",
         503,
         "SECRET_MASTER_KEY_UNAVAILABLE",
         { cause: error instanceof Error ? error : undefined },
@@ -94,14 +94,13 @@ async function authAttemptId(purpose: "login" | "password_change" | "rebuild_act
 async function assertAttemptAllowed(
   db: AppEnv["Variables"]["db"],
   id: string,
-  message: string,
 ) {
   const attempt = await db.query.authAttempts.findFirst({
     where: eq(authAttempts.usernameIpHash, id),
   });
   const now = Date.now();
   if (attempt && attempt.blockedUntil > now) {
-    throw new BusinessError(message, 429, "AUTH_RATE_LIMITED", {
+    throw new BusinessError("errors:authRateLimited", 429, "AUTH_RATE_LIMITED", {
       retryAfterSeconds: Math.ceil((attempt.blockedUntil - now) / 1000),
     });
   }
@@ -113,7 +112,7 @@ export async function assertLoginAllowed(
   clientIp: string,
 ) {
   const id = await authAttemptId("login", username, clientIp);
-  await assertAttemptAllowed(db, id, "用户名或密码错误，请稍后重试");
+  await assertAttemptAllowed(db, id);
   return id;
 }
 
@@ -171,7 +170,7 @@ export async function assertRebuildAllowed(
   clientIp: string,
 ) {
   const id = await authAttemptId("rebuild_active", userId, clientIp);
-  await assertAttemptAllowed(db, id, "当前密码错误，请稍后重试");
+  await assertAttemptAllowed(db, id);
   return id;
 }
 
@@ -184,7 +183,7 @@ export async function assertPasswordChangeAllowed(
   clientIp: string,
 ) {
   const id = await authAttemptId("password_change", userId, clientIp);
-  await assertAttemptAllowed(db, id, "当前密码错误，请稍后重试");
+  await assertAttemptAllowed(db, id);
   return id;
 }
 

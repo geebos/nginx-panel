@@ -48,7 +48,7 @@ export function saveDraftVersion(
       inArray(deployments.status, ["queued", "running"]),
     )).get();
     if (runningDeploy) {
-      throw new BusinessError("发布任务运行期间不能修改该草稿", 409, "DRAFT_DEPLOYMENT_RUNNING");
+      throw new BusinessError("errors:draftDeploymentRunning", 409, "DRAFT_DEPLOYMENT_RUNNING");
     }
     const updated = tx.update(configVersions).set({
       snapshotJson: input.snapshot.json,
@@ -61,7 +61,7 @@ export function saveDraftVersion(
       eq(configVersions.status, "draft"),
       eq(configVersions.snapshotChecksum, input.expectedChecksum ?? draft.snapshotChecksum),
     )).run();
-    if (updated.changes !== 1) throw new BusinessError("草稿已被其他会话修改，请刷新后重试", 409, "VERSION_CONFLICT");
+    if (updated.changes !== 1) throw new BusinessError("errors:versionConflict", 409, "VERSION_CONFLICT");
     version = { ...draft, snapshotJson: input.snapshot.json, snapshotChecksum: input.snapshot.checksum, changeSummary: input.changeSummary, createdBy: input.createdBy ?? draft.createdBy, updatedAt: input.now };
     mode = "updated";
   } else {

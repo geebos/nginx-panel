@@ -16,7 +16,7 @@ function scheduleActivationRun(db: AppEnv["Variables"]["db"]) {
 }
 
 function safeError(error: unknown) {
-  const message = error instanceof Error ? error.message : "证书激活创建失败";
+  const message = error instanceof Error ? error.message : "Certificate activation creation failed";
   return message.replace(/https?:\/\/\S+/g, "[URL]").slice(0, 500);
 }
 
@@ -50,20 +50,20 @@ export async function processCertificateActivation(db: AppEnv["Variables"]["db"]
     const activation = await db.query.certificateActivations.findFirst({ where: eq(certificateActivations.id, activationId) });
     if (!activation || !["pending", "failed"].includes(activation.status)) return;
     const certificate = await db.query.certificates.findFirst({ where: and(eq(certificates.id, activation.certificateId), eq(certificates.status, "ready")) });
-    if (!certificate) throw new Error("Ready Certificate 不存在");
+    if (!certificate) throw new Error("Ready certificate does not exist");
     const order = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, certificate.acmeOrderId) });
     const domain = await db.query.domains.findFirst({ where: and(eq(domains.id, certificate.domainId), isNull(domains.deletedAt)) });
-    if (!order || !domain) throw new Error("证书来源订单或 Domain 不存在");
+    if (!order || !domain) throw new Error("Certificate source order or domain does not exist");
     const aliases = await db.select({ hostname: domainAliases.hostname }).from(domainAliases).where(eq(domainAliases.domainId, domain.id));
     const certificateSans = JSON.parse(certificate.sansJson) as string[];
-    if (!sameHostnames([domain.primaryHostname, ...aliases.map((alias) => alias.hostname)], certificateSans)) throw new Error("当前 Domain hostname 与证书 SAN 不一致");
+    if (!sameHostnames([domain.primaryHostname, ...aliases.map((alias) => alias.hostname)], certificateSans)) throw new Error("Current domain hostnames do not match certificate SANs");
 
     const baseVersionId = domain.activeVersionId ?? order.unpublishedBaseVersionId;
-    if (!baseVersionId) throw new Error("证书激活基线版本不存在");
+    if (!baseVersionId) throw new Error("Certificate activation baseline version does not exist");
     const baseVersion = await db.query.configVersions.findFirst({ where: and(eq(configVersions.id, baseVersionId), eq(configVersions.domainId, domain.id)) });
-    if (!baseVersion) throw new Error("证书激活基线版本不存在");
+    if (!baseVersion) throw new Error("Certificate activation baseline version does not exist");
     const baseConfig = domainConfigSchema.parse(JSON.parse(baseVersion.snapshotJson));
-    if (!sameHostnames([baseConfig.primaryHostname, ...baseConfig.aliases], certificateSans)) throw new Error("基线版本 hostname 与证书 SAN 不一致");
+    if (!sameHostnames([baseConfig.primaryHostname, ...baseConfig.aliases], certificateSans)) throw new Error("Baseline version hostnames do not match certificate SANs");
 
     let version = await db.query.configVersions.findFirst({ where: eq(configVersions.sourceCertificateId, certificate.id) });
     if (!version) {
@@ -82,7 +82,7 @@ export async function processCertificateActivation(db: AppEnv["Variables"]["db"]
           status: "pending",
           sourceVersionId: baseVersion.id,
           sourceCertificateId: certificate.id,
-          changeSummary: "激活新签发证书",
+          changeSummary: "Activate newly issued certificate",
           snapshotJson: snapshot.json,
           snapshotChecksum: snapshot.checksum,
           createdAt: now,
@@ -118,7 +118,7 @@ export async function runCertificateActivationOnce(db: AppEnv["Variables"]["db"]
 
 export async function retryCertificateActivation(db: AppEnv["Variables"]["db"], activationId: string, enqueue: typeof enqueuePublish = enqueuePublish) {
   const activation = await db.query.certificateActivations.findFirst({ where: eq(certificateActivations.id, activationId) });
-  if (!activation) throw new Error("证书 Activation 不存在");
+  if (!activation) throw new Error("Certificate activation does not exist");
   if (activation.status === "failed") {
     const now = Date.now();
     await db.update(certificateActivations).set({ status: "pending", errorCode: null, errorMessage: null, nextAttemptAt: now, updatedAt: now }).where(eq(certificateActivations.id, activation.id));

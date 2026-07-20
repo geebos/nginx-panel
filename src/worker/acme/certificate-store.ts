@@ -56,18 +56,18 @@ export class FileCertificateStore implements CertificateStore {
   async persist(input: PersistCertificateInput): Promise<PersistedCertificate> {
     const privateKey = await readFile(join(acmeRoot(), "orders", input.orderId, "private.key"));
     const chain = acme.crypto.splitPemChain(input.certificatePem);
-    if (chain.length === 0) throw new Error("ACME 未返回证书链");
+    if (chain.length === 0) throw new Error("ACME did not return a certificate chain");
     const info = acme.crypto.readCertificateInfo(chain[0]);
     const sans = normalized(info.domains.altNames);
-    if (JSON.stringify(sans) !== JSON.stringify(normalized(input.identifiers))) throw new Error("证书 SAN 与订单域名不一致");
+    if (JSON.stringify(sans) !== JSON.stringify(normalized(input.identifiers))) throw new Error("Certificate SANs do not match order hostnames");
 
     const leaf = new X509Certificate(chain[0]);
     const certificateSpki = leaf.publicKey.export({ type: "spki", format: "der" });
     const privateKeySpki = createPublicKey(privateKey).export({ type: "spki", format: "der" });
-    if (!Buffer.from(certificateSpki).equals(Buffer.from(privateKeySpki))) throw new Error("证书与订单私钥不匹配");
+    if (!Buffer.from(certificateSpki).equals(Buffer.from(privateKeySpki))) throw new Error("Certificate does not match order private key");
     const notBefore = info.notBefore.getTime();
     const notAfter = info.notAfter.getTime();
-    if (!Number.isFinite(notBefore) || !Number.isFinite(notAfter) || notAfter <= Date.now()) throw new Error("证书有效期无效");
+    if (!Number.isFinite(notBefore) || !Number.isFinite(notAfter) || notAfter <= Date.now()) throw new Error("Certificate validity period is invalid");
 
     const target = join(certificateRoot(), input.domainId, input.certificateId);
     const temporary = `${target}.tmp`;

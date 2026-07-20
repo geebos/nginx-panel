@@ -48,10 +48,10 @@ export class NodeCloudflareDnsProvider implements CloudflareDnsProvider {
 
   async preflight(token: string, hostnames: string[]) {
     const verification = await this.verify(token);
-    if (verification.status !== "active") throw new Error(`Cloudflare API Token 状态为 ${verification.status}`);
+    if (verification.status !== "active") throw new Error(`Cloudflare API token status is ${verification.status}`);
     const zones = hostnames.map((hostname) => {
       const zone = zoneForHostname(verification.zones, hostname);
-      if (!zone) throw new Error(`Cloudflare Token 无法访问 ${hostname} 对应的 Zone`);
+      if (!zone) throw new Error(`Cloudflare token cannot access the zone for ${hostname}`);
       return zone;
     });
     for (const zone of new Map(zones.map((item) => [item.id, item])).values()) {
@@ -64,7 +64,7 @@ export class NodeCloudflareDnsProvider implements CloudflareDnsProvider {
   async present(token: string, input: { orderId: string; challengeId: string; name: string; value: string; hostname: string }) {
     const api = client(token);
     const [zone] = await this.preflight(token, [input.hostname]);
-    if (!zone) throw new Error(`Cloudflare Zone 不可用: ${input.hostname}`);
+    if (!zone) throw new Error(`Cloudflare zone unavailable: ${input.hostname}`);
     const comment = `nginx-domain-manager:${input.orderId}:${input.challengeId}`;
     for await (const record of api.dns.records.list({
       zone_id: zone.id,
@@ -86,7 +86,7 @@ export class NodeCloudflareDnsProvider implements CloudflareDnsProvider {
       proxied: false,
       comment,
     });
-    if (!record.id) throw new Error("Cloudflare 未返回 DNS Record ID");
+    if (!record.id) throw new Error("Cloudflare did not return a DNS record ID");
     return { zoneId: zone.id, recordId: record.id };
   }
 

@@ -34,7 +34,7 @@ export function injectAccessLogFormat(template: string, settings: Pick<NginxLogS
   const end = "  # nginx-manager:log-format:end";
   const startIndex = template.indexOf(start);
   const endIndex = template.indexOf(end);
-  if (startIndex < 0 || endIndex <= startIndex) throw new Error("Nginx 模板缺少日志格式标记");
+  if (startIndex < 0 || endIndex <= startIndex) throw new Error("Nginx template is missing log format markers");
   return `${template.slice(0, startIndex)}${start}\n${renderAccessLogFormat(settings)}\n${template.slice(endIndex)}`;
 }
 
@@ -67,23 +67,23 @@ function indent(lines: string[], spaces = 2) {
 
 function quote(value: string) {
   if (/[\r\n\0]/.test(value)) {
-    throw new Error("Nginx 参数包含非法控制字符");
+    throw new Error("Nginx parameter contains illegal control characters");
   }
   return `"${value.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"").replace(/\$/g, "\\$")}"`;
 }
 
 function assertAbsolutePath(value: string, label: string) {
   if (!isAbsolute(value) || /[\r\n\0]/.test(value)) {
-    throw new Error(`${label} 必须是安全的绝对路径`);
+    throw new Error(`${label} must be a safe absolute path`);
   }
 }
 
 function containedPath(root: string, ...segments: string[]) {
-  assertAbsolutePath(root, "日志根目录");
+  assertAbsolutePath(root, "Logs root directory");
   const normalizedRoot = normalize(root);
   const target = normalize(join(normalizedRoot, ...segments));
   if (target !== normalizedRoot && !target.startsWith(`${normalizedRoot}${sep}`)) {
-    throw new Error("日志路径越界");
+    throw new Error("Log path is out of bounds");
   }
   return target;
 }
@@ -198,7 +198,7 @@ export function renderDomainConfig(input: RenderDomainConfigInput) {
   const enabled = input.mode === "preview" ? true : input.enabled;
   const logLines: string[] = [];
   if (input.mode === "runtime") {
-    if (!errorLevels.has(input.logs.errorLevel)) throw new Error("无效的 error log level");
+    if (!errorLevels.has(input.logs.errorLevel)) throw new Error("Invalid error log level");
     const domainLogRoot = containedPath(input.logs.root, snapshot.primaryHostname);
     logLines.push(
       `access_log ${quote(join(domainLogRoot, "access.log"))} domain_manager;`,
@@ -216,7 +216,7 @@ export function renderDomainConfig(input: RenderDomainConfigInput) {
     : undefined;
   const listeners = input.mode === "runtime" ? input.listeners ?? { http: 80, https: 443 } : { http: 80, https: 443 };
   for (const port of [listeners.http, listeners.https]) {
-    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("监听端口超出范围");
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Listen port out of range");
   }
 
   const http = renderServer({
@@ -252,10 +252,10 @@ export function renderDomainPreview(snapshot: DomainConfig) {
 }
 
 export function renderRootConfig(input: RenderRootConfigInput) {
-  assertAbsolutePath(input.pidPath, "PID 路径");
+  assertAbsolutePath(input.pidPath, "PID path");
   const workerConnections = input.workerConnections ?? 1024;
   if (!Number.isInteger(workerConnections) || workerConnections < 128 || workerConnections > 65535) {
-    throw new Error("workerConnections 超出范围");
+    throw new Error("workerConnections out of range");
   }
   return `worker_processes auto;
 pid ${quote(input.pidPath)};

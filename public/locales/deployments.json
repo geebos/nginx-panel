@@ -1,0 +1,46 @@
+{
+  "title": { "en": "Deployments", "zh-CN": "部署任务" },
+  "description": {
+    "en": "Audit trail of config tests, publishes, rollbacks, and system tasks.",
+    "zh-CN": "配置测试、发布、回滚和系统任务的审计记录。"
+  },
+  "refresh": { "en": "Refresh", "zh-CN": "刷新" },
+  "loadFailed": { "en": "Failed to load deployments", "zh-CN": "发布记录加载失败" },
+  "globalDomain": { "en": "Global", "zh-CN": "全局" },
+  "columns": {
+    "id": { "en": "ID", "zh-CN": "ID" },
+    "type": { "en": "Type", "zh-CN": "类型" },
+    "status": { "en": "Status", "zh-CN": "状态" },
+    "domain": { "en": "Domain", "zh-CN": "域名" },
+    "started": { "en": "Started", "zh-CN": "开始时间" },
+    "duration": { "en": "Duration", "zh-CN": "耗时" }
+  },
+  "empty": {
+    "title": { "en": "No tasks yet", "zh-CN": "还没有任务" },
+    "description": {
+      "en": "Tasks appear here after you test a draft from the Domains page.",
+      "zh-CN": "从 Domain 页面测试草稿后，任务会出现在这里。"
+    }
+  },
+  "detail": {
+    "title": { "en": "Deployment", "zh-CN": "部署任务" },
+    "description": {
+      "loading": { "en": "Loading task status...", "zh-CN": "读取任务状态。" },
+      "global": { "en": "{{type}} · Global task", "zh-CN": "{{type}} · 全局任务" },
+      "version": { "en": "{{type}} · Version {{version}}", "zh-CN": "{{type}} · 版本 {{version}}" }
+    },
+    "backToDomain": { "en": "Back to Domain", "zh-CN": "返回 Domain" },
+    "loadFailed": { "en": "Failed to load task", "zh-CN": "任务加载失败" },
+    "taskFailed": { "en": "Task failed", "zh-CN": "任务失败" },
+    "errorMessageFallback": { "en": "Production config unchanged.", "zh-CN": "线上配置未改变。" },
+    "cardTitle": {
+      "test": { "en": "Config test", "zh-CN": "配置测试" },
+      "steps": { "en": "Task steps", "zh-CN": "任务步骤" }
+    },
+    "cardDescription": {
+      "en": "Status is returned by the Worker; the page does not infer task results.",
+      "zh-CN": "状态由 Worker 返回，页面不会推断任务结果。"
+    },
+    "viewLog": { "en": "View redacted logs", "zh-CN": "查看脱敏日志" }
+  }
+}

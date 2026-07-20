@@ -1,4 +1,6 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -18,33 +20,35 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { RouteConfig } from "@/shared/schemas";
 
-const routeFormSchema = z.object({
-  type: z.enum(["proxy", "static", "redirect"]),
-  path: z.string().trim().min(1, "请输入路径").startsWith("/", "路径必须以 / 开头"),
-  target: z.string(),
-  root: z.string(),
-  index: z.string(),
-  statusCode: z.enum(["301", "302"]),
-  enabled: z.boolean(),
-  websocket: z.boolean(),
-  preserveHost: z.boolean(),
-  spaFallback: z.boolean(),
-  connectTimeoutSeconds: z.number().int().min(1).max(3600),
-  readTimeoutSeconds: z.number().int().min(1).max(3600),
-  sendTimeoutSeconds: z.number().int().min(1).max(3600),
-}).superRefine((value, ctx) => {
-  if (["proxy", "redirect"].includes(value.type)) {
-    const parsed = z.url().safeParse(value.target);
-    if (!parsed.success || !/^https?:\/\//i.test(value.target)) {
-      ctx.addIssue({ code: "custom", path: ["target"], message: "请输入完整的 HTTP 或 HTTPS URL" });
+function buildRouteFormSchema(t: TFunction) {
+  return z.object({
+    type: z.enum(["proxy", "static", "redirect"]),
+    path: z.string().trim().min(1, t("domains:forms.routeForm.validations.pathRequired")).startsWith("/", t("domains:forms.routeForm.validations.pathStart")),
+    target: z.string(),
+    root: z.string(),
+    index: z.string(),
+    statusCode: z.enum(["301", "302"]),
+    enabled: z.boolean(),
+    websocket: z.boolean(),
+    preserveHost: z.boolean(),
+    spaFallback: z.boolean(),
+    connectTimeoutSeconds: z.number().int().min(1).max(3600),
+    readTimeoutSeconds: z.number().int().min(1).max(3600),
+    sendTimeoutSeconds: z.number().int().min(1).max(3600),
+  }).superRefine((value, ctx) => {
+    if (["proxy", "redirect"].includes(value.type)) {
+      const parsed = z.url().safeParse(value.target);
+      if (!parsed.success || !/^https?:\/\//i.test(value.target)) {
+        ctx.addIssue({ code: "custom", path: ["target"], message: t("domains:forms.routeForm.validations.targetUrl") });
+      }
     }
-  }
-  if (value.type === "static" && !value.root.startsWith("/")) {
-    ctx.addIssue({ code: "custom", path: ["root"], message: "静态目录必须是绝对路径" });
-  }
-});
+    if (value.type === "static" && !value.root.startsWith("/")) {
+      ctx.addIssue({ code: "custom", path: ["root"], message: t("domains:forms.routeForm.validations.staticRoot") });
+    }
+  });
+}
 
-type RouteFormValues = z.infer<typeof routeFormSchema>;
+type RouteFormValues = z.infer<ReturnType<typeof buildRouteFormSchema>>;
 
 function defaults(route?: RouteConfig): RouteFormValues {
   return {
@@ -77,6 +81,8 @@ export function RouteForm({
   onCancel: () => void;
   onSubmit: (route: RouteConfig) => Promise<void>;
 }) {
+  const { t } = useTranslation(["common", "domains"]);
+  const routeFormSchema = React.useMemo(() => buildRouteFormSchema(t), [t]);
   const form = useForm<RouteFormValues>({ resolver: zodResolver(routeFormSchema), defaultValues: defaults(route) });
   const routeType = useWatch({ control: form.control, name: "type" });
   const path = useWatch({ control: form.control, name: "path" });
@@ -84,7 +90,7 @@ export function RouteForm({
 
   const submit = form.handleSubmit(async (values) => {
     if (existingPaths.some((item) => item === values.path && item !== route?.path)) {
-      form.setError("path", { message: "同一域名中的路径不能重复" });
+      form.setError("path", { message: t("domains:forms.routeForm.validations.pathDuplicate") });
       return;
     }
     const base = { id: route?.id ?? crypto.randomUUID(), path: values.path, enabled: values.enabled, order: route?.order ?? existingPaths.length };
@@ -113,13 +119,13 @@ export function RouteForm({
           name="type"
           render={({ field }) => (
             <Field>
-              <FieldLabel htmlFor="routeType">Type</FieldLabel>
+              <FieldLabel htmlFor="routeType">{t("domains:forms.routeForm.type")}</FieldLabel>
               <Select
                 id="routeType"
                 options={[
-                  { value: "proxy", label: "Reverse Proxy" },
-                  { value: "static", label: "Static Website" },
-                  { value: "redirect", label: "Redirect" },
+                  { value: "proxy", label: t("domains:forms.routeForm.typeProxy") },
+                  { value: "static", label: t("domains:forms.routeForm.typeStatic") },
+                  { value: "redirect", label: t("domains:forms.routeForm.typeRedirect") },
                 ]}
                 value={field.value}
                 onChange={(value) => field.onChange(value)}
@@ -128,14 +134,14 @@ export function RouteForm({
           )}
         />
         <Field data-invalid={Boolean(form.formState.errors.path)}>
-          <FieldLabel htmlFor="routePath">Path</FieldLabel>
+          <FieldLabel htmlFor="routePath">{t("domains:forms.routeForm.path")}</FieldLabel>
           <Input id="routePath" aria-invalid={Boolean(form.formState.errors.path)} {...form.register("path")} />
-          <FieldDescription>普通前缀 location，Nginx 自动使用最长前缀匹配。</FieldDescription>
+          <FieldDescription>{t("domains:forms.routeForm.pathDesc")}</FieldDescription>
           <FieldError errors={[form.formState.errors.path]} />
         </Field>
         {routeType === "proxy" || routeType === "redirect" ? (
           <Field data-invalid={Boolean(form.formState.errors.target)}>
-            <FieldLabel htmlFor="routeTarget">Target URL</FieldLabel>
+            <FieldLabel htmlFor="routeTarget">{t("domains:forms.routeForm.targetUrl")}</FieldLabel>
             <Input id="routeTarget" aria-invalid={Boolean(form.formState.errors.target)} {...form.register("target")} />
             <FieldError errors={[form.formState.errors.target]} />
           </Field>
@@ -143,12 +149,12 @@ export function RouteForm({
         {routeType === "static" ? (
           <>
             <Field data-invalid={Boolean(form.formState.errors.root)}>
-              <FieldLabel htmlFor="routeRoot">Static Root</FieldLabel>
+              <FieldLabel htmlFor="routeRoot">{t("domains:forms.routeForm.staticRoot")}</FieldLabel>
               <Input id="routeRoot" aria-invalid={Boolean(form.formState.errors.root)} {...form.register("root")} />
               <FieldError errors={[form.formState.errors.root]} />
             </Field>
             <Field>
-              <FieldLabel htmlFor="routeIndex">Index file</FieldLabel>
+              <FieldLabel htmlFor="routeIndex">{t("domains:forms.routeForm.indexFile")}</FieldLabel>
               <Input id="routeIndex" {...form.register("index")} />
             </Field>
           </>
@@ -165,31 +171,31 @@ export function RouteForm({
               ))}
             </div>
             <Controller control={form.control} name="websocket" render={({ field }) => (
-              <Field orientation="horizontal"><FieldContent><FieldTitle>WebSocket</FieldTitle><FieldDescription>注入受控 Upgrade headers。</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
+              <Field orientation="horizontal"><FieldContent><FieldTitle>{t("domains:forms.routeForm.websocket")}</FieldTitle><FieldDescription>{t("domains:forms.routeForm.websocketDesc")}</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
             )} />
             <Controller control={form.control} name="preserveHost" render={({ field }) => (
-              <Field orientation="horizontal"><FieldContent><FieldTitle>Preserve Host</FieldTitle><FieldDescription>向 upstream 传递原始 Host。</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
+              <Field orientation="horizontal"><FieldContent><FieldTitle>{t("domains:forms.routeForm.preserveHost")}</FieldTitle><FieldDescription>{t("domains:forms.routeForm.preserveHostDesc")}</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
             )} />
           </>
         ) : null}
         {routeType === "static" ? (
           <Controller control={form.control} name="spaFallback" render={({ field }) => (
-            <Field orientation="horizontal"><FieldContent><FieldTitle>SPA fallback</FieldTitle><FieldDescription>未找到资源时回退到 Index。</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
+            <Field orientation="horizontal"><FieldContent><FieldTitle>{t("domains:forms.routeForm.spaFallback")}</FieldTitle><FieldDescription>{t("domains:forms.routeForm.spaFallbackDesc")}</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
           )} />
         ) : null}
         <Controller control={form.control} name="enabled" render={({ field }) => (
-          <Field orientation="horizontal"><FieldContent><FieldTitle>Enabled</FieldTitle><FieldDescription>关闭后保留在版本 JSON，但不生成 location。</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
+          <Field orientation="horizontal"><FieldContent><FieldTitle>{t("domains:forms.routeForm.enabled")}</FieldTitle><FieldDescription>{t("domains:forms.routeForm.enabledDesc")}</FieldDescription></FieldContent><Switch checked={field.value} onCheckedChange={field.onChange} /></Field>
         )} />
       </FieldGroup>
 
       <div className="rounded-lg border border-border bg-muted/30 p-4">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">生成结果预览</p>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">{t("domains:forms.routeForm.previewTitle")}</p>
         <pre className="overflow-x-auto font-mono text-xs">{`location ${path || "/"} {\n  ${routeType === "static" ? "root ...;" : routeType === "redirect" ? `return ... ${target};` : `proxy_pass ${target};`}\n}`}</pre>
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>取消</Button>
-        <Button type="submit" disabled={submitting}>{submitting ? "保存中" : "保存到草稿"}</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>{t("domains:common.actions.cancel")}</Button>
+        <Button type="submit" disabled={submitting}>{submitting ? t("domains:common.actions.saving") : t("domains:forms.routeForm.saveToDraft")}</Button>
       </DialogFooter>
     </form>
   );

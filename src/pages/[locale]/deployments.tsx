@@ -1,4 +1,5 @@
 import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { RefreshCwIcon, RocketIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
@@ -10,35 +11,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { useApiQuery } from "@/hooks/use-api-query";
+import { useLocale } from "@/hooks/use-locale";
 import { getDeployments } from "@/lib/api";
-
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+import { formatErrorMessage } from "@/lib/i18n-error";
 
 export const getStaticPaths = getLocaleStaticPaths;
-export const getStaticProps = makeStaticProps(["common"]);
+export const getStaticProps = makeStaticProps(["common", "deployments"]);
 
 export default function DeploymentsPage() {
+  const { t } = useTranslation(["common", "deployments"]);
+  const locale = useLocale();
   const query = useApiQuery(getDeployments);
+  const dateFormatter = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   return (
     <Page className="px-0 pb-16">
       <PageHeader
-        title="Deployments"
-        description="配置测试、发布、回滚和系统任务的审计记录。"
-        breadcrumbs={[{ label: "Deployments" }]}
-        action={<Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />刷新</Button>}
+        title={t("deployments:title")}
+        description={t("deployments:description")}
+        breadcrumbs={[{ label: t("deployments:title") }]}
+        action={<Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />{t("deployments:refresh")}</Button>}
       />
       <div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-8">
-        {query.error ? <Alert variant="destructive"><AlertTitle>发布记录加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
+        {query.error ? <Alert variant="destructive"><AlertTitle>{t("deployments:loadFailed")}</AlertTitle><AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-80" /> : query.data?.items.length ? (
           <div className="rounded-md border border-border bg-card">
-            <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Domain</TableHead><TableHead>Started</TableHead><TableHead>Duration</TableHead></TableRow></TableHeader><TableBody>
+            <Table><TableHeader><TableRow><TableHead>{t("deployments:columns.id")}</TableHead><TableHead>{t("deployments:columns.type")}</TableHead><TableHead>{t("deployments:columns.status")}</TableHead><TableHead>{t("deployments:columns.domain")}</TableHead><TableHead>{t("deployments:columns.started")}</TableHead><TableHead>{t("deployments:columns.duration")}</TableHead></TableRow></TableHeader><TableBody>
               {query.data.items.map((item) => (
-                <TableRow key={item.id}><TableCell><LocalizedLink className="font-mono text-xs underline-offset-4 hover:underline" href={`/deployments/detail?id=${item.id}`}>{item.id.slice(0, 8)}</LocalizedLink></TableCell><TableCell className="capitalize">{item.type}</TableCell><TableCell><StatusBadge status={item.status} /></TableCell><TableCell className="font-mono text-xs">{item.domainId?.slice(0, 8) ?? "Global"}</TableCell><TableCell>{dateFormatter.format(item.startedAt ?? item.createdAt)}</TableCell><TableCell>{item.startedAt && item.finishedAt ? `${item.finishedAt - item.startedAt} ms` : "-"}</TableCell></TableRow>
+                <TableRow key={item.id}><TableCell><LocalizedLink className="font-mono text-xs underline-offset-4 hover:underline" href={`/deployments/detail?id=${item.id}`}>{item.id.slice(0, 8)}</LocalizedLink></TableCell><TableCell className="capitalize">{item.type}</TableCell><TableCell><StatusBadge status={item.status} /></TableCell><TableCell className="font-mono text-xs">{item.domainId?.slice(0, 8) ?? t("deployments:globalDomain")}</TableCell><TableCell>{dateFormatter.format(item.startedAt ?? item.createdAt)}</TableCell><TableCell>{item.startedAt && item.finishedAt ? `${item.finishedAt - item.startedAt} ms` : "-"}</TableCell></TableRow>
               ))}
             </TableBody></Table>
           </div>
         ) : (
-          <Empty className="min-h-72 border"><EmptyHeader><EmptyMedia variant="icon"><RocketIcon /></EmptyMedia><EmptyTitle>还没有任务</EmptyTitle><EmptyDescription>从 Domain 页面测试草稿后，任务会出现在这里。</EmptyDescription></EmptyHeader></Empty>
+          <Empty className="min-h-72 border"><EmptyHeader><EmptyMedia variant="icon"><RocketIcon /></EmptyMedia><EmptyTitle>{t("deployments:empty.title")}</EmptyTitle><EmptyDescription>{t("deployments:empty.description")}</EmptyDescription></EmptyHeader></Empty>
         )}
       </div>
     </Page>

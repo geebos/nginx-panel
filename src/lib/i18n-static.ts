@@ -11,8 +11,22 @@ import {
   type Messages,
 } from "@/i18n/settings";
 import common from "../../public/locales/common.json";
+import dashboard from "../../public/locales/dashboard.json";
+import certificates from "../../public/locales/certificates.json";
+import deployments from "../../public/locales/deployments.json";
+import domains from "../../public/locales/domains.json";
+import logs from "../../public/locales/logs.json";
+import login from "../../public/locales/login.json";
 
-const MESSAGES: Record<string, Record<string, unknown>> = { common };
+const MESSAGES: Record<string, Record<string, unknown>> = {
+  common,
+  dashboard,
+  certificates,
+  deployments,
+  domains,
+  logs,
+  login,
+};
 
 export type StaticPageContext = GetStaticPropsContext<{
   locale?: string;

@@ -1,0 +1,568 @@
+{
+  "common": {
+    "actions": {
+      "refresh": { "en": "Refresh", "zh-CN": "刷新" },
+      "cancel": { "en": "Cancel", "zh-CN": "取消" },
+      "delete": { "en": "Delete", "zh-CN": "删除" },
+      "edit": { "en": "Edit", "zh-CN": "编辑" },
+      "copy": { "en": "Copy", "zh-CN": "复制" },
+      "save": { "en": "Save", "zh-CN": "保存" },
+      "back": { "en": "Back", "zh-CN": "返回" },
+      "manage": { "en": "Manage", "zh-CN": "管理" },
+      "deleting": { "en": "Deleting", "zh-CN": "删除中" },
+      "saving": { "en": "Saving", "zh-CN": "保存中" },
+      "confirmDelete": { "en": "Confirm delete", "zh-CN": "确认删除" },
+      "nextStep": { "en": "Next", "zh-CN": "下一步" },
+      "previousStep": { "en": "Back", "zh-CN": "上一步" },
+      "format": { "en": "Format", "zh-CN": "格式化" },
+      "retry": { "en": "Retry", "zh-CN": "重试" }
+    },
+    "status": {
+      "enabled": { "en": "Enabled", "zh-CN": "已启用" },
+      "disabled": { "en": "Disabled", "zh-CN": "已停用" },
+      "yes": { "en": "Yes", "zh-CN": "Yes" },
+      "no": { "en": "No", "zh-CN": "No" },
+      "none": { "en": "None", "zh-CN": "无" },
+      "notPublished": { "en": "Not published", "zh-CN": "未发布" }
+    },
+    "breadcrumbs": {
+      "domains": { "en": "Domains", "zh-CN": "Domains" },
+      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "overview": { "en": "Overview", "zh-CN": "Overview" },
+      "routes": { "en": "Routes", "zh-CN": "Routes" },
+      "ssl": { "en": "SSL", "zh-CN": "SSL" },
+      "headers": { "en": "Headers", "zh-CN": "Headers" },
+      "advanced": { "en": "Advanced", "zh-CN": "Advanced" },
+      "logs": { "en": "Logs", "zh-CN": "Logs" },
+      "history": { "en": "History", "zh-CN": "History" },
+      "version": { "en": "Version", "zh-CN": "Version" },
+      "diff": { "en": "Diff", "zh-CN": "Diff" },
+      "order": { "en": "Order", "zh-CN": "Order" },
+      "addDomain": { "en": "Add domain", "zh-CN": "添加域名" }
+    },
+    "errors": {
+      "deleteFailed": { "en": "Delete failed", "zh-CN": "删除失败" }
+    },
+    "toast": {
+      "noChange": { "en": "No config changes", "zh-CN": "没有配置变化" },
+      "draftCreated": { "en": "Created draft v{{n}}", "zh-CN": "已创建 v{{n}} 草稿" },
+      "draftUpdated": { "en": "Updated draft v{{n}}", "zh-CN": "已更新 v{{n}} 草稿" }
+    }
+  },
+  "tabs": {
+    "ariaLabel": { "en": "Domain sections", "zh-CN": "Domain 分区" },
+    "overview": { "en": "Overview", "zh-CN": "Overview" },
+    "routes": { "en": "Routes", "zh-CN": "Routes" },
+    "ssl": { "en": "SSL", "zh-CN": "SSL" },
+    "headers": { "en": "Headers", "zh-CN": "Headers" },
+    "advanced": { "en": "Advanced", "zh-CN": "Advanced" },
+    "logs": { "en": "Logs", "zh-CN": "Logs" },
+    "history": { "en": "History", "zh-CN": "History" },
+    "disabledTitle": { "en": "Added in later phase", "zh-CN": "后续阶段接入" }
+  },
+  "list": {
+    "title": { "en": "Domains", "zh-CN": "Domains" },
+    "description": { "en": "Create, search, and manage all Nginx domains.", "zh-CN": "创建、查询和管理所有 Nginx 域名。" },
+    "addDomain": { "en": "Add domain", "zh-CN": "添加域名" },
+    "search": {
+      "ariaLabel": { "en": "Search domains", "zh-CN": "搜索域名" },
+      "placeholder": { "en": "Search primary domain or aliases", "zh-CN": "搜索主域名或别名" }
+    },
+    "filters": {
+      "statusAriaLabel": { "en": "Filter by runtime status", "zh-CN": "筛选运行状态" },
+      "all": { "en": "All statuses", "zh-CN": "全部状态" },
+      "sortAriaLabel": { "en": "Sort", "zh-CN": "排序" },
+      "sortUpdatedDesc": { "en": "Recently updated", "zh-CN": "最近修改" },
+      "sortCreatedDesc": { "en": "Recently created", "zh-CN": "最近创建" },
+      "sortHostnameAsc": { "en": "Hostname A-Z", "zh-CN": "域名 A-Z" }
+    },
+    "loadFailed": { "en": "Failed to load domains", "zh-CN": "域名列表加载失败" },
+    "columns": {
+      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "aliases": { "en": "Aliases", "zh-CN": "Aliases" },
+      "ssl": { "en": "SSL", "zh-CN": "SSL" },
+      "runtime": { "en": "Runtime", "zh-CN": "运行状态" },
+      "version": { "en": "Active version", "zh-CN": "当前版本" },
+      "updated": { "en": "Last updated", "zh-CN": "最后修改" },
+      "actions": { "en": "Actions", "zh-CN": "操作" }
+    },
+    "noAlias": { "en": "None", "zh-CN": "无别名" },
+    "pagination": {
+      "previous": { "en": "Previous", "zh-CN": "上一页" },
+      "next": { "en": "Next", "zh-CN": "下一页" }
+    },
+    "empty": {
+      "filteredTitle": { "en": "No matches", "zh-CN": "没有匹配项" },
+      "emptyTitle": { "en": "No domains yet", "zh-CN": "还没有域名" },
+      "filteredDescription": { "en": "Adjust the search or filters and try again.", "zh-CN": "调整搜索或筛选条件后重试。" },
+      "emptyDescription": { "en": "Create the first domain and a v1 draft; live Nginx will not change immediately.", "zh-CN": "创建第一个域名和 v1 草稿，线上 Nginx 不会立即改变。" },
+      "clearFilters": { "en": "Clear filters", "zh-CN": "清除筛选" },
+      "createFirst": { "en": "Create the first domain", "zh-CN": "创建第一个域名" }
+    },
+    "actions": {
+      "manageAria": { "en": "Manage {{hostname}}", "zh-CN": "管理 {{hostname}}" },
+      "deleteTitle": { "en": "Delete {{hostname}}?", "zh-CN": "删除 {{hostname}}？" },
+      "deleteDescription": { "en": "This domain is not published yet. Deleting will archive the Domain; historical drafts remain in the database.", "zh-CN": "该域名尚未发布。删除后会归档 Domain，历史草稿仍保留在数据库中。" }
+    }
+  },
+  "overview": {
+    "titleFallback": { "en": "Domain Overview", "zh-CN": "Domain Overview" },
+    "descriptionFallback": { "en": "Loading domain overview.", "zh-CN": "读取域名概览。" },
+    "notPublished": { "en": "Not published", "zh-CN": "尚未发布" },
+    "noDraft": { "en": "No draft", "zh-CN": "无草稿" },
+    "activeSuffix": { "en": "Active", "zh-CN": "Active" },
+    "draftSuffix": { "en": "Draft", "zh-CN": "Draft" },
+    "breadcrumbFallback": { "en": "Overview", "zh-CN": "Overview" },
+    "createdAlertTitle": { "en": "v1 draft created", "zh-CN": "v1 草稿已创建" },
+    "createdAlertDescription": { "en": "Live Nginx is unchanged. Test the draft first; safe publish will be wired up after the runtime image spike.", "zh-CN": "线上 Nginx 尚未改变。可先测试草稿，安全发布将在 runtime image spike 完成后接入。" },
+    "loadFailed": { "en": "Failed to load domain overview", "zh-CN": "域名概览加载失败" },
+    "runtimeCard": {
+      "title": { "en": "Runtime", "zh-CN": "运行概况" },
+      "description": { "en": "Current live version and recent runtime status.", "zh-CN": "当前线上版本和最近运行状态。" },
+      "nginxStatus": { "en": "Nginx status", "zh-CN": "Nginx status" },
+      "activeVersion": { "en": "Active version", "zh-CN": "Active version" },
+      "lastDeployment": { "en": "Last deployment", "zh-CN": "Last deployment" },
+      "configValidation": { "en": "Config validation", "zh-CN": "Config validation" },
+      "notPublished": { "en": "Not published", "zh-CN": "Not published" },
+      "none": { "en": "None", "zh-CN": "None" },
+      "notTested": { "en": "Not tested", "zh-CN": "Not tested" }
+    },
+    "infoCard": {
+      "title": { "en": "Domain info", "zh-CN": "域名信息" },
+      "description": { "en": "Primary domain, aliases, and runtime projection.", "zh-CN": "主域名、别名和运行投影。" },
+      "primaryDomain": { "en": "Primary Domain", "zh-CN": "Primary Domain" },
+      "aliases": { "en": "Aliases", "zh-CN": "Aliases" },
+      "created": { "en": "Created", "zh-CN": "Created" },
+      "enabled": { "en": "Enabled", "zh-CN": "Enabled" }
+    },
+    "draftCard": {
+      "title": { "en": "Draft changes", "zh-CN": "草稿变更" },
+      "description": { "en": "The current draft remains editable; publishing freezes it into an immutable version.", "zh-CN": "当前草稿可继续编辑，发布后冻结为不可变版本。" },
+      "synced": { "en": "Live config is in sync.", "zh-CN": "线上配置已同步。" },
+      "shaLabel": { "en": "SHA-256", "zh-CN": "SHA-256" }
+    },
+    "routesCard": {
+      "title": { "en": "Routes summary", "zh-CN": "路由摘要" },
+      "description": { "en": "{{count}} route(s), matched by Nginx longest-prefix.", "zh-CN": "{{count}} 条路由，按 Nginx 最长前缀匹配。" },
+      "empty": { "en": "No routes added; non-ACME requests will return 404 after publish.", "zh-CN": "尚未添加路由，发布后非 ACME 请求将返回 404。" }
+    },
+    "httpsCard": {
+      "title": { "en": "HTTPS", "zh-CN": "HTTPS" },
+      "description": { "en": "Certificate issuance is an independent flow, not implicitly triggered by publish.", "zh-CN": "证书申请是独立流程，不由发布按钮隐式触发。" },
+      "status": { "en": "Status", "zh-CN": "Status" },
+      "environment": { "en": "Environment", "zh-CN": "Environment" },
+      "autoRenew": { "en": "Auto renew", "zh-CN": "Auto renew" },
+      "forceHttps": { "en": "Force HTTPS", "zh-CN": "Force HTTPS" }
+    }
+  },
+  "routes": {
+    "titleFallback": { "en": "Routes", "zh-CN": "Routes" },
+    "description": { "en": "Edit standard prefix locations under the server. Unpublished drafts update in place.", "zh-CN": "编辑 server 下的普通前缀 location。未发布草稿会原位更新。" },
+    "addRoute": { "en": "Add route", "zh-CN": "添加路由" },
+    "loadFailed": { "en": "Routes operation failed", "zh-CN": "Routes 操作失败" },
+    "columns": {
+      "path": { "en": "Path", "zh-CN": "Path" },
+      "type": { "en": "Type", "zh-CN": "Type" },
+      "target": { "en": "Target", "zh-CN": "Target" },
+      "options": { "en": "Options", "zh-CN": "Options" },
+      "status": { "en": "Status", "zh-CN": "Status" },
+      "actions": { "en": "Actions", "zh-CN": "Actions" }
+    },
+    "options": {
+      "static": { "en": "Static", "zh-CN": "静态" },
+      "spa": { "en": "SPA", "zh-CN": "SPA" },
+      "ws": { "en": "WS", "zh-CN": "WS" }
+    },
+    "srOnly": {
+      "edit": { "en": "Edit {{path}}", "zh-CN": "编辑 {{path}}" },
+      "copy": { "en": "Copy {{path}}", "zh-CN": "复制 {{path}}" },
+      "delete": { "en": "Delete {{path}}", "zh-CN": "删除 {{path}}" }
+    },
+    "empty": {
+      "title": { "en": "No routes added", "zh-CN": "尚未添加路由" },
+      "description": { "en": "After publish, requests other than ACME challenge will return 404.", "zh-CN": "发布后除 ACME challenge 外的请求将返回 404。" },
+      "addFirst": { "en": "Add the first route", "zh-CN": "添加第一条路由" }
+    },
+    "dialog": {
+      "addTitle": { "en": "Add route", "zh-CN": "添加路由" },
+      "editTitle": { "en": "Edit route", "zh-CN": "编辑路由" },
+      "description": { "en": "The route is saved into the current full draft; it will not publish automatically.", "zh-CN": "路由保存到当前完整草稿，不会自动发布。" }
+    },
+    "saveFailed": { "en": "Failed to save routes", "zh-CN": "路由保存失败" },
+    "changeSummary": { "en": "Update route config", "zh-CN": "更新路由配置" },
+    "deleteDialog": {
+      "title": { "en": "Delete route {{path}}?", "zh-CN": "删除路由 {{path}}？" },
+      "description": { "en": "Deletion updates the current draft; live config will not change immediately.", "zh-CN": "删除会更新当前草稿，线上配置不会立即改变。" },
+      "action": { "en": "Delete route", "zh-CN": "删除路由" }
+    }
+  },
+  "ssl": {
+    "titleFallback": { "en": "SSL", "zh-CN": "SSL" },
+    "description": { "en": "Configure HTTPS, request certificates, and track the independent issuance and activation flows.", "zh-CN": "配置 HTTPS、申请证书并跟踪独立的签发与激活流程。" },
+    "loadFailed": { "en": "SSL operation failed", "zh-CN": "SSL 操作失败" },
+    "disabledAlert": {
+      "title": { "en": "Active · Domain Disabled / not serving", "zh-CN": "Active · Domain Disabled / not serving" },
+      "description": { "en": "The certificate is still referenced by the 503 runtime server but is not serving traffic. Auto Renew keeps running and may consume CA quota; disable Auto Renew and publish to stop.", "zh-CN": "证书仍被 503 runtime server 引用，但当前不提供业务服务。Auto Renew 会继续运行并可能消耗 CA 配额；如需停止，请关闭 Auto Renew 并发布设置。" }
+    },
+    "saveFailed": { "en": "Failed to save SSL settings", "zh-CN": "SSL 设置保存失败" },
+    "orderCreateFailed": { "en": "Failed to create certificate order", "zh-CN": "证书订单创建失败" },
+    "draftSaved": { "en": "Saved draft v{{n}}", "zh-CN": "已保存 v{{n}} 草稿" },
+    "changeSummary": { "en": "Update HTTPS settings", "zh-CN": "更新 HTTPS 设置" },
+    "ordersCard": {
+      "title": { "en": "Recent orders", "zh-CN": "最近订单" },
+      "description": { "en": "Issuance status and config publish are independent.", "zh-CN": "签发状态与配置发布相互独立。" },
+      "renewal": { "en": "Renewal", "zh-CN": "续期" },
+      "apply": { "en": "Apply", "zh-CN": "申请" },
+      "empty": { "en": "No certificate orders yet.", "zh-CN": "尚无证书订单。" }
+    },
+    "certsCard": {
+      "title": { "en": "Certificate assets", "zh-CN": "证书资产" },
+      "description": { "en": "Active certificates enter renewal 30 days before expiry.", "zh-CN": "Active 证书会在到期前 30 天自动进入续期。" },
+      "expireOn": { "en": "Expires {{date}}", "zh-CN": "到期 {{date}}" },
+      "unknownExpiry": { "en": "Validity unknown", "zh-CN": "有效期未知" },
+      "nextCheck": { "en": "Next check {{date}}", "zh-CN": "下次检查 {{date}}" },
+      "renewNow": { "en": "Renew now", "zh-CN": "立即续期" },
+      "empty": { "en": "No downloaded certificates yet.", "zh-CN": "尚无已下载证书。" }
+    },
+    "orderDetail": {
+      "titleRenewal": { "en": "Certificate renewal", "zh-CN": "证书续期" },
+      "titleOrder": { "en": "Certificate order", "zh-CN": "证书订单" },
+      "titleFallback": { "en": "Certificate order", "zh-CN": "证书订单" },
+      "description": { "en": "Order status comes from the server-side persisted state machine; the page does not infer ACME results.", "zh-CN": "订单状态来自服务端持久化状态机，页面不会自行推断 ACME 结果。" },
+      "backToSsl": { "en": "Back to SSL", "zh-CN": "返回 SSL" },
+      "loadFailed": { "en": "Failed to load order", "zh-CN": "订单加载失败" },
+      "statusCard": {
+        "title": { "en": "Order status", "zh-CN": "Order 状态" }
+      },
+      "identifiers": { "en": "Identifiers", "zh-CN": "Identifiers" },
+      "createdAt": { "en": "Created", "zh-CN": "创建时间" },
+      "processFailed": { "en": "Order processing failed", "zh-CN": "订单处理失败" },
+      "cleanupFailed": { "en": "Cloudflare TXT cleanup failed", "zh-CN": "Cloudflare TXT 清理失败" },
+      "cleanupFailedDesc": { "en": "Certificate result is unaffected; the system will keep retrying automatically.", "zh-CN": "证书结果不受影响，系统会继续自动重试。" },
+      "retryCleanup": { "en": "Retry cleanup", "zh-CN": "重试清理" },
+      "preparingTitle": { "en": "Preparing ACME Order", "zh-CN": "正在准备 ACME Order" },
+      "preparingDesc": { "en": "Account and order keys are persisted; the server is obtaining the real challenge from the CA.", "zh-CN": "账户和订单密钥已持久化；服务端正在向 CA 获取真实 Challenge。" },
+      "challengesTitle": { "en": "Challenges", "zh-CN": "Challenges" },
+      "challengesDescDns": { "en": "Add the corresponding TXT for each hostname; do not overwrite other records with the same name.", "zh-CN": "为每个 hostname 添加对应 TXT；不要覆盖同名的其他记录。" },
+      "challengesDescHttp": { "en": "HTTP token is served by the system's public endpoint.", "zh-CN": "HTTP token 已由系统公开端点提供。" },
+      "recheck": { "en": "Recheck", "zh-CN": "重新校验" },
+      "httpReady": { "en": "/.well-known/acme-challenge/ is ready", "zh-CN": "/.well-known/acme-challenge/ 已就绪" },
+      "activationTitle": { "en": "Certificate activation", "zh-CN": "证书激活" },
+      "activationDesc": { "en": "Issuance is complete; config version and publish result are not written back to the ACME Order.", "zh-CN": "签发已完成；配置版本和发布结果不会回写 ACME Order。" },
+      "certificate": { "en": "Certificate", "zh-CN": "Certificate" },
+      "configVersion": { "en": "Config Version", "zh-CN": "Config Version" },
+      "waitingCreate": { "en": "Waiting for creation", "zh-CN": "等待创建" },
+      "viewDeployment": { "en": "View Deployment · {{status}}", "zh-CN": "查看 Deployment · {{status}}" },
+      "activationFailed": { "en": "Certificate activation failed", "zh-CN": "证书激活失败" },
+      "retryActivation": { "en": "Retry activation", "zh-CN": "重试激活" },
+      "activationRetried": { "en": "Certificate activation rescheduled", "zh-CN": "已重新安排证书激活" },
+      "operationFailed": { "en": "Order operation failed", "zh-CN": "订单操作失败" },
+      "toastDebounced": { "en": "Check requested just now", "zh-CN": "刚刚已请求检查" },
+      "toastScheduled": { "en": "Check scheduled immediately", "zh-CN": "已安排立即检查" }
+    }
+  },
+  "headers": {
+    "titleFallback": { "en": "Headers", "zh-CN": "Headers" },
+    "description": { "en": "Manage response headers for the server or a specific route. Unpublished drafts update in place.", "zh-CN": "管理 server 或指定 route 的响应 Header。未发布草稿会原位更新。" },
+    "addHeader": { "en": "Add header", "zh-CN": "添加 Header" },
+    "loadFailed": { "en": "Headers operation failed", "zh-CN": "Headers 操作失败" },
+    "presetsCard": {
+      "title": { "en": "Recommended templates", "zh-CN": "推荐模板" },
+      "description": { "en": "After selecting a template you can still modify name, value, scope, and Always.", "zh-CN": "选择模板后仍可修改名称、值、作用域和 Always 设置。" }
+    },
+    "columns": {
+      "name": { "en": "Name", "zh-CN": "Name" },
+      "value": { "en": "Value", "zh-CN": "Value" },
+      "scope": { "en": "Scope", "zh-CN": "Scope" },
+      "always": { "en": "Always", "zh-CN": "Always" },
+      "status": { "en": "Status", "zh-CN": "Status" },
+      "actions": { "en": "Actions", "zh-CN": "Actions" }
+    },
+    "scopeServer": { "en": "Server", "zh-CN": "Server" },
+    "scopeRoute": { "en": "Route {{path}}", "zh-CN": "Route {{path}}" },
+    "scopeDeleted": { "en": "Deleted", "zh-CN": "已删除" },
+    "srOnly": {
+      "edit": { "en": "Edit {{name}}", "zh-CN": "编辑 {{name}}" },
+      "copy": { "en": "Copy {{name}}", "zh-CN": "复制 {{name}}" },
+      "delete": { "en": "Delete {{name}}", "zh-CN": "删除 {{name}}" }
+    },
+    "empty": {
+      "title": { "en": "No response headers configured", "zh-CN": "尚未配置响应 Header" },
+      "description": { "en": "Start from a recommended template, or add a custom header.", "zh-CN": "可从推荐模板开始，或添加自定义 Header。" }
+    },
+    "dialog": {
+      "addTitle": { "en": "Add header", "zh-CN": "添加 Header" },
+      "editTitle": { "en": "Edit header", "zh-CN": "编辑 Header" },
+      "description": { "en": "Saving only creates a draft; it will not publish automatically.", "zh-CN": "保存只创建草稿，不会自动发布。" }
+    },
+    "saveFailed": { "en": "Failed to save header", "zh-CN": "Header 保存失败" },
+    "changeSummary": { "en": "Update response headers", "zh-CN": "更新响应 Header" },
+    "deleteDialog": {
+      "title": { "en": "Delete header {{name}}?", "zh-CN": "删除 Header {{name}}？" },
+      "description": { "en": "Deletion updates the current draft; live config will not change immediately.", "zh-CN": "删除会更新当前草稿，线上配置不会立即改变。" },
+      "action": { "en": "Delete header", "zh-CN": "删除 Header" }
+    }
+  },
+  "advanced": {
+    "titleFallback": { "en": "Advanced", "zh-CN": "Advanced" },
+    "description": { "en": "Supplement the small set of server directives not yet covered by the visual forms.", "zh-CN": "补充可视化表单尚未覆盖的少量 server 指令。" },
+    "saveDraft": { "en": "Save draft", "zh-CN": "保存草稿" },
+    "warningTitle": { "en": "Advanced config may cause test or publish to fail", "zh-CN": "高级配置可能造成测试或发布失败" },
+    "warningDescription": { "en": "Only one whitelisted directive per line; blocks, include, dynamic modules, and file or process capabilities are forbidden.", "zh-CN": "每行只允许一条白名单指令；禁止 block、include、动态模块及文件或进程相关能力。" },
+    "loadFailed": { "en": "Advanced operation failed", "zh-CN": "Advanced 操作失败" },
+    "snippetCard": {
+      "title": { "en": "Server snippet", "zh-CN": "Server snippet" },
+      "description": { "en": "Generated after server-level headers and before business locations.", "zh-CN": "生成在 server 级 Header 之后、业务 location 之前。" },
+      "label": { "en": "Nginx directives", "zh-CN": "Nginx directives" },
+      "fieldDescription": { "en": "Up to 16 KiB; directive arguments cannot contain comments or blocks.", "zh-CN": "最多 16 KiB；指令参数不能包含注释或 block。" },
+      "counter": { "en": "{{count}} / 16,384 chars", "zh-CN": "{{count}} / 16,384 字符" },
+      "dirty": { "en": ", unsaved changes", "zh-CN": "，有未保存修改" }
+    },
+    "allowCard": {
+      "title": { "en": "Allowed directives", "zh-CN": "允许的指令" },
+      "description": { "en": "MVP whitelist, {{count}} entries.", "zh-CN": "MVP 白名单，共 {{count}} 项。" }
+    },
+    "saveFailed": { "en": "Failed to save advanced config", "zh-CN": "高级配置保存失败" },
+    "invalidFormat": { "en": "Invalid advanced config format", "zh-CN": "高级配置格式无效" },
+    "changeSummary": { "en": "Update advanced config", "zh-CN": "更新高级配置" }
+  },
+  "history": {
+    "titleFallback": { "en": "History", "zh-CN": "History" },
+    "description": { "en": "Published versions are immutable; the current draft updates in place until it is frozen by publish.", "zh-CN": "已发布版本不可变；当前 Draft 会原位更新，直到发布后冻结。" },
+    "loadFailed": { "en": "Failed to load version history", "zh-CN": "版本历史加载失败" },
+    "columns": {
+      "version": { "en": "Version", "zh-CN": "Version" },
+      "status": { "en": "Status", "zh-CN": "Status" },
+      "summary": { "en": "Summary", "zh-CN": "Summary" },
+      "created": { "en": "Created", "zh-CN": "Created" },
+      "updated": { "en": "Updated", "zh-CN": "Updated" },
+      "checksum": { "en": "Checksum", "zh-CN": "Checksum" },
+      "actions": { "en": "Actions", "zh-CN": "Actions" }
+    },
+    "srOnly": {
+      "view": { "en": "View v{{n}}", "zh-CN": "查看 v{{n}}" },
+      "compare": { "en": "Compare v{{n}}", "zh-CN": "比较 v{{n}}" },
+      "rollback": { "en": "Rollback to v{{n}}", "zh-CN": "回滚到 v{{n}}" }
+    },
+    "empty": {
+      "title": { "en": "No config versions", "zh-CN": "没有配置版本" },
+      "description": { "en": "Creating a Domain generates an editable draft, which becomes immutable after publish.", "zh-CN": "创建 Domain 后会生成可编辑草稿，发布后成为不可变版本。" }
+    },
+    "rollbackDialog": {
+      "title": { "en": "Rollback to v{{n}}", "zh-CN": "回滚到 v{{n}}" },
+      "description": { "en": "The current live v{{active}} will keep serving until the new rollback version passes full config test and reload. The system will copy the target snapshot to create a new version and will not modify history.", "zh-CN": "当前线上 v{{active}} 将保持服务，直到新回滚版本通过完整配置测试并成功 reload。系统会复制目标快照创建一个新版本，不会修改历史记录。" },
+      "diffDetected": { "en": "{{count}} semantic change(s) detected. Confirming will create v{{next}} and a rollback task.", "zh-CN": "检测到 {{count}} 项语义变化。确认后将创建 v{{next}} 和回滚任务。" },
+      "diffLoading": { "en": "Calculating diff against the current live version…", "zh-CN": "正在计算与当前线上版本的差异…" },
+      "confirm": { "en": "Confirm rollback", "zh-CN": "确认回滚" }
+    }
+  },
+  "logs": {
+    "titleFallback": { "en": "Logs", "zh-CN": "Logs" },
+    "description": { "en": "View recent structured access/error logs for the current Domain.", "zh-CN": "查看当前 Domain 最近的结构化 access/error 日志。" }
+  },
+  "version": {
+    "titleFallback": { "en": "Version", "zh-CN": "Version" },
+    "compareTitle": { "en": "Compare v{{base}} and v{{target}}", "zh-CN": "Compare v{{base}} and v{{target}}" },
+    "versionTitle": { "en": "Version v{{n}}", "zh-CN": "Version v{{n}}" },
+    "descriptionDiff": { "en": "{{count}} semantic change(s)", "zh-CN": "{{count}} 项语义变化" },
+    "descriptionDetailDraft": { "en": "{{summary}}. The current draft is still editable", "zh-CN": "{{summary}}。当前草稿可继续编辑" },
+    "descriptionDetailImmutable": { "en": "{{summary}}. This published snapshot is immutable", "zh-CN": "{{summary}}。该已发布快照不可变" },
+    "descriptionFallback": { "en": "Loading config snapshot.", "zh-CN": "读取配置快照。" },
+    "breadcrumbDiff": { "en": "Diff", "zh-CN": "Diff" },
+    "breadcrumbVersion": { "en": "Version", "zh-CN": "Version" },
+    "backToHistory": { "en": "Back to history", "zh-CN": "返回历史" },
+    "loadFailed": { "en": "Failed to load version", "zh-CN": "版本加载失败" },
+    "tabs": {
+      "nginxPreview": { "en": "Nginx Preview", "zh-CN": "Nginx Preview" },
+      "jsonSnapshot": { "en": "JSON Snapshot", "zh-CN": "JSON Snapshot" },
+      "nginx": { "en": "Nginx", "zh-CN": "Nginx" },
+      "json": { "en": "JSON", "zh-CN": "JSON" }
+    },
+    "changesCard": {
+      "title": { "en": "Semantic changes", "zh-CN": "Semantic changes" },
+      "description": { "en": "Grouped by business object, independent of text line numbers.", "zh-CN": "按业务对象归类，不依赖文本行号。" },
+      "empty": { "en": "No business differences between the two versions.", "zh-CN": "两个版本没有业务差异。" }
+    }
+  },
+  "create": {
+    "title": { "en": "Add domain", "zh-CN": "添加域名" },
+    "description": { "en": "Create a Domain and a v1 draft. Live Nginx is not modified until publish.", "zh-CN": "创建 Domain 和 v1 草稿。发布前不会修改线上 Nginx。" }
+  },
+  "publish": {
+    "dialogTitle": { "en": "Publish {{hostname}}", "zh-CN": "发布 {{hostname}}" },
+    "dialogDescription": { "en": "Diff → Test → Publish. Test results are bound to the current draft checksum; publish will still rerun a full nginx -t.", "zh-CN": "Diff → Test → Publish。测试结果与当前草稿 checksum 绑定，发布时仍会重新执行完整 nginx -t。" },
+    "stepsAria": { "en": "Publish steps", "zh-CN": "发布步骤" },
+    "stepDiff": { "en": "Diff", "zh-CN": "Diff" },
+    "stepTest": { "en": "Test", "zh-CN": "Test" },
+    "stepPublish": { "en": "Publish", "zh-CN": "Publish" },
+    "cannotContinue": { "en": "Cannot continue publishing", "zh-CN": "无法继续发布" },
+    "noChanges": { "en": "No semantic difference between the current draft and the live version.", "zh-CN": "当前草稿与线上版本没有语义差异。" },
+    "noActiveConfig": { "en": "# No active config", "zh-CN": "# 当前无活跃配置" },
+    "tabSemantic": { "en": "Semantic Diff", "zh-CN": "语义 Diff" },
+    "tabJson": { "en": "JSON", "zh-CN": "JSON" },
+    "tabNginx": { "en": "Nginx", "zh-CN": "Nginx" },
+    "testPassed": { "en": "Config test passed", "zh-CN": "配置测试通过" },
+    "testFailed": { "en": "Config test failed", "zh-CN": "配置测试失败" },
+    "testing": { "en": "Testing candidate config", "zh-CN": "正在测试候选配置" },
+    "testPassedDesc": { "en": "Test result is bound to the current Version and checksum.", "zh-CN": "测试结果已绑定当前 Version 和 checksum。" },
+    "testingDesc": { "en": "The system is generating the candidate config and running nginx -t.", "zh-CN": "系统正在生成候选配置并执行 nginx -t。" },
+    "summaryCard": {
+      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "targetVersion": { "en": "Target version", "zh-CN": "目标版本" },
+      "checksum": { "en": "Checksum", "zh-CN": "Checksum" },
+      "testPassedAt": { "en": "Test passed at", "zh-CN": "测试通过时间" },
+      "diffSummary": { "en": "Diff summary", "zh-CN": "Diff 摘要" },
+      "changesCount": { "en": "{{count}} semantic change(s)", "zh-CN": "{{count}} 项语义变化" }
+    },
+    "previousStep": { "en": "Previous step", "zh-CN": "上一步" },
+    "nextTest": { "en": "Next: test config", "zh-CN": "下一步：测试配置" },
+    "backToEdit": { "en": "Back to edit", "zh-CN": "返回编辑" },
+    "retest": { "en": "Retest", "zh-CN": "重新测试" },
+    "nextPublish": { "en": "Next: confirm publish", "zh-CN": "下一步：确认发布" },
+    "confirmPublish": { "en": "Confirm publish", "zh-CN": "确认发布" },
+    "errors": {
+      "previewFailed": { "en": "Failed to load publish preview", "zh-CN": "发布预览加载失败" },
+      "draftChanged": { "en": "Draft has changed; please review the diff and test again.", "zh-CN": "草稿已变化，请重新查看 Diff 并测试。" },
+      "testStatusFailed": { "en": "Failed to read test status", "zh-CN": "测试状态读取失败" },
+      "testCreateFailed": { "en": "Failed to create config test", "zh-CN": "配置测试创建失败" },
+      "publishCreateFailed": { "en": "Failed to create publish task", "zh-CN": "发布任务创建失败" }
+    },
+    "publishButton": { "en": "Publish", "zh-CN": "发布" },
+    "dirtyWarning": { "en": "Save the current page changes before opening the publish wizard", "zh-CN": "请先保存当前页面的修改，再打开发布向导" },
+    "reasons": {
+      "noDraft": { "en": "No pending draft to publish", "zh-CN": "当前没有待发布草稿" },
+      "disabled": { "en": "Domain is disabled; enable it first", "zh-CN": "Domain 已停用，请先启用" },
+      "degraded": { "en": "Runtime is degraded; go to Diagnostics first", "zh-CN": "运行时处于 degraded，请先前往 Diagnostics" },
+      "busy": { "en": "A publish task is already running", "zh-CN": "已有发布任务正在运行" }
+    },
+    "badgeChanged": { "en": "Changed", "zh-CN": "Changed" },
+    "badgeAdded": { "en": "Added", "zh-CN": "Added" },
+    "badgeRemoved": { "en": "Removed", "zh-CN": "Removed" }
+  },
+  "forms": {
+    "domainForm": {
+      "steps": {
+        "domain": { "en": "Domain", "zh-CN": "域名" },
+        "routeType": { "en": "Initial type", "zh-CN": "初始类型" },
+        "https": { "en": "HTTPS & confirm", "zh-CN": "HTTPS 与确认" }
+      },
+      "stepsAria": { "en": "Creation steps", "zh-CN": "创建步骤" },
+      "alertTitle": { "en": "Unable to create domain", "zh-CN": "无法创建域名" },
+      "primaryDomain": { "en": "Primary Domain", "zh-CN": "Primary Domain" },
+      "primaryDomainDesc": { "en": "Accepts standard ASCII or Punycode only; no protocol, port, or path.", "zh-CN": "只接受标准 ASCII 或 Punycode 域名，不包含协议、端口和路径。" },
+      "aliases": { "en": "Aliases", "zh-CN": "Aliases" },
+      "aliasesDesc": { "en": "Separate multiple aliases with commas; the system will dedupe automatically.", "zh-CN": "使用逗号分隔多个别名，系统会自动去重。" },
+      "routeType": { "en": "Initial type", "zh-CN": "初始类型" },
+      "routeTypeProxy": { "en": "Reverse Proxy", "zh-CN": "Reverse Proxy" },
+      "routeTypeStatic": { "en": "Static Website", "zh-CN": "Static Website" },
+      "routeTypeRedirect": { "en": "Redirect", "zh-CN": "Redirect" },
+      "routeTypeNone": { "en": "Skip for now", "zh-CN": "暂不添加" },
+      "path": { "en": "Path", "zh-CN": "Path" },
+      "targetUrl": { "en": "Target URL", "zh-CN": "Target URL" },
+      "staticRoot": { "en": "Static Root", "zh-CN": "Static Root" },
+      "indexFile": { "en": "Index file", "zh-CN": "Index file" },
+      "websocket": { "en": "WebSocket", "zh-CN": "WebSocket" },
+      "websocketDesc": { "en": "Injects controlled Upgrade and Connection headers.", "zh-CN": "注入受控的 Upgrade 和 Connection headers。" },
+      "preserveHost": { "en": "Preserve Host", "zh-CN": "Preserve Host" },
+      "preserveHostDesc": { "en": "Pass the original request Host to the upstream.", "zh-CN": "向 upstream 传递原始请求 Host。" },
+      "enableHttps": { "en": "Enable HTTPS", "zh-CN": "Enable HTTPS" },
+      "enableHttpsDesc": { "en": "Only stores the intent here; creating a draft will not request a certificate.", "zh-CN": "这里只保存申请意图，创建草稿不会申请证书。" },
+      "email": { "en": "Let's Encrypt email", "zh-CN": "Let's Encrypt 邮箱" },
+      "environment": { "en": "Environment", "zh-CN": "Environment" },
+      "environmentProduction": { "en": "Production", "zh-CN": "Production" },
+      "environmentStaging": { "en": "Staging", "zh-CN": "Staging" },
+      "validationMethod": { "en": "Validation Method", "zh-CN": "Validation Method" },
+      "validationHttp01": { "en": "HTTP-01", "zh-CN": "HTTP-01" },
+      "validationDnsManual": { "en": "DNS-01 Manual", "zh-CN": "DNS-01 Manual" },
+      "autoRenew": { "en": "Auto renew", "zh-CN": "Auto renew" },
+      "autoRenewDesc": { "en": "Renews according to this policy once the certificate module is complete.", "zh-CN": "证书模块完成后按此策略续期。" },
+      "forceHttps": { "en": "Force HTTPS", "zh-CN": "Force HTTPS" },
+      "forceHttpsDesc": { "en": "After publish, uses 308 to preserve request method and body.", "zh-CN": "发布后使用 308 保留请求 method 和 body。" },
+      "v1AlertTitle": { "en": "About to create v1 draft", "zh-CN": "即将创建 v1 草稿" },
+      "v1AlertDescription": { "en": "{{hostname}}, {{count}} initial route(s), HTTPS {{https}}. Live Nginx will not change.", "zh-CN": "{{hostname}}，{{count}} 条初始路由，HTTPS {{https}}。线上 Nginx 不会改变。" },
+      "httpsSelected": { "en": "selected", "zh-CN": "已选择" },
+      "httpsNotEnabled": { "en": "not enabled", "zh-CN": "未启用" },
+      "cancel": { "en": "Cancel", "zh-CN": "取消" },
+      "next": { "en": "Next", "zh-CN": "下一步" },
+      "createDraft": { "en": "Create draft", "zh-CN": "创建草稿" },
+      "createFailed": { "en": "Create failed", "zh-CN": "创建失败" },
+      "validations": {
+        "pathStart": { "en": "Path must start with /", "zh-CN": "路径必须以 / 开头" },
+        "targetUrl": { "en": "Enter a full HTTP or HTTPS URL", "zh-CN": "请输入完整的 HTTP 或 HTTPS URL" },
+        "staticRoot": { "en": "Static root must be an absolute path", "zh-CN": "静态目录必须是绝对路径" },
+        "emailRequired": { "en": "A valid email is required when HTTPS is enabled", "zh-CN": "启用 HTTPS 时需要有效邮箱" }
+      }
+    },
+    "routeForm": {
+      "type": { "en": "Type", "zh-CN": "Type" },
+      "typeProxy": { "en": "Reverse Proxy", "zh-CN": "Reverse Proxy" },
+      "typeStatic": { "en": "Static Website", "zh-CN": "Static Website" },
+      "typeRedirect": { "en": "Redirect", "zh-CN": "Redirect" },
+      "path": { "en": "Path", "zh-CN": "Path" },
+      "pathDesc": { "en": "Standard prefix location; Nginx uses longest-prefix match.", "zh-CN": "普通前缀 location，Nginx 自动使用最长前缀匹配。" },
+      "targetUrl": { "en": "Target URL", "zh-CN": "Target URL" },
+      "staticRoot": { "en": "Static Root", "zh-CN": "Static Root" },
+      "indexFile": { "en": "Index file", "zh-CN": "Index file" },
+      "websocket": { "en": "WebSocket", "zh-CN": "WebSocket" },
+      "websocketDesc": { "en": "Injects controlled Upgrade headers.", "zh-CN": "注入受控 Upgrade headers。" },
+      "preserveHost": { "en": "Preserve Host", "zh-CN": "Preserve Host" },
+      "preserveHostDesc": { "en": "Pass the original Host to the upstream.", "zh-CN": "向 upstream 传递原始 Host。" },
+      "spaFallback": { "en": "SPA fallback", "zh-CN": "SPA fallback" },
+      "spaFallbackDesc": { "en": "Falls back to Index when a resource is not found.", "zh-CN": "未找到资源时回退到 Index。" },
+      "enabled": { "en": "Enabled", "zh-CN": "Enabled" },
+      "enabledDesc": { "en": "When off, kept in the version JSON but no location is generated.", "zh-CN": "关闭后保留在版本 JSON，但不生成 location。" },
+      "previewTitle": { "en": "Generated preview", "zh-CN": "生成结果预览" },
+      "saveToDraft": { "en": "Save to draft", "zh-CN": "保存到草稿" },
+      "validations": {
+        "pathRequired": { "en": "Path is required", "zh-CN": "请输入路径" },
+        "pathStart": { "en": "Path must start with /", "zh-CN": "路径必须以 / 开头" },
+        "targetUrl": { "en": "Enter a full HTTP or HTTPS URL", "zh-CN": "请输入完整的 HTTP 或 HTTPS URL" },
+        "staticRoot": { "en": "Static root must be an absolute path", "zh-CN": "静态目录必须是绝对路径" },
+        "pathDuplicate": { "en": "Paths must be unique within the same domain", "zh-CN": "同一域名中的路径不能重复" }
+      }
+    },
+    "headerForm": {
+      "name": { "en": "Name", "zh-CN": "Name" },
+      "value": { "en": "Value", "zh-CN": "Value" },
+      "valueDesc": { "en": "No newlines or NUL; the Nginx generator will safely quote this value.", "zh-CN": "禁止换行和 NUL；Nginx 生成器会安全引用该值。" },
+      "scope": { "en": "Scope", "zh-CN": "Scope" },
+      "scopeServer": { "en": "Server", "zh-CN": "Server" },
+      "scopeRoute": { "en": "Route {{path}}", "zh-CN": "Route {{path}}" },
+      "scopeDesc": { "en": "Server applies to the whole domain; Route is written only into the specified location.", "zh-CN": "Server 应用于整个域名；Route 只写入指定 location。" },
+      "always": { "en": "Always", "zh-CN": "Always" },
+      "alwaysDesc": { "en": "Add this header to non-success responses as well.", "zh-CN": "在非成功响应中也添加该 Header。" },
+      "enabled": { "en": "Enabled", "zh-CN": "Enabled" },
+      "enabledDesc": { "en": "When off, kept in the snapshot but no add_header is generated.", "zh-CN": "关闭后保留在快照中，但不生成 add_header。" },
+      "hstsWarning": { "en": "HSTS is cached by browsers for a long time; confirm all subdomains support HTTPS before using includeSubDomains.", "zh-CN": "HSTS 会被浏览器长期缓存；使用 includeSubDomains 前请确认所有子域都支持 HTTPS。" },
+      "saveToDraft": { "en": "Save to draft", "zh-CN": "保存到草稿" },
+      "validations": {
+        "nameFormat": { "en": "Invalid header name format", "zh-CN": "Header 名称格式无效" },
+        "valueInvalid": { "en": "Header value cannot contain newline or NUL", "zh-CN": "Header 值不能包含换行或 NUL" },
+        "hstsRequiresHttps": { "en": "Enable HTTPS before adding HSTS", "zh-CN": "启用 HTTPS 后才能添加 HSTS" }
+      }
+    },
+    "sslForm": {
+      "cardTitle": { "en": "HTTPS settings", "zh-CN": "HTTPS 设置" },
+      "cardDescription": { "en": "Saving only updates the draft; certificate request and config publish are separate steps.", "zh-CN": "保存只更新草稿；证书申请和配置发布是两个独立步骤。" },
+      "invalidAlert": { "en": "Invalid settings", "zh-CN": "设置无效" },
+      "invalidMessage": { "en": "SSL settings are invalid", "zh-CN": "SSL 设置无效" },
+      "enableHttps": { "en": "Enable HTTPS", "zh-CN": "启用 HTTPS" },
+      "acmeEmail": { "en": "ACME Email", "zh-CN": "ACME Email" },
+      "acmeEmailDesc": { "en": "Used for Let's Encrypt expiry and account notifications.", "zh-CN": "用于 Let's Encrypt 到期和账户通知。" },
+      "environment": { "en": "Environment", "zh-CN": "Environment" },
+      "environmentStaging": { "en": "Staging (test certificate)", "zh-CN": "Staging（测试证书）" },
+      "environmentProduction": { "en": "Production", "zh-CN": "Production" },
+      "validationMethod": { "en": "Validation method", "zh-CN": "验证方式" },
+      "validationHttp01": { "en": "HTTP-01", "zh-CN": "HTTP-01" },
+      "validationDnsManual": { "en": "DNS-01 Manual", "zh-CN": "DNS-01 Manual" },
+      "validationDnsCloudflare": { "en": "DNS-01 Cloudflare", "zh-CN": "DNS-01 Cloudflare" },
+      "validationDescCloudflare": { "en": "Cloudflare mode creates and deletes TXT records precisely at terminal state.", "zh-CN": "Cloudflare 模式会自动创建并在终态精确删除 TXT 记录。" },
+      "validationDescEmpty": { "en": "Add credentials in Settings / Cloudflare DNS first.", "zh-CN": "请先在 Settings / Cloudflare DNS 添加凭据。" },
+      "cloudflareCredential": { "en": "Cloudflare credential", "zh-CN": "Cloudflare 凭据" },
+      "autoRenew": { "en": "Auto renew", "zh-CN": "自动续期" },
+      "forceHttps": { "en": "Force HTTPS (308)", "zh-CN": "强制 HTTPS（308）" },
+      "saveDraft": { "en": "Save draft", "zh-CN": "保存草稿" },
+      "requestCertificate": { "en": "Request certificate", "zh-CN": "申请证书" }
+    }
+  }
+}

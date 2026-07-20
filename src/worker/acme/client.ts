@@ -115,18 +115,18 @@ async function accountClient(input: Pick<PrepareAcmeOrderInput, "accountEmail" |
   const root = join(acmeRoot(), "accounts", input.environment, hash);
   const keyPath = join(root, "account.key");
   const key = allowCreate ? await ensurePrivateKey(keyPath) : await readOptional(keyPath);
-  if (!key) throw new AcmeRecoveryError("ACME_ACCOUNT_KEY_MISSING", "ACME account key 不存在，无法恢复订单");
+  if (!key) throw new AcmeRecoveryError("ACME_ACCOUNT_KEY_MISSING", "ACME account key is missing; cannot recover order");
   const metadataPath = join(root, "metadata.json");
   const url = directoryUrl(input.environment);
   const metadataRaw = await readOptional(metadataPath);
   if (metadataRaw) {
     const metadata = JSON.parse(metadataRaw.toString("utf8")) as AccountMetadata;
     if (metadata.schemaVersion !== 1 || metadata.emailHash !== hash || metadata.environment !== input.environment || metadata.directoryUrl !== url || !metadata.accountUrl) {
-      throw new AcmeRecoveryError("ACME_ACCOUNT_METADATA_INVALID", "ACME account metadata 与当前环境不匹配");
+      throw new AcmeRecoveryError("ACME_ACCOUNT_METADATA_INVALID", "ACME account metadata does not match the current environment");
     }
     return new acme.Client({ directoryUrl: url, accountKey: key, accountUrl: metadata.accountUrl });
   }
-  if (!allowCreate) throw new AcmeRecoveryError("ACME_ACCOUNT_METADATA_MISSING", "ACME account metadata 不存在，无法恢复订单");
+  if (!allowCreate) throw new AcmeRecoveryError("ACME_ACCOUNT_METADATA_MISSING", "ACME account metadata is missing; cannot recover order");
   const client = new acme.Client({ directoryUrl: url, accountKey: key });
   await client.createAccount({ contact: [`mailto:${normalizedEmail}`], termsOfServiceAgreed: true });
   const metadata: AccountMetadata = { schemaVersion: 1, environment: input.environment, emailHash: hash, directoryUrl: url, accountUrl: client.getAccountUrl(), createdAt: Date.now() };
@@ -148,7 +148,7 @@ export class NodeAcmeAdapter implements AcmeAdapter {
     const orderExpiry = order.expires ? expiry(order.expires) : null;
     const challenges = await Promise.all(authorizations.map(async (authorization) => {
       const challenge = authorization.challenges.find((item) => item.type === input.validationMethod);
-      if (!challenge) throw new Error(`${authorization.identifier.value} 不支持 ${input.validationMethod}`);
+      if (!challenge) throw new Error(`${authorization.identifier.value} does not support ${input.validationMethod}`);
       const value = await client.getChallengeKeyAuthorization(challenge);
       const hostname = authorization.identifier.value.toLowerCase().replace(/\.$/, "");
       return {
@@ -170,10 +170,10 @@ export class NodeAcmeAdapter implements AcmeAdapter {
     this.assertIdentifiers(input.identifiers, authorizations.map((authorization) => authorization.identifier.value));
     for (const authorization of authorizations) {
       if (authorization.status === "valid") continue;
-      if (authorization.status !== "pending") throw new Error(`ACME 授权状态不可继续: ${authorization.status}`);
+      if (authorization.status !== "pending") throw new Error(`ACME authorization status cannot continue: ${authorization.status}`);
       const challenge = authorization.challenges.find((item) => item.type === input.validationMethod);
-      if (!challenge) throw new Error(`${authorization.identifier.value} 不支持 ${input.validationMethod}`);
-      if (challenge.status === "invalid") throw new Error("ACME Challenge 已失效");
+      if (!challenge) throw new Error(`${authorization.identifier.value} does not support ${input.validationMethod}`);
+      if (challenge.status === "invalid") throw new Error("ACME challenge is invalid");
       if (challenge.status === "pending") await client.completeChallenge(challenge);
     }
   }
@@ -193,7 +193,7 @@ export class NodeAcmeAdapter implements AcmeAdapter {
 
   async finalizeOrder(input: ExistingAcmeOrderInput): Promise<FinalizedAcmeOrder> {
     const { client, order } = await this.loadOrder(input);
-    if (order.status === "invalid") throw new Error("ACME Order 已失效");
+    if (order.status === "invalid") throw new Error("ACME order is invalid");
     let current = order;
     if (current.status === "ready") {
       const privateKey = await readFile(join(acmeRoot(), "orders", input.orderId, "private.key"));
@@ -213,7 +213,7 @@ export class NodeAcmeAdapter implements AcmeAdapter {
   private assertIdentifiers(expectedIdentifiers: string[], actualIdentifiers: string[]) {
     const expected = expectedIdentifiers.map((value) => value.toLowerCase().replace(/\.$/, "")).sort();
     const actual = actualIdentifiers.map((value) => value.toLowerCase().replace(/\.$/, "")).sort();
-    if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error("ACME 返回的授权域名与订单不一致");
+    if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error("ACME authorization hostnames do not match the order");
   }
 }
 

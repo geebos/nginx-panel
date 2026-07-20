@@ -14,7 +14,7 @@ deploymentsRoute.get("/deployments", async (c) => {
 deploymentsRoute.get("/deployments/:id", async (c) => {
   const db = c.get("db");
   const deployment = await db.query.deployments.findFirst({ where: eq(deployments.id, c.req.param("id")) });
-  if (!deployment) throw new BusinessError("任务不存在", 404, "DEPLOYMENT_NOT_FOUND");
+  if (!deployment) throw new BusinessError("errors:deploymentNotFound", 404, "DEPLOYMENT_NOT_FOUND");
   const steps = await db.query.deploymentSteps.findMany({
     where: eq(deploymentSteps.deploymentId, deployment.id),
     orderBy: [deploymentSteps.sequence],

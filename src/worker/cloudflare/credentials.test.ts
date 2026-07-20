@@ -16,7 +16,7 @@ test("Cloudflare tokens are encrypted with credential-bound authenticated encryp
     tokenCiphertext: encrypted.ciphertext,
     tokenIv: encrypted.iv,
     tokenAuthTag: encrypted.authTag,
-  }), /无法解密/);
+  }), /errors:cloudflareCredentialDecryptFailed/);
   if (previous === undefined) delete process.env.APP_ENV;
   else process.env.APP_ENV = previous;
 });

@@ -26,9 +26,15 @@ export const requiredAccessLogFields = [
 
 export const nginxLogSettingsInputSchema = z.object({
   accessFields: z.array(accessLogFieldSchema).min(requiredAccessLogFields.length).max(11).superRefine((fields, ctx) => {
-    if (new Set(fields).size !== fields.length) ctx.addIssue({ code: "custom", message: "日志字段不能重复" });
+    if (new Set(fields).size !== fields.length) ctx.addIssue({ code: "custom", message: "errors:validation.logFieldDuplicate" });
     for (const field of requiredAccessLogFields) {
-      if (!fields.includes(field)) ctx.addIssue({ code: "custom", message: `日志字段 ${field} 不能移除` });
+      if (!fields.includes(field)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "errors:validation.logFieldRequired",
+          params: { field },
+        });
+      }
     }
   }),
   errorLevel: z.enum(["error", "warn", "notice", "info"]),
@@ -42,7 +48,7 @@ export const nginxLogSettingsSchema = nginxLogSettingsInputSchema.extend({
 });
 
 export const rebuildActiveSchema = z.object({
-  currentPassword: z.string().min(1, "请输入当前密码").max(128),
+  currentPassword: z.string().min(1, "errors:validation.currentPasswordRequired").max(128),
 });
 
 export const sessionPolicySchema = z.object({

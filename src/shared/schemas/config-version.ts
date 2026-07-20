@@ -42,7 +42,7 @@ export type ConfigVersion = typeof configVersions.$inferSelect;
 
 export const createConfigVersionSchema = z.object({
   config: domainConfigSchema,
-  changeSummary: z.string().trim().min(1).max(240).default("更新域名配置"),
+  changeSummary: z.string().trim().min(1).max(240).default("Update domain config"),
 });
 
 export const versionDiffQuerySchema = z.object({

@@ -11,23 +11,23 @@ export const hostnameSchema = z
   .pipe(
     z
       .string()
-      .max(253, "域名不能超过 253 个字符")
-      .regex(hostnamePattern, "请输入标准 ASCII 或 Punycode 域名"),
+      .max(253, "errors:validation.hostnameMax")
+      .regex(hostnamePattern, "errors:validation.hostnamePattern"),
   );
 
 const routePathSchema = z
   .string()
   .trim()
-  .min(1, "请输入路由路径")
-  .startsWith("/", "路由路径必须以 / 开头")
-  .refine((value) => !value.includes("\n") && !value.includes("\r"), "路由路径不能包含换行");
+  .min(1, "errors:validation.routePathRequired")
+  .startsWith("/", "errors:validation.routePathStart")
+  .refine((value) => !value.includes("\n") && !value.includes("\r"), "errors:validation.routePathNewline");
 
 const httpUrlSchema = z
-  .url("请输入完整的 HTTP 或 HTTPS URL")
+  .url("errors:validation.urlInvalid")
   .refine((value) => {
     const url = new URL(value);
     return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
-  }, "URL 只允许 HTTP/HTTPS，且不能包含凭据");
+  }, "errors:validation.urlScheme");
 
 const routeBaseSchema = z.object({
   id: z.string().min(1),
@@ -51,15 +51,15 @@ export const staticRouteSchema = routeBaseSchema.extend({
   root: z
     .string()
     .trim()
-    .startsWith("/", "静态目录必须是绝对路径")
-    .refine((value) => !value.includes("\0") && !value.includes(".."), "静态目录格式无效"),
+    .startsWith("/", "errors:validation.staticRootAbsolute")
+    .refine((value) => !value.includes("\0") && !value.includes(".."), "errors:validation.staticRootInvalid"),
   index: z
     .string()
     .trim()
     .min(1)
     .max(128)
-    .regex(/^[A-Za-z0-9._-]+$/, "首页文件名格式无效")
-    .refine((value) => value !== "." && value !== "..", "首页文件名不能是 . 或 .."),
+    .regex(/^[A-Za-z0-9._-]+$/, "errors:validation.indexFileFormat")
+    .refine((value) => value !== "." && value !== "..", "errors:validation.indexFileDot"),
   spaFallback: z.boolean(),
 });
 
@@ -79,11 +79,11 @@ export const headerConfigSchema = z.object({
   id: z.string().min(1),
   name: z
     .string()
-    .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/, "Header 名称格式无效"),
+    .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/, "errors:validation.headerNameFormat"),
   value: z
     .string()
     .max(4096)
-    .refine((value) => !/[\r\n\0]/.test(value), "Header 值不能包含换行或 NUL"),
+    .refine((value) => !/[\r\n\0]/.test(value), "errors:validation.headerValueNewline"),
   scope: z.discriminatedUnion("type", [
     z.object({ type: z.literal("server") }),
     z.object({ type: z.literal("route"), routeId: z.string().min(1) }),
@@ -106,14 +106,18 @@ const advancedDirectiveNameSet = new Set<string>(advancedDirectiveNames);
 export function parseAdvancedSnippet(snippet: string) {
   const trimmed = snippet.trim();
   if (!trimmed) return [];
-  if (/[{}\0]/.test(trimmed)) throw new Error("高级配置不允许 block 或 NUL");
+  if (/[{}\0]/.test(trimmed)) throw new Error("errors:validation.advancedBlock");
 
   return trimmed.split(/\r?\n/).flatMap((rawLine, index) => {
     const line = rawLine.trim();
     if (!line) return [];
     const match = line.match(/^([a-z_]+)\s+([^;#]+);$/);
     if (!match || !advancedDirectiveNameSet.has(match[1])) {
-      throw new Error(`高级配置第 ${index + 1} 行不是允许的指令`);
+      const err = new Error("errors:validation.advancedLineInvalid") as Error & {
+        params?: Record<string, string | number>;
+      };
+      err.params = { n: index + 1 };
+      throw err;
     }
     return `${match[1]} ${match[2].trim()};`;
   });
@@ -126,9 +130,11 @@ export const advancedSnippetSchema = z
     try {
       parseAdvancedSnippet(value);
     } catch (error) {
+      const err = error as Error & { params?: Record<string, string | number> };
       ctx.addIssue({
         code: "custom",
-        message: error instanceof Error ? error.message : "高级配置格式无效",
+        message: err instanceof Error ? err.message : "errors:validation.advancedSnippetInvalid",
+        params: err?.params,
       });
     }
   });
@@ -138,7 +144,7 @@ export const sslConfigSchema = z.object({
   certificateId: z.string().optional(),
   provider: z.literal("letsencrypt"),
   environment: z.enum(["staging", "production"]),
-  email: z.email("请输入有效邮箱").or(z.literal("")),
+  email: z.email("errors:validation.sslEmail").or(z.literal("")),
   autoRenew: z.boolean(),
   forceHttps: z.boolean(),
   validation: z.union([
@@ -165,21 +171,21 @@ export const domainConfigSchema = z
   .superRefine((value, ctx) => {
     const hostnames = [value.primaryHostname, ...value.aliases];
     if (new Set(hostnames).size !== hostnames.length) {
-      ctx.addIssue({ code: "custom", path: ["aliases"], message: "主域名和别名不能重复" });
+      ctx.addIssue({ code: "custom", path: ["aliases"], message: "errors:validation.aliasesDuplicate" });
     }
 
     const paths = value.routes.map((route) => route.path);
     if (new Set(paths).size !== paths.length) {
-      ctx.addIssue({ code: "custom", path: ["routes"], message: "同一域名中的路由路径不能重复" });
+      ctx.addIssue({ code: "custom", path: ["routes"], message: "errors:validation.routesDuplicate" });
     }
 
     const routeIds = new Set(value.routes.map((route) => route.id));
     value.headers.forEach((header, index) => {
       if (header.scope.type === "route" && !routeIds.has(header.scope.routeId)) {
-        ctx.addIssue({ code: "custom", path: ["headers", index, "scope"], message: "Header 引用的路由不存在" });
+        ctx.addIssue({ code: "custom", path: ["headers", index, "scope"], message: "errors:validation.headerRouteMissing" });
       }
       if (header.name.toLowerCase() === "strict-transport-security" && !value.ssl.enabled) {
-        ctx.addIssue({ code: "custom", path: ["headers", index, "name"], message: "启用 HTTPS 后才能添加 HSTS" });
+        ctx.addIssue({ code: "custom", path: ["headers", index, "name"], message: "errors:validation.hstsRequiresHttps" });
       }
     });
   });

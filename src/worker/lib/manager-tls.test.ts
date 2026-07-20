@@ -36,15 +36,15 @@ test("manager TLS validation checks SAN, validity and private key match", () => 
     );
     assert.throws(
       () => validateManagerTlsFiles({ hostname: "manager.example.com", certificateFile: primary.certificateFile, privateKeyFile: other.privateKeyFile }),
-      /不匹配/,
+      /does not match private key/,
     );
     assert.throws(
       () => validateManagerTlsFiles({ hostname: "manager.example.com", ...primary, now: info.validTo }),
-      /有效期/,
+      /validity period/,
     );
     assert.throws(
       () => validateManagerTlsFiles({ hostname: "manager.example.com", certificateFile: join(directory, "missing.crt"), privateKeyFile: primary.privateKeyFile }),
-      (error: unknown) => error instanceof Error && error.message === "管理端 TLS 证书或私钥无法读取或解析" && !error.message.includes(directory),
+      (error: unknown) => error instanceof Error && error.message === "Manager TLS certificate or private key cannot be read or parsed" && !error.message.includes(directory),
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });

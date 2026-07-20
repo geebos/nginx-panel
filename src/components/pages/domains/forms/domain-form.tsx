@@ -1,6 +1,7 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useRouter } from "next/router";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, LoaderCircleIcon } from "lucide-react";
@@ -22,44 +23,46 @@ import { hostnameSchema, type DomainConfig, type RouteConfig } from "@/shared/sc
 import { ApiError, createDomain } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
+import { formatErrorMessage, formatMessageKey } from "@/lib/i18n-error";
 import { localizePath } from "@/lib/i18n-utils";
+import { localizedZodResolver } from "@/lib/i18n-form";
 
-const formSchema = z
-  .object({
-    primaryHostname: hostnameSchema,
-    aliases: z.string().max(4096),
-    routeType: z.enum(["none", "proxy", "static", "redirect"]),
-    routePath: z.string().startsWith("/", "路径必须以 / 开头"),
-    target: z.string(),
-    staticRoot: z.string(),
-    staticIndex: z.string(),
-    websocket: z.boolean(),
-    preserveHost: z.boolean(),
-    httpsEnabled: z.boolean(),
-    email: z.string(),
-    environment: z.enum(["staging", "production"]),
-    autoRenew: z.boolean(),
-    forceHttps: z.boolean(),
-    validationMethod: z.enum(["http-01", "dns-manual"]),
-  })
-  .superRefine((value, ctx) => {
-    if (["proxy", "redirect"].includes(value.routeType)) {
-      const parsed = z.url().safeParse(value.target);
-      if (!parsed.success || !/^https?:\/\//i.test(value.target)) {
-        ctx.addIssue({ code: "custom", path: ["target"], message: "请输入完整的 HTTP 或 HTTPS URL" });
+function buildFormSchema(t: TFunction) {
+  return z
+    .object({
+      primaryHostname: hostnameSchema,
+      aliases: z.string().max(4096),
+      routeType: z.enum(["none", "proxy", "static", "redirect"]),
+      routePath: z.string().startsWith("/", t("domains:forms.domainForm.validations.pathStart")),
+      target: z.string(),
+      staticRoot: z.string(),
+      staticIndex: z.string(),
+      websocket: z.boolean(),
+      preserveHost: z.boolean(),
+      httpsEnabled: z.boolean(),
+      email: z.string(),
+      environment: z.enum(["staging", "production"]),
+      autoRenew: z.boolean(),
+      forceHttps: z.boolean(),
+      validationMethod: z.enum(["http-01", "dns-manual"]),
+    })
+    .superRefine((value, ctx) => {
+      if (["proxy", "redirect"].includes(value.routeType)) {
+        const parsed = z.url().safeParse(value.target);
+        if (!parsed.success || !/^https?:\/\//i.test(value.target)) {
+          ctx.addIssue({ code: "custom", path: ["target"], message: t("domains:forms.domainForm.validations.targetUrl") });
+        }
       }
-    }
-    if (value.routeType === "static" && !value.staticRoot.startsWith("/")) {
-      ctx.addIssue({ code: "custom", path: ["staticRoot"], message: "静态目录必须是绝对路径" });
-    }
-    if (value.httpsEnabled && !z.email().safeParse(value.email).success) {
-      ctx.addIssue({ code: "custom", path: ["email"], message: "启用 HTTPS 时需要有效邮箱" });
-    }
-  });
+      if (value.routeType === "static" && !value.staticRoot.startsWith("/")) {
+        ctx.addIssue({ code: "custom", path: ["staticRoot"], message: t("domains:forms.domainForm.validations.staticRoot") });
+      }
+      if (value.httpsEnabled && !z.email().safeParse(value.email).success) {
+        ctx.addIssue({ code: "custom", path: ["email"], message: t("domains:forms.domainForm.validations.emailRequired") });
+      }
+    });
+}
 
-type DomainFormValues = z.infer<typeof formSchema>;
-
-const steps = ["域名", "初始类型", "HTTPS 与确认"];
+type DomainFormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 function parseAliases(value: string) {
   return [...new Set(value.split(/[\n,]/).map((item) => item.trim().toLowerCase().replace(/\.$/, "")).filter(Boolean))];
@@ -102,12 +105,14 @@ function buildRoute(values: DomainFormValues): RouteConfig[] {
 }
 
 export function DomainForm() {
+  const { t } = useTranslation(["common", "domains"]);
   const router = useRouter();
   const locale = useLocale();
   const [step, setStep] = React.useState(0);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const formSchema = React.useMemo(() => buildFormSchema(t), [t]);
   const form = useForm<DomainFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: localizedZodResolver(formSchema, t),
     defaultValues: {
       primaryHostname: "",
       aliases: "",
@@ -128,6 +133,12 @@ export function DomainForm() {
   });
   const routeType = useWatch({ control: form.control, name: "routeType" });
   const httpsEnabled = useWatch({ control: form.control, name: "httpsEnabled" });
+
+  const steps = [
+    t("domains:forms.domainForm.steps.domain"),
+    t("domains:forms.domainForm.steps.routeType"),
+    t("domains:forms.domainForm.steps.https"),
+  ];
 
   const nextStep = async () => {
     const fields: Array<keyof DomainFormValues> =
@@ -166,14 +177,16 @@ export function DomainForm() {
       await router.push(localizePath(`/domains/overview?id=${result.domainId}&created=1`, locale));
     } catch (error) {
       if (error instanceof ApiError) {
-        setServerError(error.message);
+        setServerError(formatErrorMessage(t, error));
         const primaryError = error.fieldErrors?.["config.primaryHostname"]?.[0];
         if (primaryError) {
-          form.setError("primaryHostname", { message: primaryError });
+          form.setError("primaryHostname", {
+            message: formatMessageKey(t, primaryError, error.params),
+          });
           setStep(0);
         }
       } else {
-        setServerError(error instanceof Error ? error.message : "创建失败");
+        setServerError(formatErrorMessage(t, error, "domains:forms.domainForm.createFailed"));
       }
     }
   });
@@ -189,7 +202,7 @@ export function DomainForm() {
 
   return (
     <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
-      <ol className="grid grid-cols-3 gap-2" aria-label="创建步骤">
+      <ol className="grid grid-cols-3 gap-2" aria-label={t("domains:forms.domainForm.stepsAria")}>
         {steps.map((label, index) => (
           <li
             className={cn(
@@ -208,7 +221,7 @@ export function DomainForm() {
 
       {serverError ? (
         <Alert variant="destructive">
-          <AlertTitle>无法创建域名</AlertTitle>
+          <AlertTitle>{t("domains:forms.domainForm.alertTitle")}</AlertTitle>
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       ) : null}
@@ -216,7 +229,7 @@ export function DomainForm() {
       {step === 0 ? (
         <FieldGroup>
           <Field data-invalid={Boolean(form.formState.errors.primaryHostname)}>
-            <FieldLabel htmlFor="primaryHostname">Primary Domain</FieldLabel>
+            <FieldLabel htmlFor="primaryHostname">{t("domains:forms.domainForm.primaryDomain")}</FieldLabel>
             <Input
               id="primaryHostname"
               placeholder="example.com"
@@ -224,11 +237,11 @@ export function DomainForm() {
               aria-invalid={Boolean(form.formState.errors.primaryHostname)}
               {...form.register("primaryHostname")}
             />
-            <FieldDescription>只接受标准 ASCII 或 Punycode 域名，不包含协议、端口和路径。</FieldDescription>
+            <FieldDescription>{t("domains:forms.domainForm.primaryDomainDesc")}</FieldDescription>
             <FieldError errors={[form.formState.errors.primaryHostname]} />
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.aliases)}>
-            <FieldLabel htmlFor="aliases">Aliases</FieldLabel>
+            <FieldLabel htmlFor="aliases">{t("domains:forms.domainForm.aliases")}</FieldLabel>
             <Input
               id="aliases"
               placeholder="www.example.com, api.example.com"
@@ -236,7 +249,7 @@ export function DomainForm() {
               aria-invalid={Boolean(form.formState.errors.aliases)}
               {...form.register("aliases")}
             />
-            <FieldDescription>使用逗号分隔多个别名，系统会自动去重。</FieldDescription>
+            <FieldDescription>{t("domains:forms.domainForm.aliasesDesc")}</FieldDescription>
             <FieldError errors={[form.formState.errors.aliases]} />
           </Field>
         </FieldGroup>
@@ -245,7 +258,7 @@ export function DomainForm() {
       {step === 1 ? (
         <FieldGroup>
           <Field>
-            <FieldLabel>初始类型</FieldLabel>
+            <FieldLabel>{t("domains:forms.domainForm.routeType")}</FieldLabel>
             <Controller
               control={form.control}
               name="routeType"
@@ -257,24 +270,24 @@ export function DomainForm() {
                   value={field.value}
                   onValueChange={(value) => value && field.onChange(value)}
                 >
-                  <ToggleGroupItem value="proxy">Reverse Proxy</ToggleGroupItem>
-                  <ToggleGroupItem value="static">Static Website</ToggleGroupItem>
-                  <ToggleGroupItem value="redirect">Redirect</ToggleGroupItem>
-                  <ToggleGroupItem value="none">暂不添加</ToggleGroupItem>
+                  <ToggleGroupItem value="proxy">{t("domains:forms.domainForm.routeTypeProxy")}</ToggleGroupItem>
+                  <ToggleGroupItem value="static">{t("domains:forms.domainForm.routeTypeStatic")}</ToggleGroupItem>
+                  <ToggleGroupItem value="redirect">{t("domains:forms.domainForm.routeTypeRedirect")}</ToggleGroupItem>
+                  <ToggleGroupItem value="none">{t("domains:forms.domainForm.routeTypeNone")}</ToggleGroupItem>
                 </ToggleGroup>
               )}
             />
           </Field>
           {routeType !== "none" ? (
             <Field data-invalid={Boolean(form.formState.errors.routePath)}>
-              <FieldLabel htmlFor="routePath">Path</FieldLabel>
+              <FieldLabel htmlFor="routePath">{t("domains:forms.domainForm.path")}</FieldLabel>
               <Input id="routePath" aria-invalid={Boolean(form.formState.errors.routePath)} {...form.register("routePath")} />
               <FieldError errors={[form.formState.errors.routePath]} />
             </Field>
           ) : null}
           {routeType === "proxy" || routeType === "redirect" ? (
             <Field data-invalid={Boolean(form.formState.errors.target)}>
-              <FieldLabel htmlFor="target">Target URL</FieldLabel>
+              <FieldLabel htmlFor="target">{t("domains:forms.domainForm.targetUrl")}</FieldLabel>
               <Input id="target" aria-invalid={Boolean(form.formState.errors.target)} {...form.register("target")} />
               <FieldError errors={[form.formState.errors.target]} />
             </Field>
@@ -282,12 +295,12 @@ export function DomainForm() {
           {routeType === "static" ? (
             <>
               <Field data-invalid={Boolean(form.formState.errors.staticRoot)}>
-                <FieldLabel htmlFor="staticRoot">Static Root</FieldLabel>
+                <FieldLabel htmlFor="staticRoot">{t("domains:forms.domainForm.staticRoot")}</FieldLabel>
                 <Input id="staticRoot" aria-invalid={Boolean(form.formState.errors.staticRoot)} {...form.register("staticRoot")} />
                 <FieldError errors={[form.formState.errors.staticRoot]} />
               </Field>
               <Field>
-                <FieldLabel htmlFor="staticIndex">Index file</FieldLabel>
+                <FieldLabel htmlFor="staticIndex">{t("domains:forms.domainForm.indexFile")}</FieldLabel>
                 <Input id="staticIndex" {...form.register("staticIndex")} />
               </Field>
             </>
@@ -300,8 +313,8 @@ export function DomainForm() {
                 render={({ field }) => (
                   <Field orientation="horizontal">
                     <FieldContent>
-                      <FieldTitle>WebSocket</FieldTitle>
-                      <FieldDescription>注入受控的 Upgrade 和 Connection headers。</FieldDescription>
+                      <FieldTitle>{t("domains:forms.domainForm.websocket")}</FieldTitle>
+                      <FieldDescription>{t("domains:forms.domainForm.websocketDesc")}</FieldDescription>
                     </FieldContent>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </Field>
@@ -313,8 +326,8 @@ export function DomainForm() {
                 render={({ field }) => (
                   <Field orientation="horizontal">
                     <FieldContent>
-                      <FieldTitle>Preserve Host</FieldTitle>
-                      <FieldDescription>向 upstream 传递原始请求 Host。</FieldDescription>
+                      <FieldTitle>{t("domains:forms.domainForm.preserveHost")}</FieldTitle>
+                      <FieldDescription>{t("domains:forms.domainForm.preserveHostDesc")}</FieldDescription>
                     </FieldContent>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </Field>
@@ -333,8 +346,8 @@ export function DomainForm() {
             render={({ field }) => (
               <Field orientation="horizontal">
                 <FieldContent>
-                  <FieldTitle>Enable HTTPS</FieldTitle>
-                  <FieldDescription>这里只保存申请意图，创建草稿不会申请证书。</FieldDescription>
+                  <FieldTitle>{t("domains:forms.domainForm.enableHttps")}</FieldTitle>
+                  <FieldDescription>{t("domains:forms.domainForm.enableHttpsDesc")}</FieldDescription>
                 </FieldContent>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
               </Field>
@@ -343,32 +356,32 @@ export function DomainForm() {
           {httpsEnabled ? (
             <>
               <Field data-invalid={Boolean(form.formState.errors.email)}>
-                <FieldLabel htmlFor="email">Let&apos;s Encrypt 邮箱</FieldLabel>
+                <FieldLabel htmlFor="email">{t("domains:forms.domainForm.email")}</FieldLabel>
                 <Input id="email" type="email" aria-invalid={Boolean(form.formState.errors.email)} {...form.register("email")} />
                 <FieldError errors={[form.formState.errors.email]} />
               </Field>
               <Field>
-                <FieldLabel>Environment</FieldLabel>
+                <FieldLabel>{t("domains:forms.domainForm.environment")}</FieldLabel>
                 <Controller
                   control={form.control}
                   name="environment"
                   render={({ field }) => (
                     <ToggleGroup type="single" variant="outline" value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-                      <ToggleGroupItem value="production">Production</ToggleGroupItem>
-                      <ToggleGroupItem value="staging">Staging</ToggleGroupItem>
+                      <ToggleGroupItem value="production">{t("domains:forms.domainForm.environmentProduction")}</ToggleGroupItem>
+                      <ToggleGroupItem value="staging">{t("domains:forms.domainForm.environmentStaging")}</ToggleGroupItem>
                     </ToggleGroup>
                   )}
                 />
               </Field>
               <Field>
-                <FieldLabel>Validation Method</FieldLabel>
+                <FieldLabel>{t("domains:forms.domainForm.validationMethod")}</FieldLabel>
                 <Controller
                   control={form.control}
                   name="validationMethod"
                   render={({ field }) => (
                     <ToggleGroup type="single" variant="outline" value={field.value} onValueChange={(value) => value && field.onChange(value)}>
-                      <ToggleGroupItem value="http-01">HTTP-01</ToggleGroupItem>
-                      <ToggleGroupItem value="dns-manual">DNS-01 Manual</ToggleGroupItem>
+                      <ToggleGroupItem value="http-01">{t("domains:forms.domainForm.validationHttp01")}</ToggleGroupItem>
+                      <ToggleGroupItem value="dns-manual">{t("domains:forms.domainForm.validationDnsManual")}</ToggleGroupItem>
                     </ToggleGroup>
                   )}
                 />
@@ -378,7 +391,7 @@ export function DomainForm() {
                 name="autoRenew"
                 render={({ field }) => (
                   <Field orientation="horizontal">
-                    <FieldContent><FieldTitle>Auto renew</FieldTitle><FieldDescription>证书模块完成后按此策略续期。</FieldDescription></FieldContent>
+                    <FieldContent><FieldTitle>{t("domains:forms.domainForm.autoRenew")}</FieldTitle><FieldDescription>{t("domains:forms.domainForm.autoRenewDesc")}</FieldDescription></FieldContent>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </Field>
                 )}
@@ -388,7 +401,7 @@ export function DomainForm() {
                 name="forceHttps"
                 render={({ field }) => (
                   <Field orientation="horizontal">
-                    <FieldContent><FieldTitle>Force HTTPS</FieldTitle><FieldDescription>发布后使用 308 保留请求 method 和 body。</FieldDescription></FieldContent>
+                    <FieldContent><FieldTitle>{t("domains:forms.domainForm.forceHttps")}</FieldTitle><FieldDescription>{t("domains:forms.domainForm.forceHttpsDesc")}</FieldDescription></FieldContent>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </Field>
                 )}
@@ -396,9 +409,13 @@ export function DomainForm() {
             </>
           ) : null}
           <Alert>
-            <AlertTitle>即将创建 v1 草稿</AlertTitle>
+            <AlertTitle>{t("domains:forms.domainForm.v1AlertTitle")}</AlertTitle>
             <AlertDescription>
-              {form.getValues("primaryHostname")}，{buildRoute(form.getValues()).length} 条初始路由，HTTPS {httpsEnabled ? "已选择" : "未启用"}。线上 Nginx 不会改变。
+              {t("domains:forms.domainForm.v1AlertDescription", {
+                hostname: form.getValues("primaryHostname"),
+                count: buildRoute(form.getValues()).length,
+                https: httpsEnabled ? t("domains:forms.domainForm.httpsSelected") : t("domains:forms.domainForm.httpsNotEnabled"),
+              })}
             </AlertDescription>
           </Alert>
         </FieldGroup>
@@ -411,7 +428,7 @@ export function DomainForm() {
           onClick={() => (step === 0 ? void router.push(localizePath("/domains", locale)) : setStep((current) => current - 1))}
         >
           <ArrowLeftIcon data-icon="inline-start" />
-          {step === 0 ? "取消" : "上一步"}
+          {step === 0 ? t("domains:forms.domainForm.cancel") : t("domains:common.actions.previousStep")}
         </Button>
         {step < 2 ? (
           <Button
@@ -421,13 +438,13 @@ export function DomainForm() {
               void nextStep();
             }}
           >
-            下一步
+            {t("domains:forms.domainForm.next")}
             <ArrowRightIcon data-icon="inline-end" />
           </Button>
         ) : (
           <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? <LoaderCircleIcon data-icon="inline-start" className="animate-spin" /> : null}
-            创建草稿
+            {t("domains:forms.domainForm.createDraft")}
           </Button>
         )}
       </div>

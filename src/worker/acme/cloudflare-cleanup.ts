@@ -5,7 +5,7 @@ import { decryptCloudflareToken } from "@/worker/cloudflare/credentials";
 import { getCloudflareDnsProvider, type CloudflareDnsProvider } from "@/worker/cloudflare/dns";
 
 function safeError(error: unknown) {
-  return (error instanceof Error ? error.message : "Cloudflare DNS 清理失败").slice(0, 500);
+  return (error instanceof Error ? error.message : "Cloudflare DNS cleanup failed").slice(0, 500);
 }
 
 export async function cleanupCloudflareOrder(
@@ -16,9 +16,9 @@ export async function cleanupCloudflareOrder(
   const order = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, orderId) });
   if (!order || order.dnsProvider !== "cloudflare" || order.cleanupStatus === "succeeded") return;
   try {
-    if (!order.cloudflareCredentialId) throw new Error("Cloudflare 凭据关联已丢失");
+    if (!order.cloudflareCredentialId) throw new Error("Cloudflare credential association is missing");
     const credential = await db.query.cloudflareCredentials.findFirst({ where: eq(cloudflareCredentials.id, order.cloudflareCredentialId) });
-    if (!credential) throw new Error("Cloudflare 凭据已被删除");
+    if (!credential) throw new Error("Cloudflare credential has been deleted");
     const token = await decryptCloudflareToken(credential.id, credential);
     const challenges = await db.select().from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id));
     for (const challenge of challenges) {

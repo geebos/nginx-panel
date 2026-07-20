@@ -109,9 +109,9 @@ export async function collectRuntimeDiagnostics(paths: DiagnosticPaths = runtime
   const revisionsRoot = join(paths.runtimeRoot, "revisions");
   const storage = await Promise.all([
     probeStorage({ key: "sqlite", label: "SQLite", actualPath: sqliteFile, displayPath: "<sqlite>/app.db", measure: "file" }),
-    probeStorage({ key: "runtime", label: "Runtime 配置", actualPath: paths.runtimeRoot, displayPath: "<runtime>" }),
-    probeStorage({ key: "certificates", label: "证书", actualPath: paths.certificateRoot, displayPath: "<certificates>", measure: "directory" }),
-    probeStorage({ key: "logs", label: "日志", actualPath: paths.logsRoot, displayPath: paths.logsRoot ?? "<logs>" }),
+    probeStorage({ key: "runtime", label: "Runtime config", actualPath: paths.runtimeRoot, displayPath: "<runtime>" }),
+    probeStorage({ key: "certificates", label: "Certificates", actualPath: paths.certificateRoot, displayPath: "<certificates>", measure: "directory" }),
+    probeStorage({ key: "logs", label: "Logs", actualPath: paths.logsRoot, displayPath: paths.logsRoot ?? "<logs>" }),
     probeStorage({ key: "revisions", label: "Revisions", actualPath: revisionsRoot, displayPath: "<runtime>/revisions", measure: "directory" }),
   ]);
 
@@ -160,11 +160,11 @@ function redactRuntimeConfig(value: string, paths: DiagnosticPaths) {
 
 export async function getActiveRuntimeConfig(db: AppEnv["Variables"]["db"], domainId: string, paths: DiagnosticPaths = runtimePaths()) {
   const domain = await db.query.domains.findFirst({ where: eq(domains.id, domainId) });
-  if (!domain || domain.deletedAt !== null) throw new BusinessError("Domain 不存在", 404, "DOMAIN_NOT_FOUND");
-  if (!domain.activeVersionId) throw new BusinessError("Domain 尚未发布", 409, "DOMAIN_NO_ACTIVE_VERSION");
+  if (!domain || domain.deletedAt !== null) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
+  if (!domain.activeVersionId) throw new BusinessError("errors:domainNoActiveVersion", 409, "DOMAIN_NO_ACTIVE_VERSION");
 
   const runtime = getRuntimeState();
-  if (!runtime.activeRevision) throw new BusinessError("Active revision 不可用", 409, "ACTIVE_REVISION_UNAVAILABLE");
+  if (!runtime.activeRevision) throw new BusinessError("errors:activeRevisionUnavailable", 409, "ACTIVE_REVISION_UNAVAILABLE");
   const revisionRoot = join(paths.runtimeRoot, "revisions", basename(runtime.activeRevision));
   const manifestPath = join(revisionRoot, "manifest.json");
   const configPath = join(revisionRoot, "domains", `${domain.id}.conf`);
@@ -206,6 +206,6 @@ export async function getActiveRuntimeConfig(db: AppEnv["Variables"]["db"], doma
     };
   } catch (error) {
     if (error instanceof BusinessError) throw error;
-    throw new BusinessError("Active Domain 配置不可读或 checksum 不一致", 409, "ACTIVE_RUNTIME_CONFIG_INVALID", { cause: error instanceof Error ? error : undefined });
+    throw new BusinessError("errors:activeRuntimeConfigInvalid", 409, "ACTIVE_RUNTIME_CONFIG_INVALID", { cause: error instanceof Error ? error : undefined });
   }
 }

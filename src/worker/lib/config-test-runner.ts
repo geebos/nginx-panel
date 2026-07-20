@@ -74,9 +74,9 @@ export async function createConfigTestDeployment(
   await db.transaction((tx) => {
     const domain = tx.select().from(domains).where(and(eq(domains.id, input.domainId), isNull(domains.deletedAt))).get();
     const version = tx.select().from(configVersions).where(and(eq(configVersions.id, input.versionId), eq(configVersions.domainId, input.domainId))).get();
-    if (!domain || !version) throw new BusinessError("测试目标不存在", 404, "VERSION_NOT_FOUND");
+    if (!domain || !version) throw new BusinessError("errors:versionNotFound", 404, "VERSION_NOT_FOUND");
     if (domain.draftVersionId !== version.id || version.status !== "draft" || version.snapshotChecksum !== input.expectedSnapshotChecksum) {
-      throw new BusinessError("草稿内容已变化，请重新查看 Diff", 409, "DRAFT_CHANGED");
+      throw new BusinessError("errors:draftChanged", 409, "DRAFT_CHANGED");
     }
     tx.insert(deployments).values({
       id,
@@ -102,17 +102,17 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
     const deployment = await db.query.deployments.findFirst({ where: eq(deployments.id, deploymentId) });
     if (!deployment || deployment.status !== "queued") return;
     if (!deployment.domainId || !deployment.configVersionId) {
-      throw new Error("测试任务缺少域名或配置版本");
+      throw new Error("Test job is missing domain or config version");
     }
     const targetDomain = await db.query.domains.findFirst({ where: and(eq(domains.id, deployment.domainId), isNull(domains.deletedAt)) });
     const targetVersion = await db.query.configVersions.findFirst({ where: eq(configVersions.id, deployment.configVersionId) });
     const input = JSON.parse(deployment.inputJson ?? "null") as { expectedSnapshotChecksum?: string } | null;
-    if (!targetDomain) throw new Error("测试目标域名不存在或已删除");
+    if (!targetDomain) throw new Error("Test target domain does not exist or was deleted");
     if (!targetVersion || targetVersion.domainId !== targetDomain.id) {
-      throw new Error("测试目标配置版本不存在");
+      throw new Error("Test target config version does not exist");
     }
     if (targetDomain.draftVersionId !== targetVersion.id || targetVersion.status !== "draft" || targetVersion.snapshotChecksum !== input?.expectedSnapshotChecksum) {
-      throw new DraftChangedError("草稿内容已变化，请重新查看 Diff");
+      throw new DraftChangedError("Draft content has changed; review Diff again");
     }
 
     candidateRoot = await mkdtemp(join(tmpdir(), `nginx-manager-test-${deploymentId}-`));
@@ -148,13 +148,13 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
     await writeFile(join(candidateRoot, "nginx.conf"), rootConfig);
     for (const domain of selected) {
       const version = versionsById.get(domain.sourceVersionId);
-      if (!version) throw new Error("候选版本不存在");
+      if (!version) throw new Error("Candidate version does not exist");
       const snapshot = snapshotsByVersionId.get(version.id)!;
       const certificate = snapshot.ssl.enabled && snapshot.ssl.certificateId
         ? certificatesById.get(snapshot.ssl.certificateId)
         : undefined;
       if (snapshot.ssl.enabled && snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !["ready", "active"].includes(certificate.status))) {
-        throw new Error("配置引用的证书资产不可用");
+        throw new Error("Referenced certificate asset is unavailable");
       }
       await mkdir(join(logsRoot, snapshot.primaryHostname), { recursive: true });
       const rendered = renderDomainConfig({
@@ -167,16 +167,16 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       });
       await writeFile(join(candidateRoot, "domains", `${domain.id}.conf`), rendered);
     }
-    await updateStep(db, deploymentId, 0, "succeeded", `生成 ${selected.length} 个 Domain 配置`);
+    await updateStep(db, deploymentId, 0, "succeeded", `Generated ${selected.length} Domain configs`);
     await updateStep(db, deploymentId, 1, "running");
-    await updateStep(db, deploymentId, 1, "succeeded", "Schema、路径和候选文件校验通过");
+    await updateStep(db, deploymentId, 1, "succeeded", "Schema, path, and candidate file validation passed");
     await updateStep(db, deploymentId, 2, "running");
     const result = await execFileAsync(process.env.NGINX_BIN || "nginx", ["-p", `${candidateRoot}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
     const output = redactRuntimePath(`${result.stdout}\n${result.stderr}`.trim(), candidateRoot).slice(0, 8_000);
-    await updateStep(db, deploymentId, 2, "succeeded", "nginx -t 通过", output);
+    await updateStep(db, deploymentId, 2, "succeeded", "nginx -t passed", output);
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   } catch (error) {
-    const rawMessage = error instanceof Error ? error.message : "配置测试失败";
+    const rawMessage = error instanceof Error ? error.message : "Config test failed";
     const message = candidateRoot ? redactRuntimePath(rawMessage, candidateRoot) : rawMessage;
     try {
       const steps = await retry(() => db.query.deploymentSteps.findMany({ where: eq(deploymentSteps.deploymentId, deploymentId) }));

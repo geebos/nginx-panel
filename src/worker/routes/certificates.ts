@@ -28,7 +28,7 @@ const httpChallengeStatuses = ["pending", "presented", "propagating", "ready"];
 
 async function domainOrThrow(db: AppEnv["Variables"]["db"], id: string) {
   const domain = await db.query.domains.findFirst({ where: and(eq(domains.id, id), isNull(domains.deletedAt)) });
-  if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   return domain;
 }
 
@@ -105,35 +105,35 @@ certificatesRoute.post("/domains/:id/certificate/orders", jsonValidator(createCe
   const db = c.get("db");
   const domain = await domainOrThrow(db, c.req.param("id"));
   const idempotencyKey = c.req.header("Idempotency-Key");
-  if (!idempotencyKey) throw new BusinessError("缺少 Idempotency-Key", 400, "IDEMPOTENCY_KEY_REQUIRED");
+  if (!idempotencyKey) throw new BusinessError("errors:idempotencyKeyRequired", 400, "IDEMPOTENCY_KEY_REQUIRED");
   const existing = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.idempotencyKey, idempotencyKey) });
   if (existing) return c.json({ order: publicOrder(existing) }, 200);
 
   const currentVersionId = domain.draftVersionId ?? domain.activeVersionId;
-  if (!currentVersionId) throw new BusinessError("域名配置不存在", 409, "VERSION_NOT_FOUND");
+  if (!currentVersionId) throw new BusinessError("errors:versionNotFound", 409, "VERSION_NOT_FOUND");
   const version = await db.query.configVersions.findFirst({ where: and(eq(configVersions.id, currentVersionId), eq(configVersions.domainId, domain.id)) });
-  if (!version) throw new BusinessError("域名配置不存在", 409, "VERSION_NOT_FOUND");
+  if (!version) throw new BusinessError("errors:versionNotFound", 409, "VERSION_NOT_FOUND");
   const config = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
   const input = c.req.valid("json");
-  if (!config.ssl.enabled) throw new BusinessError("请先启用 HTTPS 并保存草稿", 409, "HTTPS_NOT_ENABLED");
+  if (!config.ssl.enabled) throw new BusinessError("errors:httpsNotEnabled", 409, "HTTPS_NOT_ENABLED");
   if (config.ssl.email.toLowerCase() !== input.accountEmail || config.ssl.environment !== input.environment || JSON.stringify(config.ssl.validation) !== JSON.stringify(input.validation)) {
-    throw new BusinessError("申请参数与当前 SSL 草稿不一致，请刷新后重试", 409, "SSL_CONFIG_CHANGED");
+    throw new BusinessError("errors:sslConfigChanged", 409, "SSL_CONFIG_CHANGED");
   }
   const active = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.domainId, domain.id), notInArray(acmeOrders.status, terminalOrderStatuses)) });
-  if (active) throw new BusinessError("该域名已有进行中的证书订单", 409, "DOMAIN_HAS_ACTIVE_ORDER");
+  if (active) throw new BusinessError("errors:domainHasActiveOrder", 409, "DOMAIN_HAS_ACTIVE_ORDER");
 
   let credentialName: string | null = null;
   const identifiers = [config.primaryHostname, ...config.aliases].sort();
   if (input.validation.method === "dns-01" && input.validation.provider === "cloudflare") {
     const credential = await db.query.cloudflareCredentials.findFirst({ where: and(eq(cloudflareCredentials.id, input.validation.cloudflareCredentialId), eq(cloudflareCredentials.status, "active")) });
-    if (!credential) throw new BusinessError("Cloudflare 凭据无效或尚未验证", 409, "CLOUDFLARE_CREDENTIAL_INVALID");
+    if (!credential) throw new BusinessError("errors:cloudflareCredentialInvalid", 409, "CLOUDFLARE_CREDENTIAL_INVALID");
     try {
       const token = await decryptCloudflareToken(credential.id, credential);
       await getCloudflareDnsProvider().preflight(token, identifiers);
       await db.update(cloudflareCredentials).set({ lastVerifiedAt: Date.now(), lastUsedAt: Date.now(), updatedAt: Date.now() }).where(eq(cloudflareCredentials.id, credential.id));
     } catch (error) {
       if (error instanceof BusinessError) throw error;
-      throw new BusinessError("Cloudflare 预检失败：Token 必须能读取 Zone 并编辑 DNS", 422, "CLOUDFLARE_PREFLIGHT_FAILED", {
+      throw new BusinessError("errors:cloudflarePreflightFailed", 422, "CLOUDFLARE_PREFLIGHT_FAILED", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -165,9 +165,9 @@ certificatesRoute.post("/domains/:id/certificate/renew", async (c) => {
   const db = c.get("db");
   const domain = await domainOrThrow(db, c.req.param("id"));
   const idempotencyKey = c.req.header("Idempotency-Key");
-  if (!idempotencyKey) throw new BusinessError("缺少 Idempotency-Key", 400, "IDEMPOTENCY_KEY_REQUIRED");
+  if (!idempotencyKey) throw new BusinessError("errors:idempotencyKeyRequired", 400, "IDEMPOTENCY_KEY_REQUIRED");
   const certificate = await db.query.certificates.findFirst({ where: and(eq(certificates.domainId, domain.id), eq(certificates.status, "active")) });
-  if (!certificate) throw new BusinessError("该域名没有 Active Certificate", 409, "ACTIVE_CERTIFICATE_NOT_FOUND");
+  if (!certificate) throw new BusinessError("errors:activeCertificateNotFound", 409, "ACTIVE_CERTIFICATE_NOT_FOUND");
   const result = await createRenewalOrder(db, { certificateId: certificate.id, idempotencyKey });
   return c.json({ order: publicOrder(result.order) }, result.created ? 201 : 200);
 });
@@ -175,7 +175,7 @@ certificatesRoute.post("/domains/:id/certificate/renew", async (c) => {
 certificatesRoute.get("/domains/:id/certificate/orders/:orderId", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
-  if (!order) throw new BusinessError("证书订单不存在", 404, "ACME_ORDER_NOT_FOUND");
+  if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
   const [challenges, certificate] = await Promise.all([
     db.select().from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id)),
     db.query.certificates.findFirst({ where: eq(certificates.acmeOrderId, order.id) }),
@@ -189,10 +189,10 @@ certificatesRoute.get("/domains/:id/certificate/orders/:orderId", async (c) => {
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/activation/retry", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
-  if (!order) throw new BusinessError("证书订单不存在", 404, "ACME_ORDER_NOT_FOUND");
+  if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
   const certificate = await db.query.certificates.findFirst({ where: eq(certificates.acmeOrderId, order.id) });
   const activation = certificate ? await db.query.certificateActivations.findFirst({ where: eq(certificateActivations.certificateId, certificate.id) }) : null;
-  if (!activation) throw new BusinessError("证书尚未进入激活流程", 409, "CERTIFICATE_ACTIVATION_NOT_FOUND");
+  if (!activation) throw new BusinessError("errors:certificateActivationNotFound", 409, "CERTIFICATE_ACTIVATION_NOT_FOUND");
   const result = await retryCertificateActivation(db, activation.id);
   return c.json(result, 202);
 });
@@ -200,7 +200,7 @@ certificatesRoute.post("/domains/:id/certificate/orders/:orderId/activation/retr
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/recheck", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
-  if (!order) throw new BusinessError("证书订单不存在", 404, "ACME_ORDER_NOT_FOUND");
+  if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
   if (!["waiting_http", "waiting_dns", "validating"].includes(order.status)) return c.json({ order: publicOrder(order) });
   const now = Date.now();
   if (order.lastPolledAt && now - order.lastPolledAt < 5_000) return c.json({ order: publicOrder(order), debounced: true });
@@ -212,9 +212,9 @@ certificatesRoute.post("/domains/:id/certificate/orders/:orderId/recheck", async
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/cleanup/retry", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
-  if (!order) throw new BusinessError("证书订单不存在", 404, "ACME_ORDER_NOT_FOUND");
+  if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
   if (order.dnsProvider !== "cloudflare" || !terminalOrderStatuses.includes(order.status)) {
-    throw new BusinessError("该订单没有可重试的 Cloudflare 清理任务", 409, "CLOUDFLARE_CLEANUP_NOT_AVAILABLE");
+    throw new BusinessError("errors:cloudflareCleanupNotAvailable", 409, "CLOUDFLARE_CLEANUP_NOT_AVAILABLE");
   }
   await db.update(acmeOrders).set({ cleanupStatus: "pending", nextPollAt: Date.now(), updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
   await cleanupCloudflareOrder(db, order.id);
@@ -225,7 +225,7 @@ certificatesRoute.post("/domains/:id/certificate/orders/:orderId/cleanup/retry",
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/cancel", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
-  if (!order) throw new BusinessError("证书订单不存在", 404, "ACME_ORDER_NOT_FOUND");
+  if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
   if (terminalOrderStatuses.includes(order.status)) return c.json({ order: publicOrder(order) });
   const now = Date.now();
   db.transaction((tx) => {

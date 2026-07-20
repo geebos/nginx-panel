@@ -119,7 +119,7 @@ test("runtime listener projection supports the non-root production ports", () =>
       logs: { root: "/tmp/nginx-manager-logs", errorLevel: "warn" },
       listeners: { http: 0, https: 8443 },
     }),
-    /监听端口超出范围/,
+    /Listen port out of range/,
   );
 });
 
@@ -146,7 +146,7 @@ test("runtime projections change generated checksum without changing source chec
 test("advanced compiler rejects non-whitelisted directives", () => {
   assert.throws(
     () => renderDomainPreview({ ...snapshot, advanced: { serverSnippet: "include /tmp/unsafe.conf;" } }),
-    /不是允许的指令/,
+    /errors:validation.advancedLineInvalid/,
   );
 });
 
@@ -167,7 +167,7 @@ test("shared configuration validation rejects unsafe headers and accepts formatt
         enabled: true,
       }],
     }),
-    /启用 HTTPS 后才能添加 HSTS/,
+    /errors:validation.hstsRequiresHttps/,
   );
 });
 
@@ -191,7 +191,7 @@ test("static SPA fallback cannot inject nginx directives through index", () => {
       ...staticSnapshot,
       routes: [{ ...staticSnapshot.routes[0], index: "; return 200 pwned; #" }],
     }),
-    /首页文件名格式无效/,
+    /errors:validation.indexFileFormat/,
   );
   for (const index of [".", ".."]) {
     assert.throws(
@@ -199,7 +199,7 @@ test("static SPA fallback cannot inject nginx directives through index", () => {
         ...staticSnapshot,
         routes: [{ ...staticSnapshot.routes[0], index }],
       }),
-      /首页文件名不能是/,
+      /errors:validation.indexFileDot/,
     );
   }
 });

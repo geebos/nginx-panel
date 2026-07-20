@@ -1,7 +1,11 @@
+export type ErrorParams = Record<string, string | number>;
+
 export type ErrorInfo = {
   cause?: Error;
   context?: Record<string, unknown>;
   details?: Record<string, unknown>;
+  /** i18next interpolation map for message key (e.g. { hostname, bytes }). */
+  params?: ErrorParams;
   fieldErrors?: Record<string, string[]>;
   retryAfterSeconds?: number;
 };

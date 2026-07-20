@@ -1,5 +1,6 @@
 import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
 import { Globe2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
@@ -60,21 +61,17 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { deleteDomain, getDomains, type DomainListItem } from "@/lib/api";
+import { formatErrorMessage } from "@/lib/i18n-error";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
 import { localizePath } from "@/lib/i18n-utils";
-
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
 
 function queryValue(value: string | string[] | undefined, fallback: string) {
   return typeof value === "string" ? value : fallback;
 }
 
 function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDeleted: () => void }) {
+  const { t } = useTranslation(["common", "domains"]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -87,7 +84,7 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
       setConfirmOpen(false);
       onDeleted();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "删除失败");
+      setError(formatErrorMessage(t, nextError, "domains:common.errors.deleteFailed"));
     } finally {
       setDeleting(false);
     }
@@ -97,14 +94,14 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="icon-sm" variant="ghost" aria-label={`管理 ${domain.primaryHostname}`}>
+          <Button size="icon-sm" variant="ghost" aria-label={t("domains:list.actions.manageAria", { hostname: domain.primaryHostname })}>
             <MoreHorizontalIcon />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <LocalizedLink href={`/domains/overview?id=${domain.id}`}>管理</LocalizedLink>
+              <LocalizedLink href={`/domains/overview?id=${domain.id}`}>{t("domains:common.actions.manage")}</LocalizedLink>
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
@@ -112,7 +109,7 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
               onSelect={() => setConfirmOpen(true)}
             >
               <Trash2Icon />
-              删除
+              {t("domains:common.actions.delete")}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
@@ -120,16 +117,16 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>删除 {domain.primaryHostname}？</AlertDialogTitle>
+            <AlertDialogTitle>{t("domains:list.actions.deleteTitle", { hostname: domain.primaryHostname })}</AlertDialogTitle>
             <AlertDialogDescription>
-              该域名尚未发布。删除后会归档 Domain，历史草稿仍保留在数据库中。
+              {t("domains:list.actions.deleteDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("domains:common.actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void remove(); }}>
-              {deleting ? "删除中" : "确认删除"}
+              {deleting ? t("domains:common.actions.deleting") : t("domains:common.actions.confirmDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -139,8 +136,14 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
 }
 
 function DomainList() {
+  const { t } = useTranslation(["common", "domains"]);
   const router = useRouter();
   const locale = useLocale();
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
   const page = Number(queryValue(router.query.page, "1"));
   const status = queryValue(router.query.status, "all");
   const sort = queryValue(router.query.sort, "updated_desc");
@@ -185,14 +188,14 @@ function DomainList() {
   return (
     <>
       <PageHeader
-        title="Domains"
-        description="创建、查询和管理所有 Nginx 域名。"
-        breadcrumbs={[{ label: "Domains" }]}
+        title={t("domains:list.title")}
+        description={t("domains:list.description")}
+        breadcrumbs={[{ label: t("domains:list.title") }]}
         action={
           <Button asChild size="sm">
             <LocalizedLink href="/domains/create">
               <PlusIcon data-icon="inline-start" />
-              添加域名
+              {t("domains:list.addDomain")}
             </LocalizedLink>
           </Button>
         }
@@ -204,30 +207,30 @@ function DomainList() {
               <SearchIcon />
             </InputGroupAddon>
             <InputGroupInput
-              aria-label="搜索域名"
-              placeholder="搜索主域名或别名"
+              aria-label={t("domains:list.search.ariaLabel")}
+              placeholder={t("domains:list.search.placeholder")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </InputGroup>
           <Select
-            aria-label="筛选运行状态"
+            aria-label={t("domains:list.filters.statusAriaLabel")}
             options={[
-              { value: "all", label: "全部状态" },
-              { value: "running", label: "Running" },
-              { value: "failed", label: "Failed" },
-              { value: "disabled", label: "Disabled" },
-              { value: "unknown", label: "Unknown" },
+              { value: "all", label: t("domains:list.filters.all") },
+              { value: "running", label: t("common:status.running") },
+              { value: "failed", label: t("common:status.failed") },
+              { value: "disabled", label: t("common:status.disabled") },
+              { value: "unknown", label: t("common:status.unknown") },
             ]}
             value={status}
             onChange={(value) => updateQuery("status", value)}
           />
           <Select
-            aria-label="排序"
+            aria-label={t("domains:list.filters.sortAriaLabel")}
             options={[
-              { value: "updated_desc", label: "最近修改" },
-              { value: "created_desc", label: "最近创建" },
-              { value: "hostname_asc", label: "域名 A-Z" },
+              { value: "updated_desc", label: t("domains:list.filters.sortUpdatedDesc") },
+              { value: "created_desc", label: t("domains:list.filters.sortCreatedDesc") },
+              { value: "hostname_asc", label: t("domains:list.filters.sortHostnameAsc") },
             ]}
             value={sort}
             onChange={(value) => updateQuery("sort", value)}
@@ -236,8 +239,8 @@ function DomainList() {
 
         {query.error ? (
           <Alert variant="destructive">
-            <AlertTitle>域名列表加载失败</AlertTitle>
-            <AlertDescription>{query.error.message}</AlertDescription>
+            <AlertTitle>{t("domains:list.loadFailed")}</AlertTitle>
+            <AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -253,13 +256,13 @@ function DomainList() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Domain</TableHead>
-                    <TableHead>Aliases</TableHead>
-                    <TableHead>SSL</TableHead>
-                    <TableHead>运行状态</TableHead>
-                    <TableHead>当前版本</TableHead>
-                    <TableHead>最后修改</TableHead>
-                    <TableHead><span className="sr-only">操作</span></TableHead>
+                    <TableHead>{t("domains:list.columns.domain")}</TableHead>
+                    <TableHead>{t("domains:list.columns.aliases")}</TableHead>
+                    <TableHead>{t("domains:list.columns.ssl")}</TableHead>
+                    <TableHead>{t("domains:list.columns.runtime")}</TableHead>
+                    <TableHead>{t("domains:list.columns.version")}</TableHead>
+                    <TableHead>{t("domains:list.columns.updated")}</TableHead>
+                    <TableHead><span className="sr-only">{t("domains:list.columns.actions")}</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -271,14 +274,14 @@ function DomainList() {
                         </LocalizedLink>
                       </TableCell>
                       <TableCell className="max-w-56 truncate text-muted-foreground">
-                        {domain.aliases.length ? domain.aliases.join(", ") : "None"}
+                        {domain.aliases.length ? domain.aliases.join(", ") : t("domains:common.status.none")}
                       </TableCell>
                       <TableCell><StatusBadge status={domain.sslStatus} /></TableCell>
                       <TableCell>
                         <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {domain.activeVersionId ? domain.activeVersionId.slice(0, 8) : "Not published"}
+                        {domain.activeVersionId ? domain.activeVersionId.slice(0, 8) : t("domains:common.status.notPublished")}
                       </TableCell>
                       <TableCell>{dateFormatter.format(domain.updatedAt)}</TableCell>
                       <TableCell>
@@ -298,7 +301,7 @@ function DomainList() {
                       <LocalizedLink href={`/domains/overview?id=${domain.id}`}>{domain.primaryHostname}</LocalizedLink>
                     </CardTitle>
                     <CardDescription>
-                      {domain.aliases.length ? domain.aliases.join(", ") : "无别名"}
+                      {domain.aliases.length ? domain.aliases.join(", ") : t("domains:list.noAlias")}
                     </CardDescription>
                     <CardAction>
                       <DomainActions domain={domain} onDeleted={() => void query.refresh()} />
@@ -319,7 +322,7 @@ function DomainList() {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      text="上一页"
+                      text={t("domains:list.pagination.previous")}
                       href={page > 1 ? pageHref(page - 1) : pageHref(1)}
                       aria-disabled={page <= 1}
                       onClick={(event) => page <= 1 && event.preventDefault()}
@@ -332,7 +335,7 @@ function DomainList() {
                   </PaginationItem>
                   <PaginationItem>
                     <PaginationNext
-                      text="下一页"
+                      text={t("domains:list.pagination.next")}
                       href={page < totalPages ? pageHref(page + 1) : pageHref(totalPages)}
                       aria-disabled={page >= totalPages}
                       onClick={(event) => page >= totalPages && event.preventDefault()}
@@ -346,11 +349,11 @@ function DomainList() {
           <Empty className="min-h-80 border border-border">
             <EmptyHeader>
               <EmptyMedia variant="icon"><Globe2Icon /></EmptyMedia>
-              <EmptyTitle>{querySearch || status !== "all" ? "没有匹配项" : "还没有域名"}</EmptyTitle>
+              <EmptyTitle>{querySearch || status !== "all" ? t("domains:list.empty.filteredTitle") : t("domains:list.empty.emptyTitle")}</EmptyTitle>
               <EmptyDescription>
                 {querySearch || status !== "all"
-                  ? "调整搜索或筛选条件后重试。"
-                  : "创建第一个域名和 v1 草稿，线上 Nginx 不会立即改变。"}
+                  ? t("domains:list.empty.filteredDescription")
+                  : t("domains:list.empty.emptyDescription")}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
@@ -362,10 +365,10 @@ function DomainList() {
                     void router.replace(localizePath("/domains", locale));
                   }}
                 >
-                  清除筛选
+                  {t("domains:list.empty.clearFilters")}
                 </Button>
               ) : (
-                <Button asChild><LocalizedLink href="/domains/create">创建第一个域名</LocalizedLink></Button>
+                <Button asChild><LocalizedLink href="/domains/create">{t("domains:list.empty.createFirst")}</LocalizedLink></Button>
               )}
             </EmptyContent>
           </Empty>
@@ -376,7 +379,7 @@ function DomainList() {
 }
 
 export const getStaticPaths = getLocaleStaticPaths;
-export const getStaticProps = makeStaticProps(["common"]);
+export const getStaticProps = makeStaticProps(["common", "domains"]);
 
 export default function DomainsPage() {
   return (

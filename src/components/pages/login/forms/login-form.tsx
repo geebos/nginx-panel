@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useRouter } from "next/router";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { Controller, useForm } from "react-hook-form";
+import { localizedZodResolver } from "@/lib/i18n-form";
 import { z } from "zod";
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon, LockKeyholeIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,30 +24,34 @@ import {
 } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser, getSetupStatus, login, setupAdmin } from "@/lib/api";
+import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n-error";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { passwordSchema, usernameSchema } from "@/shared/schemas";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
 import { localizePath } from "@/lib/i18n-utils";
 
-const formSchema = z.object({
-  username: usernameSchema,
-  password: z.string().min(1, "请输入密码").max(128),
-  confirmPassword: z.string().max(128),
-  remember: z.boolean(),
-});
-
-type LoginFormValues = z.infer<typeof formSchema>;
-
 export function LoginForm() {
+  const { t } = useTranslation(["common", "login"]);
   const router = useRouter();
   const locale = useLocale();
   const setupQuery = useApiQuery(getSetupStatus);
   const [showPassword, setShowPassword] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const setupRequired = setupQuery.data?.setupRequired ?? false;
+  const formSchema = React.useMemo(
+    () =>
+      z.object({
+        username: usernameSchema,
+        password: z.string().min(1, t("login:errors.passwordRequired")).max(128),
+        confirmPassword: z.string().max(128),
+        remember: z.boolean(),
+      }),
+    [t],
+  );
+  type LoginFormValues = z.infer<typeof formSchema>;
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: localizedZodResolver(formSchema, t),
     defaultValues: { username: "", password: "", confirmPassword: "", remember: false },
   });
 
@@ -62,11 +67,12 @@ export function LoginForm() {
     if (setupRequired) {
       const passwordResult = passwordSchema.safeParse(values.password);
       if (!passwordResult.success) {
-        form.setError("password", { message: passwordResult.error.issues[0]?.message });
+        const issue = passwordResult.error.issues[0];
+        form.setError("password", { message: formatMessageKey(t, issue?.message, zodIssueParams(issue)) });
         return;
       }
       if (values.password !== values.confirmPassword) {
-        form.setError("confirmPassword", { message: "两次输入的密码不一致" });
+        form.setError("confirmPassword", { message: t("login:errors.passwordMismatch") });
         return;
       }
     }
@@ -79,7 +85,7 @@ export function LoginForm() {
       }
       await router.replace(localizePath(safeRedirectPath(router.query.redirect), locale));
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : "登录失败");
+      setServerError(formatErrorMessage(t, error, "login:loginFailed"));
     }
   });
 
@@ -90,8 +96,8 @@ export function LoginForm() {
   if (setupQuery.error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>无法连接管理 API</AlertTitle>
-        <AlertDescription>{setupQuery.error.message}</AlertDescription>
+        <AlertTitle>{t("login:apiConnectFailed")}</AlertTitle>
+        <AlertDescription>{formatErrorMessage(t, setupQuery.error)}</AlertDescription>
       </Alert>
     );
   }
@@ -104,26 +110,26 @@ export function LoginForm() {
         </div>
         <div>
           <h1 className="font-heading text-[26px] font-normal tracking-[-0.02em]">
-            {setupRequired ? "初始化管理员" : "登录 Nginx Manager"}
+            {setupRequired ? t("login:title.setup") : t("login:title.login")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {setupRequired
-              ? "创建唯一管理员账号。完成后初始化入口将永久关闭。"
-              : "登录后管理域名、配置版本和发布任务。"}
+              ? t("login:description.setup")
+              : t("login:description.login")}
           </p>
         </div>
       </div>
 
       {serverError ? (
         <Alert variant="destructive">
-          <AlertTitle>{setupRequired ? "初始化失败" : "登录失败"}</AlertTitle>
+          <AlertTitle>{setupRequired ? t("login:setupFailed") : t("login:loginFailed")}</AlertTitle>
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       ) : null}
 
       <FieldGroup>
         <Field data-invalid={Boolean(form.formState.errors.username)}>
-          <FieldLabel htmlFor="username">用户名</FieldLabel>
+          <FieldLabel htmlFor="username">{t("login:username")}</FieldLabel>
           <InputGroup>
             <InputGroupInput
               id="username"
@@ -132,12 +138,12 @@ export function LoginForm() {
               {...form.register("username")}
             />
           </InputGroup>
-          <FieldDescription>使用小写字母、数字、点、下划线或连字符。</FieldDescription>
+          <FieldDescription>{t("login:usernameDescription")}</FieldDescription>
           <FieldError errors={[form.formState.errors.username]} />
         </Field>
 
         <Field data-invalid={Boolean(form.formState.errors.password)}>
-          <FieldLabel htmlFor="password">密码</FieldLabel>
+          <FieldLabel htmlFor="password">{t("login:password")}</FieldLabel>
           <InputGroup>
             <InputGroupInput
               id="password"
@@ -149,20 +155,20 @@ export function LoginForm() {
             <InputGroupAddon align="inline-end">
               <InputGroupButton
                 size="icon-xs"
-                aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                aria-label={showPassword ? t("login:hidePassword") : t("login:showPassword")}
                 onClick={() => setShowPassword((value) => !value)}
               >
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
-          {setupRequired ? <FieldDescription>至少 12 个字符。</FieldDescription> : null}
+          {setupRequired ? <FieldDescription>{t("login:passwordMinLength")}</FieldDescription> : null}
           <FieldError errors={[form.formState.errors.password]} />
         </Field>
 
         {setupRequired ? (
           <Field data-invalid={Boolean(form.formState.errors.confirmPassword)}>
-            <FieldLabel htmlFor="confirmPassword">确认密码</FieldLabel>
+            <FieldLabel htmlFor="confirmPassword">{t("login:confirmPassword")}</FieldLabel>
             <InputGroup>
               <InputGroupInput
                 id="confirmPassword"
@@ -186,8 +192,8 @@ export function LoginForm() {
                   onCheckedChange={(checked) => field.onChange(checked === true)}
                 />
                 <FieldContent>
-                  <FieldLabel htmlFor="remember">保持登录</FieldLabel>
-                  <FieldDescription>按实例安全策略延长此设备的会话。</FieldDescription>
+                  <FieldLabel htmlFor="remember">{t("login:remember")}</FieldLabel>
+                  <FieldDescription>{t("login:rememberDescription")}</FieldDescription>
                 </FieldContent>
               </Field>
             )}
@@ -197,7 +203,7 @@ export function LoginForm() {
 
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? <LoaderCircleIcon data-icon="inline-start" className="animate-spin" /> : null}
-        {setupRequired ? "创建管理员" : "登录"}
+        {setupRequired ? t("login:submit.setup") : t("login:submit.login")}
       </Button>
     </form>
   );

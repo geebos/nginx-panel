@@ -20,7 +20,7 @@ export async function getSqliteDb(): Promise<BetterSQLite3Database<typeof schema
 
   const dir = process.env.DB_SQLITE_DIR;
   if (!dir) {
-    throw new Error("DB_SQLITE_DIR 未设置：sqlite 引擎需要指定数据文件目录");
+    throw new Error("DB_SQLITE_DIR is not set: the sqlite engine requires a data directory");
   }
   const fs = await import("node:fs");
   const path = await import("node:path");

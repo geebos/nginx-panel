@@ -62,7 +62,7 @@ test("rollback refuses to overwrite an unpublished draft", async () => {
   db.update(schema.domains).set({ draftVersionId: "version-1" }).where(eq(schema.domains.id, "domain-1")).run();
   await assert.rejects(
     () => createRollbackDeployment(db, { domainId: "domain-1", sourceVersionId: "version-1", requestedBy: "user-1", idempotencyKey: "rollback-2" }),
-    (error: unknown) => error instanceof Error && error.message.includes("未发布草稿"),
+    (error: unknown) => error instanceof Error && error.message.includes("errors:draftExists"),
   );
   assert.equal(db.select().from(schema.deployments).all().length, 0);
   connection.close();

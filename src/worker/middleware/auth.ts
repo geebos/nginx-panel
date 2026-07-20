@@ -8,7 +8,7 @@ import { managerUrl } from "@/worker/lib/runtime-env";
 
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   const token = getCookie(c, SESSION_COOKIE);
-  if (!token) return c.json({ code: "UNAUTHENTICATED", message: "请先登录" }, 401);
+  if (!token) return c.json({ code: "UNAUTHENTICATED", message: "errors:loginRequired" }, 401);
 
   const idHash = hashSessionToken(token);
   const db = c.get("db");
@@ -24,7 +24,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     .where(and(eq(sessions.idHash, idHash), gt(sessions.expiresAt, Date.now())))
     .limit(1);
   const auth = rows[0];
-  if (!auth) return c.json({ code: "UNAUTHENTICATED", message: "会话已过期" }, 401);
+  if (!auth) return c.json({ code: "UNAUTHENTICATED", message: "errors:sessionExpired" }, 401);
 
   c.set("user", { id: auth.userId, username: auth.username });
   c.set("sessionIdHash", auth.sessionIdHash);
@@ -54,7 +54,7 @@ export const requireSameOrigin = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   if (!allowed) {
-    return c.json({ code: "INVALID_ORIGIN", message: "请求来源无效" }, 403);
+    return c.json({ code: "INVALID_ORIGIN", message: "errors:invalidOrigin" }, 403);
   }
   await next();
 });

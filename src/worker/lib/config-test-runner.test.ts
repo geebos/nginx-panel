@@ -215,7 +215,7 @@ test("ssl-disabled draft passes nginx -t alongside an active HTTPS domain", asyn
 
   const deployment = db.select().from(schema.deployments)
     .where(eq(schema.deployments.id, "deployment-1")).get();
-  assert.notEqual(deployment?.errorMessage, "证书文件测试将在 HTTPS 阶段接入");
+  assert.notEqual(deployment?.errorMessage, "Certificate file testing will be wired in the HTTPS phase");
   assert.equal(deployment?.status, "succeeded", deployment?.errorMessage ?? undefined);
   connection.close();
 });

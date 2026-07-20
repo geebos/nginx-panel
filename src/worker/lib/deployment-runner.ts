@@ -37,10 +37,10 @@ class RebuildSourceError extends Error {
 }
 
 function runtimePaths() {
-  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new Error("发布只允许在 nginx-manager runtime 中执行");
+  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new Error("Deploy is only allowed in the nginx-manager runtime");
   const root = process.env.NGINX_RUNTIME_ROOT || "/data/nginx";
   const logsRoot = process.env.NGINX_LOG_DIR;
-  if (!logsRoot) throw new Error("NGINX_LOG_DIR 未设置");
+  if (!logsRoot) throw new Error("NGINX_LOG_DIR is not set");
   return { root, logsRoot, active: join(root, "active"), candidates: join(root, "candidates"), revisions: join(root, "revisions") };
 }
 
@@ -57,7 +57,7 @@ async function renderRuntimeRoot(logSettings: Awaited<ReturnType<typeof getActiv
   let rendered = await readFile(templatePath, "utf8");
   if (process.env.APP_ENV !== "development") {
     const required = ["MANAGER_HOST", "MANAGER_TLS_CERT_FILE", "MANAGER_TLS_KEY_FILE"] as const;
-    for (const name of required) if (!process.env[name]) throw new Error(`${name} 未设置`);
+    for (const name of required) if (!process.env[name]) throw new Error(`${name} is not set`);
     rendered = rendered.replace(/\$\{(MANAGER_HOST|MANAGER_TLS_CERT_FILE|MANAGER_TLS_KEY_FILE)\}/g, (_, name: typeof required[number]) => process.env[name]!);
   }
   return injectAccessLogFormat(rendered, logSettings);
@@ -74,8 +74,8 @@ export async function createPublishDeployment(db: AppEnv["Variables"]["db"], inp
     const domain = tx.select().from(domains).where(and(eq(domains.id, input.domainId), isNull(domains.deletedAt))).get();
     const version = tx.select().from(configVersions).where(and(eq(configVersions.id, input.versionId), eq(configVersions.domainId, input.domainId))).get();
     const preflight = tx.select().from(deployments).where(eq(deployments.id, input.preflightDeploymentId)).get();
-    if (!domain || !version) throw new BusinessError("发布目标不存在", 404, "VERSION_NOT_FOUND");
-    if (!domain.enabled) throw new BusinessError("Domain 已停用，请先启用", 409, "DOMAIN_DISABLED");
+    if (!domain || !version) throw new BusinessError("errors:versionNotFound", 404, "VERSION_NOT_FOUND");
+    if (!domain.enabled) throw new BusinessError("errors:domainDisabled", 409, "DOMAIN_DISABLED");
     const preflightInput = preflight?.inputJson ? JSON.parse(preflight.inputJson) as { expectedSnapshotChecksum?: string } : null;
     const validPreflight = preflight?.type === "test"
       && preflight.status === "succeeded"
@@ -85,7 +85,7 @@ export async function createPublishDeployment(db: AppEnv["Variables"]["db"], inp
       && domain.draftVersionId === version.id
       && version.status === "draft"
       && version.snapshotChecksum === input.expectedSnapshotChecksum;
-    if (!validPreflight) throw new BusinessError("测试结果已过期，请重新测试", 409, "PREFLIGHT_STALE");
+    if (!validPreflight) throw new BusinessError("errors:preflightStale", 409, "PREFLIGHT_STALE");
     tx.insert(deployments).values({ id, domainId: input.domainId, configVersionId: input.versionId, previousVersionId: domain.activeVersionId, type: "deploy", status: "queued", idempotencyKey: input.idempotencyKey, inputJson: JSON.stringify({ expectedSnapshotChecksum: input.expectedSnapshotChecksum, preflightDeploymentId: input.preflightDeploymentId }), requestedBy: input.requestedBy, createdAt: now }).run();
     for (const [sequence, name] of stepNames.entries()) tx.insert(deploymentSteps).values({ id: randomUUID(), deploymentId: id, sequence, name, status: "pending" }).run();
   });
@@ -104,7 +104,7 @@ export async function createCertificateDeployment(db: AppEnv["Variables"]["db"],
     const domain = tx.select().from(domains).where(and(eq(domains.id, input.domainId), isNull(domains.deletedAt))).get();
     const version = tx.select().from(configVersions).where(and(eq(configVersions.id, input.versionId), eq(configVersions.domainId, input.domainId), eq(configVersions.sourceCertificateId, input.certificateId))).get();
     const certificate = tx.select().from(certificates).where(and(eq(certificates.id, input.certificateId), eq(certificates.domainId, input.domainId), eq(certificates.status, "ready"))).get();
-    if (!domain || !version || !certificate || version.status !== "pending") throw new BusinessError("证书激活目标不存在", 409, "CERTIFICATE_ACTIVATION_TARGET_INVALID");
+    if (!domain || !version || !certificate || version.status !== "pending") throw new BusinessError("errors:certificateActivationTargetInvalid", 409, "CERTIFICATE_ACTIVATION_TARGET_INVALID");
     tx.insert(deployments).values({
       id,
       domainId: input.domainId,
@@ -133,10 +133,10 @@ export async function createRollbackDeployment(db: AppEnv["Variables"]["db"], in
   db.transaction((tx) => {
     const domain = tx.select().from(domains).where(and(eq(domains.id, input.domainId), isNull(domains.deletedAt))).get();
     const source = tx.select().from(configVersions).where(and(eq(configVersions.id, input.sourceVersionId), eq(configVersions.domainId, input.domainId))).get();
-    if (!domain || !source) throw new BusinessError("回滚目标不存在", 404, "VERSION_NOT_FOUND");
-    if (!domain.enabled) throw new BusinessError("Domain 已停用，请先启用", 409, "DOMAIN_DISABLED");
-    if (!domain.activeVersionId) throw new BusinessError("Domain 尚未发布，不能回滚", 409, "DOMAIN_NO_ACTIVE_VERSION");
-    if (domain.draftVersionId) throw new BusinessError("当前有未发布草稿，请先发布或处理草稿后再回滚", 409, "DRAFT_EXISTS");
+    if (!domain || !source) throw new BusinessError("errors:versionNotFound", 404, "VERSION_NOT_FOUND");
+    if (!domain.enabled) throw new BusinessError("errors:domainDisabled", 409, "DOMAIN_DISABLED");
+    if (!domain.activeVersionId) throw new BusinessError("errors:domainNoActiveVersion", 409, "DOMAIN_NO_ACTIVE_VERSION");
+    if (domain.draftVersionId) throw new BusinessError("errors:draftExists", 409, "DRAFT_EXISTS");
     const latest = tx.select({ versionNumber: configVersions.versionNumber }).from(configVersions)
       .where(eq(configVersions.domainId, input.domainId)).orderBy(desc(configVersions.versionNumber)).limit(1).get();
     const versionNumber = (latest?.versionNumber ?? 0) + 1;
@@ -146,7 +146,7 @@ export async function createRollbackDeployment(db: AppEnv["Variables"]["db"], in
       versionNumber,
       status: "draft",
       sourceVersionId: source.id,
-      changeSummary: `回滚到 v${source.versionNumber}`,
+      changeSummary: `Rollback to v${source.versionNumber}`,
       snapshotJson: source.snapshotJson,
       snapshotChecksum: source.snapshotChecksum,
       createdBy: input.requestedBy,
@@ -197,7 +197,7 @@ export async function createLogSettingsDeployment(db: AppEnv["Variables"]["db"],
 export async function createRebuildActiveDeployment(db: AppEnv["Variables"]["db"], input: { requestedBy: string; idempotencyKey: string }) {
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, input.idempotencyKey) });
   if (existing) return existing;
-  if (getRuntimeState().status !== "degraded") throw new Error("运行配置当前不需要重建");
+  if (getRuntimeState().status !== "degraded") throw new Error("Runtime config does not need rebuild");
   await assertRuntimeStorageCapacity(db);
   const id = randomUUID();
   const names = [...stepNames];
@@ -304,11 +304,11 @@ async function runDiagnosticNginxTest(db: AppEnv["Variables"]["db"], deploymentI
     await updateStep(db, deploymentId, 0, "running");
     const result = await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
     const output = redactDiagnosticOutput(`${result.stdout}\n${result.stderr}`.trim(), paths);
-    await updateStep(db, deploymentId, 0, "succeeded", "Active 配置测试通过", output);
+    await updateStep(db, deploymentId, 0, "succeeded", "Active config test passed", output);
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   } catch (error) {
-    const raw = error instanceof Error ? error.message : "Active 配置测试失败";
-    const message = paths ? redactDiagnosticOutput(raw, paths) : "Active 配置测试失败";
+    const raw = error instanceof Error ? error.message : "Active config test failed";
+    const message = paths ? redactDiagnosticOutput(raw, paths) : "Active config test failed";
     await updateStep(db, deploymentId, 0, "failed", message, message);
     await db.update(deployments).set({ status: "failed", errorCode: "NGINX_TEST_FAILED", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   }
@@ -327,9 +327,9 @@ function verifyManagerHttps(hostname: string) {
     }, (response) => {
       response.resume();
       if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) resolve();
-      else reject(new Error(`管理端 HTTPS 验证返回 ${response.statusCode ?? "未知状态"}`));
+      else reject(new Error(`Manager HTTPS verification returned ${response.statusCode ?? "unknown status"}`));
     });
-    request.on("timeout", () => request.destroy(new Error("管理端 HTTPS 验证超时")));
+    request.on("timeout", () => request.destroy(new Error("Manager HTTPS verification timed out")));
     request.on("error", reject);
     request.end();
   });
@@ -345,25 +345,25 @@ async function runReloadManagerTls(db: AppEnv["Variables"]["db"], deploymentId: 
 
     await updateStep(db, deploymentId, 0, "running");
     const certificate = validateManagerTlsEnvironment();
-    await updateStep(db, deploymentId, 0, "succeeded", `证书有效，截止 ${new Date(certificate.validTo).toISOString()}`);
+    await updateStep(db, deploymentId, 0, "succeeded", `Certificate valid until ${new Date(certificate.validTo).toISOString()}`);
 
     await updateStep(db, deploymentId, 1, "running");
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
-    await updateStep(db, deploymentId, 1, "succeeded", "Active 配置测试通过");
+    await updateStep(db, deploymentId, 1, "succeeded", "Active config test passed");
 
     await updateStep(db, deploymentId, 2, "running");
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-s", "reload", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
-    await updateStep(db, deploymentId, 2, "succeeded", "Nginx graceful reload 已完成");
+    await updateStep(db, deploymentId, 2, "succeeded", "Nginx graceful reload completed");
 
     await updateStep(db, deploymentId, 3, "running");
     await verifyManagerHttps(certificate.hostname);
-    await updateStep(db, deploymentId, 3, "succeeded", "管理端 HTTPS 验证通过");
+    await updateStep(db, deploymentId, 3, "succeeded", "Manager HTTPS verification passed");
 
     await updateStep(db, deploymentId, 4, "running");
-    await updateStep(db, deploymentId, 4, "succeeded", "管理端 TLS 已重新加载");
+    await updateStep(db, deploymentId, 4, "succeeded", "Manager TLS reloaded");
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "管理端 TLS 重新加载失败";
+    const message = error instanceof Error ? error.message : "Manager TLS reload failed";
     const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), inArray(deploymentSteps.status, ["pending", "running"])) });
     if (pending) await updateStep(db, deploymentId, pending.sequence, "failed", message, message.slice(0, 8_000));
     await db.update(deployments).set({ status: "failed", errorCode: "MANAGER_TLS_INVALID", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
@@ -385,7 +385,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     const appliesLogSettings = deployment.type === "apply_log_settings";
     if (!rebuildActive && !appliesLogSettings && (!["deploy", "rollback"].includes(deployment.type) || !deployment.domainId || !deployment.configVersionId)) return;
     if (!rebuildActive) assertRuntimeMutable();
-    else if (getRuntimeState().status !== "degraded") throw new Error("运行配置当前不需要重建");
+    else if (getRuntimeState().status !== "degraded") throw new Error("Runtime config does not need rebuild");
     await assertRuntimeStorageCapacity(db);
     const publishInput = deployment.type === "deploy"
       ? JSON.parse(deployment.inputJson ?? "null") as { expectedSnapshotChecksum?: string; sourceCertificateId?: string } | null
@@ -398,14 +398,14 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
         ? targetVersion?.status === "pending" && targetVersion.sourceCertificateId === publishInput?.sourceCertificateId
         : targetDomain?.draftVersionId === targetVersion?.id && targetVersion?.status === "draft";
       if (!targetDomain || !targetVersion || !validTarget || targetVersion.snapshotChecksum !== publishInput?.expectedSnapshotChecksum) {
-        throw new Error("发布目标草稿已变化");
+        throw new Error("Deploy target draft has changed");
       }
     }
     if (deployment.type === "rollback") {
       const targetDomain = await db.query.domains.findFirst({ where: eq(domains.id, deployment.domainId!) });
       const targetVersion = await db.query.configVersions.findFirst({ where: eq(configVersions.id, deployment.configVersionId!) });
       if (!targetDomain || !targetVersion || targetDomain.draftVersionId !== targetVersion.id || targetVersion.status !== "draft") {
-        throw new Error("回滚目标版本已变化");
+        throw new Error("Rollback target version has changed");
       }
     }
     const logSettings = appliesLogSettings
@@ -413,13 +413,13 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       : await getActiveLogSettings(db);
     if (appliesLogSettings) {
       const active = await getActiveLogSettings(db);
-      if (logSettings.revision !== active.revision + 1) throw new Error("日志设置 revision 已过期");
+      if (logSettings.revision !== active.revision + 1) throw new Error("Log settings revision is stale");
     }
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
     await updateStep(db, deploymentId, 0, "running");
     if (rebuildActive) {
       const integrity = await db.all<{ integrity_check: string }>(sql.raw("PRAGMA integrity_check"));
-      if (integrity.some((row) => row.integrity_check !== "ok")) throw new RebuildSourceError("SQLite integrity check 未通过");
+      if (integrity.some((row) => row.integrity_check !== "ok")) throw new RebuildSourceError("SQLite integrity check failed");
     }
     const domainRows = await db.select().from(domains).where(
       appliesLogSettings || rebuildActive
@@ -442,11 +442,11 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     const manifestDomains: Record<string, { sourceVersionId: string; snapshotChecksum: string; enabled: boolean; certificateId: string | null; configChecksum: string }> = {};
     for (const domain of selected) {
       const version = byId.get(domain.sourceVersionId);
-      if (!version) throw new RebuildSourceError("Active 配置版本缺失");
+      if (!version) throw new RebuildSourceError("Active config version missing");
       const snapshot = snapshots.get(version.id)!;
-      if (createSnapshot(snapshot).checksum !== version.snapshotChecksum) throw new RebuildSourceError("Active 配置快照 checksum 无效");
+      if (createSnapshot(snapshot).checksum !== version.snapshotChecksum) throw new RebuildSourceError("Active config snapshot checksum invalid");
       const certificate = snapshot.ssl.certificateId ? certificatesById.get(snapshot.ssl.certificateId) : undefined;
-      if (snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !["ready", "active"].includes(certificate.status))) throw new RebuildSourceError("配置引用的证书资产不可用");
+      if (snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !["ready", "active"].includes(certificate.status))) throw new RebuildSourceError("Referenced certificate asset is unavailable");
       await mkdir(join(paths.logsRoot, snapshot.primaryHostname), { recursive: true });
       const enabled = !appliesLogSettings && !rebuildActive && domain.id === deployment.domainId && !certificateActivation ? true : domain.enabled;
       const config = renderDomainConfig({ mode: "runtime", domainId: domain.id, snapshot, enabled, logs: { root: paths.logsRoot, errorLevel: logSettings.errorLevel }, listeners: { http: 8080, https: 8443 }, certificate: certificate ? { fullchainPath: certificate.certPath, privateKeyPath: certificate.keyPath } : undefined });
@@ -455,13 +455,13 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     }
     const manifest = createRuntimeManifest({ rootConfig, logSettings: { revision: logSettings.revision, checksum: logSettingsChecksum(logSettings) }, rootInputs: { logsRoot: paths.logsRoot, runtimeRoot: paths.root }, domains: manifestDomains });
     await writeFile(join(candidate, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o640 });
-    await updateStep(db, deploymentId, 0, "succeeded", rebuildActive ? `SQLite 来源校验通过，生成 ${selected.length} 个 Domain 配置` : `生成 ${selected.length} 个 Domain 配置`);
+    await updateStep(db, deploymentId, 0, "succeeded", rebuildActive ? `SQLite source check passed, generated ${selected.length} Domain configs` : `Generated ${selected.length} Domain configs`);
     await updateStep(db, deploymentId, 1, "running");
-    await updateStep(db, deploymentId, 1, "succeeded", "Schema、路径和 checksum 校验通过");
+    await updateStep(db, deploymentId, 1, "succeeded", "Schema, path, and checksum validation passed");
     await updateStep(db, deploymentId, 2, "running");
     const nginx = process.env.NGINX_BIN || "/usr/sbin/nginx";
     await execFileAsync(nginx, ["-p", `${candidate}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
-    await updateStep(db, deploymentId, 2, "succeeded", "候选配置测试通过");
+    await updateStep(db, deploymentId, 2, "succeeded", "Candidate config test passed");
     await updateStep(db, deploymentId, 3, "running");
     previousTarget = await readlink(paths.active);
     await rename(candidate, revision);
@@ -470,14 +470,14 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     await rename(next, paths.active);
     activated = true;
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000 });
-    await updateStep(db, deploymentId, 3, "succeeded", "Runtime revision 已原子激活");
+    await updateStep(db, deploymentId, 3, "succeeded", "Runtime revision activated atomically");
     await updateStep(db, deploymentId, 4, "running");
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-s", "reload", "-c", "nginx.conf"], { timeout: 10_000 });
-    await updateStep(db, deploymentId, 4, "succeeded", "Nginx graceful reload 已完成");
+    await updateStep(db, deploymentId, 4, "succeeded", "Nginx graceful reload completed");
     await updateStep(db, deploymentId, 5, "running");
     const response = await fetch("http://127.0.0.1:8082/internal/health", { signal: AbortSignal.timeout(5_000) });
-    if (!response.ok) throw new Error("管理端健康检查失败");
-    await updateStep(db, deploymentId, 5, "succeeded", "管理端健康检查通过");
+    if (!response.ok) throw new Error("Manager health check failed");
+    await updateStep(db, deploymentId, 5, "succeeded", "Manager health check passed");
     await updateStep(db, deploymentId, 6, "running");
     db.transaction((tx) => {
       if (appliesLogSettings) {
@@ -501,13 +501,13 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       tx.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId)).run();
     });
     if (rebuildActive) setRuntimeHealthy(deploymentId);
-    await updateStep(db, deploymentId, 6, "succeeded", rebuildActive ? "Runtime 已按 SQLite 重建并恢复健康" : appliesLogSettings ? `日志设置 revision ${logSettings.revision} 已提交` : "Active Version 已提交");
+    await updateStep(db, deploymentId, 6, "succeeded", rebuildActive ? "Runtime rebuilt from SQLite and restored to healthy" : appliesLogSettings ? `Log settings revision ${logSettings.revision} committed` : "Active Version committed");
     void cleanupRuntimeStorage(db).catch((error) => console.error("[runtime-storage] post-deployment cleanup failed", error));
     completed = true;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "发布失败";
+    const message = error instanceof Error ? error.message : "Deploy failed";
     if (rebuildActive) {
-      setRuntimeDegraded([{ code: "ACTIVE_REBUILD_FAILED", message: "按 SQLite 重建未完成，运行配置仍处于 degraded 状态" }]);
+      setRuntimeDegraded([{ code: "ACTIVE_REBUILD_FAILED", message: "Rebuild from SQLite incomplete; runtime remains degraded" }]);
     }
     let recoveryFailed = false;
     if (activated && previousTarget) {
@@ -519,7 +519,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
         await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-p", `${paths.active}/`, "-s", "reload", "-c", "nginx.conf"], { timeout: 10_000 });
       } catch {
         recoveryFailed = true;
-        setRuntimeDegraded([{ code: "RECOVERY_FAILED", message: "发布恢复失败，运行配置需要人工重建" }]);
+        setRuntimeDegraded([{ code: "RECOVERY_FAILED", message: "Deploy recovery failed; runtime requires manual rebuild" }]);
       }
     }
     const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), inArray(deploymentSteps.status, ["pending", "running"])) });

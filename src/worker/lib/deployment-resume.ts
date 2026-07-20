@@ -43,7 +43,7 @@ export async function resumeQueuedDeployments(db: AppEnv["Variables"]["db"], run
         db,
         deployment.id,
         degraded ? "RUNTIME_DEGRADED" : "DEPLOYMENT_STATE_INVALID",
-        degraded ? "Worker 重启后检测到运行配置不一致，任务未恢复" : "Worker 重启后任务已不适用于当前运行状态",
+        degraded ? "Runtime config mismatch after worker restart; job not resumed" : "Job no longer applicable to current runtime state after worker restart",
       );
     }
   }

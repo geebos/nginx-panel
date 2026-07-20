@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "react-i18next";
 import { RotateCwIcon, SaveIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,23 +12,25 @@ import { Select } from "@/components/ui/select";
 import { nginxLogSettingsInputSchema, requiredAccessLogFields, type AccessLogField, type NginxLogSettings } from "@/shared/schemas";
 import { rotateLogs, updateLogSettings } from "@/lib/api";
 import { useLocale } from "@/hooks/use-locale";
+import { formatErrorMessage, formatMessageKey, zodIssueParams } from "@/lib/i18n-error";
 import { localizePath } from "@/lib/i18n-utils";
 
-const allFields: { value: AccessLogField; label: string }[] = [
-  { value: "timestamp", label: "Timestamp" },
-  { value: "domain", label: "Domain / Host" },
-  { value: "method", label: "HTTP Method" },
-  { value: "path", label: "Path" },
-  { value: "request_uri", label: "Request URI" },
-  { value: "status", label: "Status" },
-  { value: "request_time", label: "Request time" },
-  { value: "client_ip", label: "Client IP" },
-  { value: "upstream_addr", label: "Upstream address" },
-  { value: "upstream_status", label: "Upstream status" },
-  { value: "upstream_time", label: "Upstream time" },
+const allFieldValues: AccessLogField[] = [
+  "timestamp",
+  "domain",
+  "method",
+  "path",
+  "request_uri",
+  "status",
+  "request_time",
+  "client_ip",
+  "upstream_addr",
+  "upstream_status",
+  "upstream_time",
 ];
 
 export function LogSettingsForm({ active, preview, logRootConfigured }: { active: NginxLogSettings; preview: string; logRootConfigured: boolean }) {
+  const { t } = useTranslation(["common"]);
   const router = useRouter();
   const locale = useLocale();
   const [accessFields, setAccessFields] = React.useState<AccessLogField[]>(active.accessFields);
@@ -48,7 +51,8 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
       retainedFiles: Number(retainedFiles),
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "日志设置无效");
+      const issue = parsed.error.issues[0];
+      setError(formatMessageKey(t, issue?.message ?? "errors:logSettingsInvalid", zodIssueParams(issue)));
       return;
     }
     setSubmitting(true);
@@ -56,7 +60,7 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
       const result = await updateLogSettings(parsed.data);
       await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "日志设置保存失败");
+      setError(formatErrorMessage(t, caught, "errors:requestFailed"));
       setSubmitting(false);
     }
   };
@@ -68,36 +72,36 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
       const result = await rotateLogs();
       await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "日志轮动失败");
+      setError(formatErrorMessage(t, caught, "errors:requestFailed"));
       setRotating(false);
     }
   };
 
   return (
     <form className="flex flex-col gap-6" onSubmit={submit}>
-      {error ? <Alert variant="destructive"><AlertTitle>操作失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
-      {!logRootConfigured ? <Alert variant="destructive"><AlertTitle>日志目录未配置</AlertTitle><AlertDescription>设置 NGINX_LOG_DIR 并重启 runtime 后才能应用日志策略。</AlertDescription></Alert> : null}
+      {error ? <Alert variant="destructive"><AlertTitle>{t("common:settings.logs.operationFailed")}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
+      {!logRootConfigured ? <Alert variant="destructive"><AlertTitle>{t("common:settings.logs.logRootNotConfigured")}</AlertTitle><AlertDescription>{t("common:settings.logs.logRootNotConfiguredDescription")}</AlertDescription></Alert> : null}
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>Access log 字段</CardTitle>
-          <CardDescription>核心字段不可移除；可选字段会通过固定 Nginx 变量白名单注入，不接受自定义 format 字符串。</CardDescription>
+          <CardTitle>{t("common:settings.logs.accessFields.title")}</CardTitle>
+          <CardDescription>{t("common:settings.logs.accessFields.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldSet>
-            <FieldLegend variant="label">结构化字段</FieldLegend>
+            <FieldLegend variant="label">{t("common:settings.logs.accessFields.legend")}</FieldLegend>
             <FieldGroup className="grid gap-3 md:grid-cols-2">
-              {allFields.map((field) => {
-                const required = requiredAccessLogFields.includes(field.value as typeof requiredAccessLogFields[number]);
-                const checked = accessFields.includes(field.value);
+              {allFieldValues.map((value) => {
+                const required = requiredAccessLogFields.includes(value as typeof requiredAccessLogFields[number]);
+                const checked = accessFields.includes(value);
                 return (
-                  <Field data-disabled={required || undefined} key={field.value} orientation="horizontal">
+                  <Field data-disabled={required || undefined} key={value} orientation="horizontal">
                     <Checkbox
-                      id={`log-field-${field.value}`}
+                      id={`log-field-${value}`}
                       checked={checked}
                       disabled={required}
-                      onCheckedChange={(next) => setAccessFields((current) => next ? [...current, field.value] : current.filter((value) => value !== field.value))}
+                      onCheckedChange={(next) => setAccessFields((current) => next ? [...current, value] : current.filter((field) => field !== value))}
                     />
-                    <FieldLabel htmlFor={`log-field-${field.value}`}>{field.label}{required ? "（必需）" : ""}</FieldLabel>
+                    <FieldLabel htmlFor={`log-field-${value}`}>{t(`common:settings.logs.accessFields.fields.${value}`)}{required ? t("common:settings.logs.accessFields.required") : ""}</FieldLabel>
                   </Field>
                 );
               })}
@@ -108,36 +112,36 @@ export function LogSettingsForm({ active, preview, logRootConfigured }: { active
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>Error 与轮动策略</CardTitle>
-          <CardDescription>达到大小阈值后每 30 秒检查一次，采用 rename + Nginx reopen，保留数量不含当前文件。</CardDescription>
+          <CardTitle>{t("common:settings.logs.rotation.title")}</CardTitle>
+          <CardDescription>{t("common:settings.logs.rotation.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup>
             <Field>
-              <FieldLabel>Error log level</FieldLabel>
+              <FieldLabel>{t("common:settings.logs.rotation.errorLogLevel")}</FieldLabel>
               <Select options={["error", "warn", "notice", "info"].map((value) => ({ value, label: value }))} value={errorLevel} onChange={(value) => setErrorLevel((value ?? "warn") as typeof errorLevel)} />
             </Field>
             <Field>
-              <FieldLabel htmlFor="max-log-size">单文件大小上限（MiB）</FieldLabel>
+              <FieldLabel htmlFor="max-log-size">{t("common:settings.logs.rotation.maxFileSize")}</FieldLabel>
               <Input id="max-log-size" inputMode="numeric" min="1" max="1024" value={maxFileSizeMiB} onChange={(event) => setMaxFileSizeMiB(event.target.value)} />
-              <FieldDescription>范围 1–1024 MiB。</FieldDescription>
+              <FieldDescription>{t("common:settings.logs.rotation.maxFileSizeDescription")}</FieldDescription>
             </Field>
             <Field>
-              <FieldLabel htmlFor="retained-log-files">保留文件数量</FieldLabel>
+              <FieldLabel htmlFor="retained-log-files">{t("common:settings.logs.rotation.retainedFiles")}</FieldLabel>
               <Input id="retained-log-files" inputMode="numeric" min="1" max="30" value={retainedFiles} onChange={(event) => setRetainedFiles(event.target.value)} />
-              <FieldDescription>范围 1–30，不包含当前 access.log/error.log。</FieldDescription>
+              <FieldDescription>{t("common:settings.logs.rotation.retainedFilesDescription")}</FieldDescription>
             </Field>
             {error ? <FieldError>{error}</FieldError> : null}
           </FieldGroup>
         </CardContent>
         <CardFooter className="justify-between gap-3">
-          <Button type="button" variant="outline" disabled={rotating || submitting} onClick={() => void rotate()}><RotateCwIcon data-icon="inline-start" className={rotating ? "animate-spin" : undefined} />立即轮动全部日志</Button>
-          <Button type="submit" disabled={!logRootConfigured || submitting || rotating}><SaveIcon data-icon="inline-start" />保存并应用</Button>
+          <Button type="button" variant="outline" disabled={rotating || submitting} onClick={() => void rotate()}><RotateCwIcon data-icon="inline-start" className={rotating ? "animate-spin" : undefined} />{t("common:settings.logs.rotation.rotateNow")}</Button>
+          <Button type="submit" disabled={!logRootConfigured || submitting || rotating}><SaveIcon data-icon="inline-start" />{t("common:settings.logs.rotation.saveAndApply")}</Button>
         </CardFooter>
       </Card>
 
       <Card className="border border-border">
-        <CardHeader><CardTitle>当前 Nginx 预览</CardTitle><CardDescription>Active revision {active.revision}，保存任务成功前不会改变。</CardDescription></CardHeader>
+        <CardHeader><CardTitle>{t("common:settings.logs.preview.title")}</CardTitle><CardDescription>{t("common:settings.logs.preview.description", { revision: active.revision })}</CardDescription></CardHeader>
         <CardContent><pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs">{preview}</pre></CardContent>
       </Card>
     </form>

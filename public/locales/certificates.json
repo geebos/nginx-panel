@@ -1,0 +1,61 @@
+{
+  "title": { "en": "Certificates", "zh-CN": "证书" },
+  "description": {
+    "en": "View certificate validity, auto-renewal status, and associated Domain configuration.",
+    "zh-CN": "查看证书有效期、自动续期状态和关联的 Domain 配置。"
+  },
+  "refresh": { "en": "Refresh", "zh-CN": "刷新" },
+  "loadFailed": { "en": "Failed to load certificates", "zh-CN": "证书加载失败" },
+  "renewalOrderCreated": { "en": "Renewal order created", "zh-CN": "续期订单已创建" },
+  "renewalOrderFailed": { "en": "Failed to create renewal order", "zh-CN": "续期订单创建失败" },
+  "unknown": { "en": "Unknown", "zh-CN": "未知" },
+  "business503": {
+    "en": "Business requests currently return 503",
+    "zh-CN": "业务请求当前返回 503"
+  },
+  "activeDomainDisabled": {
+    "en": "Active, Domain Disabled",
+    "zh-CN": "活跃，域名已禁用"
+  },
+  "viewDomains": { "en": "View Domains", "zh-CN": "查看 Domains" },
+  "viewSourceOrder": { "en": "Source Order", "zh-CN": "来源 Order" },
+  "manage": { "en": "Manage", "zh-CN": "管理" },
+  "renew": { "en": "Renew", "zh-CN": "续期" },
+  "autoRenewOn": { "en": "On", "zh-CN": "开" },
+  "autoRenewOff": { "en": "Off", "zh-CN": "关" },
+  "status": {
+    "all": { "en": "All statuses", "zh-CN": "全部状态" }
+  },
+  "filters": {
+    "search": {
+      "label": { "en": "Search Domain / SAN", "zh-CN": "搜索 Domain / SAN" }
+    },
+    "status": {
+      "label": { "en": "Status", "zh-CN": "状态" }
+    },
+    "autoRenewOnly": { "en": "Auto-renewal only", "zh-CN": "仅自动续期" }
+  },
+  "columns": {
+    "primaryDomain": { "en": "Primary Domain", "zh-CN": "主域名" },
+    "san": { "en": "SAN", "zh-CN": "SAN" },
+    "provider": { "en": "Provider", "zh-CN": "提供商" },
+    "expires": { "en": "Expires", "zh-CN": "到期" },
+    "autoRenew": { "en": "Auto Renew", "zh-CN": "自动续期" },
+    "status": { "en": "Status", "zh-CN": "状态" },
+    "actions": { "en": "Actions", "zh-CN": "操作" }
+  },
+  "empty": {
+    "title": { "en": "No certificates yet", "zh-CN": "尚无证书" },
+    "description": {
+      "en": "Enable HTTPS from a Domain's SSL page to create a certificate order.",
+      "zh-CN": "进入 Domain 的 SSL 页面启用 HTTPS 并创建证书订单。"
+    }
+  },
+  "noMatches": {
+    "title": { "en": "No matching certificates", "zh-CN": "没有匹配的证书" },
+    "description": {
+      "en": "Adjust the search term, status, or auto-renewal filter.",
+      "zh-CN": "调整搜索词、状态或自动续期筛选。"
+    }
+  }
+}

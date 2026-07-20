@@ -32,11 +32,11 @@ export function getServiceLifecycle(now = Date.now()) {
 }
 
 export function assertAcceptingWrites() {
-  if (phase !== "running") throw new BusinessError("服务正在停止，请稍后重试", 503, "SERVER_SHUTTING_DOWN");
+  if (phase !== "running") throw new BusinessError("errors:serverShuttingDown", 503, "SERVER_SHUTTING_DOWN");
 }
 
 export function assertAcceptingLogStreams() {
-  if (phase !== "running") throw new BusinessError("服务正在停止，不能建立新的日志流", 503, "SERVER_SHUTTING_DOWN");
+  if (phase !== "running") throw new BusinessError("errors:serverShuttingDown", 503, "SERVER_SHUTTING_DOWN");
 }
 
 export function registerLogStream(listener: ShutdownListener) {

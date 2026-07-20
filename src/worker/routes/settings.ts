@@ -42,11 +42,15 @@ function publicCloudflareCredential(credential: typeof cloudflareCredentials.$in
 async function verifyCloudflareToken(token: string) {
   try {
     const result = await getCloudflareDnsProvider().verify(token);
-    if (result.status !== "active") throw new BusinessError(`Cloudflare API Token 状态为 ${result.status}`, 422, "CLOUDFLARE_TOKEN_INACTIVE");
+    if (result.status !== "active") {
+      throw new BusinessError("errors:cloudflareTokenInactive", 422, "CLOUDFLARE_TOKEN_INACTIVE", {
+        params: { status: result.status },
+      });
+    }
     return result;
   } catch (error) {
     if (error instanceof BusinessError) throw error;
-    throw new BusinessError("Cloudflare API Token 验证失败，请检查权限和网络", 422, "CLOUDFLARE_TOKEN_VERIFY_FAILED", {
+    throw new BusinessError("errors:cloudflareTokenVerifyFailed", 422, "CLOUDFLARE_TOKEN_VERIFY_FAILED", {
       cause: error instanceof Error ? error : undefined,
     });
   }
@@ -61,7 +65,7 @@ settingsRoute.post("/settings/cloudflare", jsonValidator(cloudflareCredentialInp
   const db = c.get("db");
   const input = c.req.valid("json");
   const existing = await db.query.cloudflareCredentials.findFirst({ where: eq(cloudflareCredentials.name, input.name) });
-  if (existing) throw new BusinessError("凭据名称已存在", 409, "CLOUDFLARE_CREDENTIAL_NAME_EXISTS");
+  if (existing) throw new BusinessError("errors:cloudflareCredentialNameExists", 409, "CLOUDFLARE_CREDENTIAL_NAME_EXISTS");
   const verification = await verifyCloudflareToken(input.token);
   const id = randomUUID();
   const encrypted = await encryptCloudflareToken(id, input.token);
@@ -88,7 +92,7 @@ settingsRoute.post("/settings/cloudflare", jsonValidator(cloudflareCredentialInp
 settingsRoute.put("/settings/cloudflare/:id/token", jsonValidator(replaceCloudflareCredentialTokenSchema), async (c) => {
   const db = c.get("db");
   const credential = await db.query.cloudflareCredentials.findFirst({ where: eq(cloudflareCredentials.id, c.req.param("id")) });
-  if (!credential) throw new BusinessError("Cloudflare 凭据不存在", 404, "CLOUDFLARE_CREDENTIAL_NOT_FOUND");
+  if (!credential) throw new BusinessError("errors:cloudflareCredentialNotFound", 404, "CLOUDFLARE_CREDENTIAL_NOT_FOUND");
   const token = c.req.valid("json").token;
   const verification = await verifyCloudflareToken(token);
   const encrypted = await encryptCloudflareToken(credential.id, token);
@@ -116,7 +120,7 @@ settingsRoute.delete("/settings/cloudflare/:id", async (c) => {
   const activeOrder = await db.query.acmeOrders.findFirst({
     where: and(eq(acmeOrders.cloudflareCredentialId, credential.id), inArray(acmeOrders.cleanupStatus, ["pending", "failed"])),
   });
-  if (activeOrder) throw new BusinessError("该凭据仍有订单等待使用或清理", 409, "CLOUDFLARE_CREDENTIAL_IN_USE");
+  if (activeOrder) throw new BusinessError("errors:cloudflareCredentialInUse", 409, "CLOUDFLARE_CREDENTIAL_IN_USE");
   await db.delete(cloudflareCredentials).where(eq(cloudflareCredentials.id, credential.id));
   return c.body(null, 204);
 });
@@ -147,12 +151,13 @@ settingsRoute.patch("/settings/nginx", jsonValidator(runtimeStorageSettingsSchem
   const current = await getRuntimeStorageSnapshot(db, { maxBytes: input.revisionMaxBytes });
   if (input.revisionMaxBytes < current.minimumAllowedBytes) {
     throw new BusinessError(
-      `容量上限不能低于受保护 revision 的实际用量（${current.minimumAllowedBytes} bytes）`,
+      "errors:revisionStorageLimitTooLow",
       409,
       "REVISION_STORAGE_LIMIT_TOO_LOW",
       {
         context: { minimumAllowedBytes: current.minimumAllowedBytes },
         details: { minimumBytes: current.minimumAllowedBytes },
+        params: { bytes: current.minimumAllowedBytes },
       },
     );
   }
@@ -188,20 +193,20 @@ settingsRoute.post("/settings/security/password", jsonValidator(changePasswordSc
   const db = c.get("db");
   const auth = c.get("user")!;
   const user = await db.query.users.findFirst({ where: eq(users.id, auth.id) });
-  if (!user) throw new BusinessError("管理员不存在", 401, "UNAUTHENTICATED");
+  if (!user) throw new BusinessError("errors:unauthenticated", 401, "UNAUTHENTICATED");
 
   const clientIp = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const attemptId = await assertPasswordChangeAllowed(db, user.id, clientIp);
   const input = c.req.valid("json");
   if (!await verifyPassword(input.currentPassword, user.passwordHash)) {
     await recordPasswordChangeFailure(db, attemptId);
-    throw new BusinessError("当前密码错误", 401, "INVALID_CREDENTIALS");
+    throw new BusinessError("errors:invalidCredentials", 401, "INVALID_CREDENTIALS");
   }
 
   const currentSession = await db.query.sessions.findFirst({
     where: eq(sessions.idHash, c.get("sessionIdHash")!),
   });
-  if (!currentSession) throw new BusinessError("会话已过期", 401, "UNAUTHENTICATED");
+  if (!currentSession) throw new BusinessError("errors:unauthenticated", 401, "UNAUTHENTICATED");
 
   const passwordHash = await hashPassword(input.newPassword);
   const token = createSessionToken();
@@ -239,12 +244,12 @@ settingsRoute.get("/settings/logs", async (c) => {
 });
 
 settingsRoute.put("/settings/logs", jsonValidator(nginxLogSettingsInputSchema), async (c) => {
-  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("日志设置只允许在 Nginx runtime 中修改", 409, "DEPLOYMENT_UNAVAILABLE");
+  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("errors:deploymentUnavailable", 409, "DEPLOYMENT_UNAVAILABLE");
   const db = c.get("db");
   const pending = await db.query.deployments.findFirst({
     where: and(eq(deployments.type, "apply_log_settings"), inArray(deployments.status, ["queued", "running"])),
   });
-  if (pending) throw new BusinessError("已有日志设置任务正在执行", 409, "DEPLOYMENT_ALREADY_RUNNING");
+  if (pending) throw new BusinessError("errors:deploymentAlreadyRunning", 409, "DEPLOYMENT_ALREADY_RUNNING");
   const deployment = await createLogSettingsDeployment(db, {
     settings: c.req.valid("json"),
     requestedBy: c.get("user")!.id,
@@ -263,7 +268,7 @@ settingsRoute.get("/settings/diagnostics", async (c) => {
     try {
       managerTls = { status: "valid", certificate: validateManagerTlsEnvironment() };
     } catch {
-      managerTls = { status: "invalid", error: "挂载的管理端证书无效，请检查有效期、SAN 和私钥" };
+      managerTls = { status: "invalid", error: "Mounted manager certificate is invalid; check expiry, SAN, and private key" };
     }
   }
   return c.json({
@@ -276,13 +281,13 @@ settingsRoute.get("/settings/diagnostics", async (c) => {
 
 settingsRoute.get("/settings/diagnostics/runtime-config", async (c) => {
   const domainId = c.req.query("domainId")?.trim();
-  if (!domainId) throw new BusinessError("请选择 Domain", 400, "DOMAIN_ID_REQUIRED");
+  if (!domainId) throw new BusinessError("errors:domainIdRequired", 400, "DOMAIN_ID_REQUIRED");
   return c.json(await getActiveRuntimeConfig(c.get("db"), domainId));
 });
 
 settingsRoute.post("/settings/diagnostics/nginx-test", async (c) => {
   if (process.env.RUNTIME_MODE !== "nginx-manager") {
-    throw new BusinessError("Nginx 配置测试只允许在 Nginx runtime 中执行", 409, "DEPLOYMENT_UNAVAILABLE");
+    throw new BusinessError("errors:deploymentUnavailable", 409, "DEPLOYMENT_UNAVAILABLE");
   }
   const deployment = await createDiagnosticNginxTestDeployment(c.get("db"), {
     requestedBy: c.get("user")!.id,
@@ -294,7 +299,7 @@ settingsRoute.post("/settings/diagnostics/nginx-test", async (c) => {
 
 settingsRoute.post("/settings/diagnostics/reload-manager-tls", async (c) => {
   if (process.env.RUNTIME_MODE !== "nginx-manager") {
-    throw new BusinessError("管理端 TLS 只允许在 Nginx runtime 中重新加载", 409, "DEPLOYMENT_UNAVAILABLE");
+    throw new BusinessError("errors:deploymentUnavailable", 409, "DEPLOYMENT_UNAVAILABLE");
   }
   const db = c.get("db");
   const pending = await db.query.deployments.findFirst({
@@ -315,15 +320,15 @@ settingsRoute.post("/settings/diagnostics/rebuild-active", jsonValidator(rebuild
   const existing = await db.query.deployments.findFirst({ where: eq(deployments.idempotencyKey, idempotencyKey) });
   if (existing) return c.json({ deploymentId: existing.id, statusUrl: `/api/deployments/${existing.id}` }, 202);
   if (getRuntimeState().status !== "degraded") {
-    throw new BusinessError("运行配置当前不需要重建", 409, "RUNTIME_NOT_DEGRADED");
+    throw new BusinessError("errors:runtimeNotDegraded", 409, "RUNTIME_NOT_DEGRADED");
   }
   const user = await db.query.users.findFirst({ where: eq(users.id, c.get("user")!.id) });
-  if (!user) throw new BusinessError("管理员不存在", 401, "UNAUTHENTICATED");
+  if (!user) throw new BusinessError("errors:unauthenticated", 401, "UNAUTHENTICATED");
   const clientIp = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const attemptId = await assertRebuildAllowed(db, user.id, clientIp);
   if (!await verifyPassword(c.req.valid("json").currentPassword, user.passwordHash)) {
     await recordRebuildFailure(db, attemptId);
-    throw new BusinessError("当前密码错误", 401, "INVALID_CREDENTIALS");
+    throw new BusinessError("errors:invalidCredentials", 401, "INVALID_CREDENTIALS");
   }
   await clearRebuildFailures(db, attemptId);
   const deployment = await createRebuildActiveDeployment(db, {

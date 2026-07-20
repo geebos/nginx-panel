@@ -28,5 +28,5 @@ export function interruptRunningDeployments(db: AppEnv["Variables"]["db"], messa
 }
 
 export function recoverInterruptedDeployments(db: AppEnv["Variables"]["db"]) {
-  interruptRunningDeployments(db, "Worker 重启前任务未完成");
+  interruptRunningDeployments(db, "Job incomplete before worker restart");
 }

@@ -12,6 +12,7 @@ import { settingsRoute } from "./routes/settings";
 import { acmeChallengeRoute, certificatesRoute } from "./routes/certificates";
 import { requireAuth, requireSameOrigin } from "./middleware/auth";
 import { createErrorHandler } from "./middleware/error";
+import { i18nRoute } from "./routes/i18n";
 import { createDbMiddleware } from "./middleware/db";
 import { assertAcceptingWrites } from "./lib/service-lifecycle";
 
@@ -30,6 +31,7 @@ export function createApp() {
   app.route("/", internalHealthRoute);
 
   app.route("/api", healthRoute);
+  app.route("/api", i18nRoute);
   app.route("/api", authRoute);
   app.use("/api/dashboard", requireAuth);
   app.use("/api/dashboard", requireSameOrigin);

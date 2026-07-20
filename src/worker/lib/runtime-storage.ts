@@ -251,7 +251,7 @@ export async function assertRuntimeStorageCapacity(db: Db, options: RuntimeStora
     ? await cleanupRuntimeStorage(db, options)
     : await getRuntimeStorageSnapshot(db, options);
   if (storage.locked) {
-    throw new BusinessError("Runtime artifacts 容量不足，请提高上限或等待清理", 409, "REVISION_STORAGE_LIMIT_EXCEEDED", {
+    throw new BusinessError("errors:revisionStorageLimitExceeded", 409, "REVISION_STORAGE_LIMIT_EXCEEDED", {
       context: {
         usedBytes: storage.usedBytes,
         projectedBytes: storage.projectedBytes,

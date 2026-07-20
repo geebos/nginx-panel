@@ -12,6 +12,7 @@ export function createErrorHandler<E extends Env>(): ErrorHandler<E> {
           message: err.message,
           fieldErrors: err.info.fieldErrors,
           retryAfterSeconds: err.info.retryAfterSeconds,
+          params: err.info.params,
           ...err.info.details,
         },
         err.status as ContentfulStatusCode,
@@ -20,7 +21,7 @@ export function createErrorHandler<E extends Env>(): ErrorHandler<E> {
 
     console.error(`[InternalError] msg="${err.message}"`, err);
     return c.json(
-      { code: "INTERNAL_ERROR", message: "服务器错误" },
+      { code: "INTERNAL_ERROR", message: "errors:internalError" },
       500,
     );
   };

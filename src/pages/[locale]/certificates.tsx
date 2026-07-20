@@ -3,7 +3,7 @@ import { Page } from "@/components/layout/page";
 import { CertificateList } from "@/components/pages/certificates/certificate-list";
 
 export const getStaticPaths = getLocaleStaticPaths;
-export const getStaticProps = makeStaticProps(["common"]);
+export const getStaticProps = makeStaticProps(["common", "certificates"]);
 
 export default function CertificatesPage() {
   return (

@@ -21,7 +21,7 @@ function scheduleAcmeRun(db: AppEnv["Variables"]["db"]) {
 }
 
 function safeError(error: unknown) {
-  const message = error instanceof Error ? error.message : "ACME 订单处理失败";
+  const message = error instanceof Error ? error.message : "ACME order processing failed";
   return message.replace(/https?:\/\/\S+/g, "[ACME URL]").slice(0, 500);
 }
 
@@ -32,7 +32,7 @@ type SchedulerDependencies = {
 };
 
 function orderInput(order: typeof acmeOrders.$inferSelect): ExistingAcmeOrderInput {
-  if (!order.orderUrl) throw new Error("ACME Order URL 缺失");
+  if (!order.orderUrl) throw new Error("ACME order URL is missing");
   return {
     orderId: order.id,
     orderUrl: order.orderUrl,
@@ -75,12 +75,12 @@ async function endOrder(db: AppEnv["Variables"]["db"], orderId: string, status: 
 }
 
 async function presentCloudflareChallenges(db: AppEnv["Variables"]["db"], order: typeof acmeOrders.$inferSelect, provider: CloudflareDnsProvider) {
-  if (!order.cloudflareCredentialId) throw new Error("Cloudflare 凭据关联缺失");
+  if (!order.cloudflareCredentialId) throw new Error("Cloudflare credential association is missing");
   const credential = await db.query.cloudflareCredentials.findFirst({ where: and(eq(cloudflareCredentials.id, order.cloudflareCredentialId), eq(cloudflareCredentials.status, "active")) });
-  if (!credential) throw new Error("Cloudflare 凭据无效或已停用");
+  if (!credential) throw new Error("Cloudflare credential is invalid or disabled");
   const token = await decryptCloudflareToken(credential.id, credential);
   const challenges = await db.select().from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id));
-  if (!challenges.length || challenges.some((challenge) => !challenge.dnsRecordName || !challenge.dnsRecordValue)) throw new Error("DNS Challenge 数据不完整");
+  if (!challenges.length || challenges.some((challenge) => !challenge.dnsRecordName || !challenge.dnsRecordValue)) throw new Error("DNS challenge data is incomplete");
   for (const challenge of challenges) {
     if (challenge.cloudflareZoneId && challenge.cloudflareRecordId) continue;
     const record = await provider.present(token, {
@@ -119,10 +119,10 @@ export async function prepareAcmeOrder(db: AppEnv["Variables"]["db"], orderId: s
       validationMethod: order.validationMethod as "http-01" | "dns-01",
       allowAccountCreate: !order.replacesCertificateId,
     });
-    if (prepared.challenges.length !== identifiers.length) throw new Error("ACME 返回的 Challenge 数量不完整");
+    if (prepared.challenges.length !== identifiers.length) throw new Error("ACME did not return a complete set of challenges");
     const expected = [...identifiers].sort();
     const actual = prepared.challenges.map((item) => item.hostname).sort();
-    if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error("ACME 返回的授权域名与订单不一致");
+    if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error("ACME authorization hostnames do not match the order");
     const now = Date.now();
     db.transaction((tx) => {
       const current = tx.select().from(acmeOrders).where(eq(acmeOrders.id, order.id)).get();
@@ -188,7 +188,7 @@ async function resolveAutoRenew(db: AppEnv["Variables"]["db"], order: typeof acm
 async function waitForDns(db: AppEnv["Variables"]["db"], order: typeof acmeOrders.$inferSelect, adapter: AcmeAdapter, dns: DnsPropagationChecker) {
   const challenges = await db.select().from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id));
   if (challenges.length === 0 || challenges.some((challenge) => !challenge.dnsRecordName || !challenge.dnsRecordValue)) {
-    throw new Error("DNS Challenge 数据不完整");
+    throw new Error("DNS challenge data is incomplete");
   }
   const results = await Promise.all(challenges.map((challenge) => dns.check(challenge.dnsRecordName!, challenge.dnsRecordValue!)));
   const now = Date.now();
@@ -222,7 +222,7 @@ async function acknowledgeHttp(db: AppEnv["Variables"]["db"], order: typeof acme
 async function pollValidation(db: AppEnv["Variables"]["db"], order: typeof acmeOrders.$inferSelect, adapter: AcmeAdapter) {
   const progress = await adapter.pollOrder(orderInput(order));
   if (progress.orderStatus === "invalid" || progress.authorizations.some((authorization) => terminalAuthorization(authorization.status))) {
-    await endOrder(db, order.id, "failed", "ACME_VALIDATION_FAILED", "ACME 未能验证一个或多个域名");
+    await endOrder(db, order.id, "failed", "ACME_VALIDATION_FAILED", "ACME failed to validate one or more domains");
     return;
   }
   const now = Date.now();
@@ -302,7 +302,7 @@ async function progressAcmeOrder(db: AppEnv["Variables"]["db"], orderId: string,
     const challenges = await db.select({ expiresAt: acmeChallenges.expiresAt }).from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id));
     const expiresAt = Math.min(...[order.expiresAt, ...challenges.map((challenge) => challenge.expiresAt)].filter((value): value is number => value !== null));
     if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
-      await endOrder(db, order.id, "expired", "ACME_ORDER_EXPIRED", "ACME Order 或 Challenge 已过期");
+      await endOrder(db, order.id, "expired", "ACME_ORDER_EXPIRED", "ACME order or challenge has expired");
       return;
     }
     if (order.status === "waiting_dns") await waitForDns(db, order, adapter, dependencies.dns);

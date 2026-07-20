@@ -1,5 +1,8 @@
 import type { CreateDomainInput, DomainConfig, LogStreamRecord, LogType, NginxLogSettings, NginxLogSettingsInput, RouteConfig, SessionPolicy } from "@/shared/schemas";
+import { type AppLocale, type Messages } from "@/i18n/settings";
 import { consumeNdjsonStream } from "@/lib/log-stream";
+
+export type ErrorParams = Record<string, string | number>;
 
 export type ApiErrorPayload = {
   code: string;
@@ -7,12 +10,15 @@ export type ApiErrorPayload = {
   fieldErrors?: Record<string, string[]>;
   retryAfterSeconds?: number;
   minimumBytes?: number;
+  /** i18next interpolation map for message key. */
+  params?: ErrorParams;
 };
 
 export class ApiError extends Error {
   status: number;
   code: string;
   fieldErrors?: Record<string, string[]>;
+  params?: ErrorParams;
 
   constructor(payload: ApiErrorPayload, status: number) {
     super(payload.message);
@@ -20,12 +26,13 @@ export class ApiError extends Error {
     this.status = status;
     this.code = payload.code;
     this.fieldErrors = payload.fieldErrors;
+    this.params = payload.params;
   }
 }
 
 export async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   if (!input.startsWith("/api/")) {
-    throw new Error("业务 API 必须使用同源 /api 路径");
+    throw new Error("errors:apiPathInvalid");
   }
   return globalThis.fetch(input, { credentials: "same-origin", ...init });
 }
@@ -43,13 +50,26 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const fallback: ApiErrorPayload = {
       code: "REQUEST_FAILED",
-      message: `请求失败 (${response.status})`,
+      message: "errors:requestFailed",
     };
     const payload = (await response.json().catch(() => fallback)) as ApiErrorPayload;
     throw new ApiError(payload, response.status);
   }
 
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
+// 按 locale 拉取后端错误 message 翻译（errors 命名空间）。失败时返回空对象，
+// 让前端 t() 回退到 key 字符串本身（不阻塞渲染）。
+export async function getErrorMessages(locale: AppLocale): Promise<Messages> {
+  try {
+    const result = await requestJson<{ errors: Messages }>(
+      `/api/i18n/messages/${locale}`,
+    );
+    return result.errors ?? {};
+  } catch {
+    return {};
+  }
 }
 
 export type DomainListItem = {

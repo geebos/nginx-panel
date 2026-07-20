@@ -20,10 +20,10 @@ const logQueryFields = {
 
 function rejectMixedTypes(value: { types?: string; type?: "access" | "error" | "all" }, ctx: z.core.$RefinementCtx) {
   if (value.types && value.type) {
-    ctx.addIssue({ code: "custom", path: ["types"], message: "types 与旧 type 参数不能同时使用" });
+    ctx.addIssue({ code: "custom", path: ["types"], message: "errors:validation.logTypesMixed" });
   }
   if (value.types && !logTypesSchema.safeParse(normalizeTypes(value.types)).success) {
-    ctx.addIssue({ code: "custom", path: ["types"], message: "types 只能包含 access,error 且至少选择一项" });
+    ctx.addIssue({ code: "custom", path: ["types"], message: "errors:validation.logTypesInvalid" });
   }
 }
 
@@ -78,7 +78,7 @@ export const logColumnPreferenceSchema = z.object({
     visible: z.boolean(),
   })).min(1).refine(
     (items) => new Set(items.map((item) => item.id)).size === items.length,
-    "日志列不能重复",
+    "errors:validation.logColumnDuplicate",
   ),
 });
 

@@ -26,18 +26,18 @@ export async function rethrowWriteConflict(
     || isUniqueConstraint(error, "domain_aliases.hostname")
   ) {
     await assertHostnamesAvailable(db, hostnames, excludedDomainId);
-    throw new BusinessError("域名已被其他配置使用", 409, "DOMAIN_CONFLICT");
+    throw new BusinessError("errors:domainConflict", 409, "DOMAIN_CONFLICT");
   }
   if (isUniqueConstraint(error, "config_versions.domain_id", "config_versions.version_number")) {
     throw new BusinessError(
-      "草稿已被其他会话修改，请刷新后重试",
+      "errors:versionConflict",
       409,
       "VERSION_CONFLICT",
     );
   }
   if (isAnyUniqueConstraint(error)) {
     throw new BusinessError(
-      "资源已存在或与现有数据冲突",
+      "errors:resourceConflict",
       409,
       "RESOURCE_CONFLICT",
       { cause: error },

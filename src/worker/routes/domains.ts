@@ -137,7 +137,7 @@ domainsRoute.post("/domains", jsonValidator(createDomainSchema), async (c) => {
         domainId,
         config,
         snapshot: createSnapshot(config),
-        changeSummary: "创建域名草稿",
+        changeSummary: "Create domain draft",
         createdBy: c.get("user")?.id,
         now,
       });
@@ -159,7 +159,7 @@ domainsRoute.get("/domains/:id", async (c) => {
   const domain = await db.query.domains.findFirst({
     where: and(eq(domains.id, c.req.param("id")), isNull(domains.deletedAt)),
   });
-  if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
 
   const [aliases, draftVersion, activeVersion, recentDeployments] = await Promise.all([
     db.select().from(domainAliases).where(eq(domainAliases.domainId, domain.id)),
@@ -216,18 +216,18 @@ domainsRoute.patch("/domains/:id", jsonValidator(updateDomainSchema), async (c) 
         .where(eq(domains.id, domainId))
         .get();
       if (!currentDomain || currentDomain.deletedAt !== null) {
-        throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+        throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
       }
       if (currentDomain.draftVersionId !== expectedVersionId) {
-        throw new BusinessError("草稿已被其他会话修改，请刷新后重试", 409, "VERSION_CONFLICT");
+        throw new BusinessError("errors:versionConflict", 409, "VERSION_CONFLICT");
       }
       const current = tx.select({ id: configVersions.id, snapshotChecksum: configVersions.snapshotChecksum })
         .from(configVersions)
         .where(and(eq(configVersions.id, expectedVersionId), eq(configVersions.domainId, domainId)))
         .get();
-      if (!current) throw new BusinessError("配置版本不存在", 404, "VERSION_NOT_FOUND");
+      if (!current) throw new BusinessError("errors:versionNotFound", 404, "VERSION_NOT_FOUND");
       if (current.snapshotChecksum !== expectedSnapshotChecksum) {
-        throw new BusinessError("草稿已被其他会话修改，请刷新后重试", 409, "VERSION_CONFLICT");
+        throw new BusinessError("errors:versionConflict", 409, "VERSION_CONFLICT");
       }
       if (current.snapshotChecksum === snapshot.checksum) {
         return { changed: false as const, versionId: current.id, snapshotChecksum: current.snapshotChecksum };
@@ -238,7 +238,7 @@ domainsRoute.patch("/domains/:id", jsonValidator(updateDomainSchema), async (c) 
         domainId,
         config,
         snapshot,
-        changeSummary: "更新域名配置",
+        changeSummary: "Update domain config",
         createdBy: c.get("user")!.id,
         now,
         expectedChecksum: expectedSnapshotChecksum,
@@ -261,10 +261,10 @@ domainsRoute.delete("/domains/:id", async (c) => {
   const domain = await db.query.domains.findFirst({
     where: and(eq(domains.id, c.req.param("id")), isNull(domains.deletedAt)),
   });
-  if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   if (domain.activeVersionId) {
     throw new BusinessError(
-      "已发布域名必须通过移除部署删除",
+      "errors:deploymentRequired",
       409,
       "DEPLOYMENT_REQUIRED",
     );

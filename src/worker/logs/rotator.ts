@@ -88,12 +88,12 @@ async function waitForCurrentFiles(files: RotatedFile[]) {
     if (ready.every(Boolean)) return;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error("Nginx reopen 后未创建新的日志文件");
+  throw new Error("Nginx reopen did not create new log files");
 }
 
 async function rotationCandidates(db: AppEnv["Variables"]["db"], input: RotationInput) {
   const logRoot = process.env.NGINX_LOG_DIR;
-  if (!logRoot) throw new Error("NGINX_LOG_DIR 未设置");
+  if (!logRoot) throw new Error("NGINX_LOG_DIR is not set");
   const settings = await getActiveLogSettings(db);
   const domainRows = await db.select().from(domains).where(and(
     isNull(domains.deletedAt),
@@ -123,26 +123,26 @@ async function runLogRotation(db: AppEnv["Variables"]["db"], deploymentId: strin
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
     await updateStep(db, deploymentId, 0, "running");
     const candidates = await rotationCandidates(db, input);
-    await updateStep(db, deploymentId, 0, "succeeded", `发现 ${candidates.paths.length} 个待轮动文件`);
+    await updateStep(db, deploymentId, 0, "succeeded", `Found ${candidates.paths.length} log files to rotate`);
     await updateStep(db, deploymentId, 1, "running");
     for (const path of candidates.paths) rotated.push(await rotateFile(path, candidates.retainedFiles));
-    await updateStep(db, deploymentId, 1, "succeeded", `已轮动 ${rotated.length} 个文件`);
+    await updateStep(db, deploymentId, 1, "succeeded", `Rotated ${rotated.length} files`);
     if (rotated.length) {
       await updateStep(db, deploymentId, 2, "running");
       const runtimeRoot = process.env.NGINX_RUNTIME_ROOT || "/data/nginx";
       await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-p", `${runtimeRoot}/active/`, "-s", "reopen", "-c", "nginx.conf"], { timeout: 10_000 });
       await waitForCurrentFiles(rotated);
       await Promise.all(rotated.map((file) => rm(file.backupPath, { force: true })));
-      await updateStep(db, deploymentId, 2, "succeeded", "Nginx 已 reopen 并创建当前日志文件");
+      await updateStep(db, deploymentId, 2, "succeeded", "Nginx reopened and created current log files");
     } else {
-      await updateStep(db, deploymentId, 2, "skipped", "没有需要轮动的日志文件");
+      await updateStep(db, deploymentId, 2, "skipped", "No log files need rotation");
     }
     await updateStep(db, deploymentId, 3, "running");
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
-    await updateStep(db, deploymentId, 3, "succeeded", "日志轮动已完成");
+    await updateStep(db, deploymentId, 3, "succeeded", "Log rotation completed");
   } catch (error) {
     await Promise.all(rotated.map(restoreFile));
-    const message = error instanceof Error ? error.message : "日志轮动失败";
+    const message = error instanceof Error ? error.message : "Log rotation failed";
     const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), isNull(deploymentSteps.finishedAt)) });
     if (pending) await updateStep(db, deploymentId, pending.sequence, "failed", message);
     await db.update(deployments).set({ status: "failed", errorCode: "LOG_ROTATION_FAILED", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));

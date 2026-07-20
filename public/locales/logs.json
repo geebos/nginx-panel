@@ -1,0 +1,107 @@
+{
+  "title": { "en": "Logs", "zh-CN": "日志" },
+  "description": {
+    "en": "View Nginx access/error history and live logs by domain.",
+    "zh-CN": "按 Domain 查看 Nginx access/error 历史与实时日志。"
+  },
+  "logSettings": { "en": "Log Settings", "zh-CN": "日志设置" },
+  "viewer": {
+    "connection": {
+      "off": { "en": "History mode", "zh-CN": "历史模式" },
+      "connecting": { "en": "Connecting", "zh-CN": "连接中" },
+      "live": { "en": "Live", "zh-CN": "实时" },
+      "paused": { "en": "Paused", "zh-CN": "已暂停" }
+    },
+    "columns": {
+      "timestamp": { "en": "Time", "zh-CN": "Time" },
+      "log_type": { "en": "Type", "zh-CN": "Type" },
+      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "method": { "en": "Method", "zh-CN": "Method" },
+      "status": { "en": "Status", "zh-CN": "Status" },
+      "path": { "en": "Path", "zh-CN": "Path" },
+      "request_uri": { "en": "Request URI", "zh-CN": "Request URI" },
+      "request_time": { "en": "Duration", "zh-CN": "Duration" },
+      "client_ip": { "en": "Client IP", "zh-CN": "Client IP" },
+      "upstream_addr": { "en": "Upstream", "zh-CN": "Upstream" },
+      "upstream_status": { "en": "Upstream Status", "zh-CN": "Upstream Status" },
+      "upstream_time": { "en": "Upstream Time", "zh-CN": "Upstream Time" },
+      "level": { "en": "Level", "zh-CN": "Level" },
+      "message": { "en": "Message", "zh-CN": "Message" },
+      "raw": { "en": "Raw", "zh-CN": "Raw" }
+    },
+    "filters": {
+      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "domainPlaceholder": { "en": "Select domain", "zh-CN": "选择 Domain" },
+      "logType": { "en": "Log type", "zh-CN": "日志类型" },
+      "access": { "en": "Access", "zh-CN": "Access" },
+      "error": { "en": "Error", "zh-CN": "Error" },
+      "method": { "en": "Method", "zh-CN": "Method" },
+      "status": { "en": "Status", "zh-CN": "Status" },
+      "all": { "en": "All", "zh-CN": "全部" },
+      "keyword": { "en": "Path / Keyword", "zh-CN": "Path / 关键字" },
+      "keywordPlaceholder": { "en": "Plain text match", "zh-CN": "普通文本匹配" }
+    },
+    "actions": {
+      "applyFilters": { "en": "Apply filters", "zh-CN": "应用筛选" },
+      "query": { "en": "Query", "zh-CN": "查询" },
+      "liveLogs": { "en": "Live logs", "zh-CN": "实时日志" },
+      "pause": { "en": "Pause", "zh-CN": "暂停" },
+      "resume": { "en": "Resume", "zh-CN": "继续" },
+      "resumeWithCount": { "en": "Resume ({{count}})", "zh-CN": "继续 ({{count}})" },
+      "clear": { "en": "Clear", "zh-CN": "清屏" },
+      "columns": { "en": "Columns", "zh-CN": "字段显示" },
+      "resetColumns": { "en": "Reset to default order", "zh-CN": "恢复默认顺序" }
+    },
+    "columnPrefs": {
+      "title": { "en": "Log fields", "zh-CN": "日志字段" },
+      "description": {
+        "en": "Choose visible fields and reorder them. Stored only in this browser.",
+        "zh-CN": "选择显示字段并调整顺序。仅保存在当前浏览器。"
+      },
+      "show": { "en": "Show {{column}}", "zh-CN": "显示 {{column}}" },
+      "hide": { "en": "Hide {{column}}", "zh-CN": "隐藏 {{column}}" },
+      "moveUp": { "en": "Move {{column}} up", "zh-CN": "上移 {{column}}" },
+      "moveDown": { "en": "Move {{column}} down", "zh-CN": "下移 {{column}}" }
+    },
+    "status": {
+      "liveFiltersUpdated": { "en": "Live filters updated", "zh-CN": "实时条件已更新" },
+      "rowCount": { "en": "{{count}} rows", "zh-CN": "{{count}} 行" },
+      "dropped": { "en": "Dropped {{count}}", "zh-CN": "已丢弃 {{count}}" }
+    },
+    "errors": {
+      "statusCode": {
+        "en": "Status Code must be an integer between 100 and 599",
+        "zh-CN": "Status Code 必须是 100-599 的整数"
+      },
+      "fileUnavailable": {
+        "en": "Log file is temporarily unavailable. Disable live mode and try again.",
+        "zh-CN": "日志文件暂时不可用，请关闭实时模式后重试。"
+      },
+      "cursorExpired": {
+        "en": "Live log cursor has expired.",
+        "zh-CN": "实时日志游标已失效。"
+      },
+      "keepOneColumn": {
+        "en": "Keep at least one visible column",
+        "zh-CN": "至少保留一个可见字段"
+      },
+      "keepOneType": {
+        "en": "Select at least one log type",
+        "zh-CN": "至少选择一种日志类型"
+      },
+      "readFailed": { "en": "Log read error", "zh-CN": "日志读取异常" }
+    },
+    "empty": {
+      "unpublishedTitle": { "en": "Domain not published yet", "zh-CN": "Domain 尚未发布" },
+      "unpublishedDescription": {
+        "en": "Runtime logs are created after the domain is published.",
+        "zh-CN": "发布 Domain 后才会创建运行日志。"
+      },
+      "noLogsTitle": { "en": "No logs yet", "zh-CN": "还没有日志" },
+      "noLogsDescription": {
+        "en": "Send requests to this domain, then query here or enable live logs.",
+        "zh-CN": "向该 Domain 发起请求后，在这里查询或开启实时日志。"
+      }
+    }
+  }
+}

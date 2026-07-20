@@ -1,5 +1,6 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
+import { useTranslation } from "react-i18next";
 import {
   Sidebar as SidebarPrimitive,
   SidebarContent,
@@ -32,12 +33,12 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: GaugeIcon },
-  { title: "Domains", href: "/domains", icon: Globe2Icon },
-  { title: "Certificates", href: "/certificates", icon: ShieldCheckIcon },
-  { title: "Deployments", href: "/deployments", icon: RocketIcon },
-  { title: "Logs", href: "/logs", icon: FileTextIcon },
-  { title: "Settings", href: "/settings/general", icon: SettingsIcon },
+  { title: "common:nav.dashboard", href: "/dashboard", icon: GaugeIcon },
+  { title: "common:nav.domains", href: "/domains", icon: Globe2Icon },
+  { title: "common:nav.certificates", href: "/certificates", icon: ShieldCheckIcon },
+  { title: "common:nav.deployments", href: "/deployments", icon: RocketIcon },
+  { title: "common:nav.logs", href: "/logs", icon: FileTextIcon },
+  { title: "common:nav.settings", href: "/settings/general", icon: SettingsIcon },
 ];
 
 // `useRouter().pathname` returns the route pattern (e.g. "/[locale]/dashboard"),
@@ -51,6 +52,7 @@ function isActive(pathname: string, href: string) {
 
 function NavButton({ item, active }: { item: NavItem; active: boolean }) {
   const { state } = useSidebar();
+  const { t } = useTranslation(["common"]);
   const collapsed = state === "collapsed";
   const Icon = item.icon;
   return (
@@ -69,17 +71,20 @@ function NavButton({ item, active }: { item: NavItem; active: boolean }) {
       )}
     >
       <Icon className={cn("shrink-0", collapsed ? "size-3.5" : "size-4")} />
-      <span className={cn("truncate", collapsed && "max-w-full")}>{item.title}</span>
+      <span className={cn("truncate", collapsed && "max-w-full")}>{t(item.title)}</span>
     </LocalizedLink>
   );
 }
 
 export function Sidebar() {
   const router = useRouter();
+  const { t } = useTranslation(["common"]);
   const dashboard = useApiQuery(getDashboard);
   const pathname = router.pathname.replace(/^\/\[locale\]/, "");
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const nginxStatus = dashboard.data?.nginx.status
+    ?? (dashboard.error ? t("common:nav.nginxStatus.unavailable") : t("common:nav.nginxStatus.checking"));
   return (
     <SidebarPrimitive collapsible="icon">
       <SidebarHeader
@@ -94,7 +99,7 @@ export function Sidebar() {
             collapsed ? "text-sm" : "text-lg",
           )}
         >
-          Nginx Manager
+          {t("common:nav.brand")}
         </span>
       </SidebarHeader>
       <SidebarContent>
@@ -112,9 +117,7 @@ export function Sidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
         <div className={cn("mb-2 text-muted-foreground", collapsed ? "text-center text-[10px]" : "px-2 text-xs")}>
-          {collapsed
-            ? "N/A"
-            : `Nginx status: ${dashboard.data?.nginx.status ?? (dashboard.error ? "unavailable" : "checking")}`}
+          {collapsed ? "N/A" : `${t("common:nav.nginxStatus.label")}: ${nginxStatus}`}
         </div>
         <SidebarTrigger className="w-full rounded-md py-2 hover:bg-sidebar-accent" />
       </SidebarFooter>
@@ -125,6 +128,7 @@ export function Sidebar() {
 export function Tabbar() {
   const router = useRouter();
   const locale = useLocale();
+  const { t } = useTranslation(["common"]);
   const pathname = router.pathname.replace(/^\/\[locale\]/, "");
   const primaryItems = navItems.filter((item) => ["/dashboard", "/domains", "/logs"].includes(item.href));
   const moreItems = navItems.filter((item) => !primaryItems.includes(item));
@@ -157,7 +161,7 @@ export function Tabbar() {
             )}
           >
             <Icon className="size-5" />
-            <span className="text-[10px] leading-none">{item.title}</span>
+            <span className="text-[10px] leading-none">{t(item.title)}</span>
           </LocalizedLink>
         );
       })}
@@ -171,7 +175,7 @@ export function Tabbar() {
             )}
           >
             <EllipsisIcon className="size-5" />
-            <span className="text-[10px] leading-none">More</span>
+            <span className="text-[10px] leading-none">{t("common:nav.more")}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="top" className="mb-2 min-w-48">
@@ -181,7 +185,7 @@ export function Tabbar() {
               <DropdownMenuItem asChild key={item.href}>
                 <LocalizedLink href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined}>
                   <Icon />
-                  {item.title}
+                  {t(item.title)}
                 </LocalizedLink>
               </DropdownMenuItem>
             );

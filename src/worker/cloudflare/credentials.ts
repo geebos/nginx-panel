@@ -11,7 +11,7 @@ async function credentialKey() {
     master = await readFile(MASTER_KEY_FILE);
   } catch (error) {
     if (process.env.APP_ENV !== "development") {
-      throw new BusinessError("凭据主密钥不可用", 503, "SECRET_MASTER_KEY_UNAVAILABLE", {
+      throw new BusinessError("errors:secretMasterKeyUnavailable", 503, "SECRET_MASTER_KEY_UNAVAILABLE", {
         cause: error instanceof Error ? error : undefined,
       });
     }
@@ -35,7 +35,7 @@ export async function encryptCloudflareToken(credentialId: string, token: string
 function encryptedBuffer(value: unknown) {
   if (Buffer.isBuffer(value)) return value;
   if (value instanceof Uint8Array) return Buffer.from(value);
-  throw new Error("加密凭据格式无效");
+  throw new Error("Encrypted credential format is invalid");
 }
 
 export async function decryptCloudflareToken(credentialId: string, encrypted: { tokenCiphertext: unknown; tokenIv: unknown; tokenAuthTag: unknown }) {
@@ -45,7 +45,7 @@ export async function decryptCloudflareToken(credentialId: string, encrypted: { 
     decipher.setAuthTag(encryptedBuffer(encrypted.tokenAuthTag));
     return Buffer.concat([decipher.update(encryptedBuffer(encrypted.tokenCiphertext)), decipher.final()]).toString("utf8");
   } catch (error) {
-    throw new BusinessError("Cloudflare 凭据无法解密", 503, "CLOUDFLARE_CREDENTIAL_DECRYPT_FAILED", {
+    throw new BusinessError("errors:cloudflareCredentialDecryptFailed", 503, "CLOUDFLARE_CREDENTIAL_DECRYPT_FAILED", {
       cause: error instanceof Error ? error : undefined,
     });
   }

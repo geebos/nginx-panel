@@ -1,0 +1,113 @@
+{
+  "title": { "en": "Dashboard", "zh-CN": "仪表盘" },
+  "description": {
+    "en": "Current view of domains, certificates, and Nginx status.",
+    "zh-CN": "查看域名、证书和 Nginx 的当前状态。"
+  },
+  "refresh": { "en": "Refresh", "zh-CN": "刷新" },
+  "lastRefreshed": {
+    "en": "Last refreshed {{time}}",
+    "zh-CN": "最后刷新 {{time}}"
+  },
+  "loadFailed": {
+    "en": "Failed to load dashboard",
+    "zh-CN": "Dashboard 加载失败"
+  },
+  "degraded": {
+    "title": {
+      "en": "Runtime is in degraded state",
+      "zh-CN": "运行配置处于 degraded 状态"
+    },
+    "description": {
+      "en": "Normal publishes and log rotation are paused. Verify consistency and rebuild safely with SQLite.",
+      "zh-CN": "普通发布与日志轮动已暂停，请检查一致性并按 SQLite 安全重建。"
+    },
+    "openDiagnostics": {
+      "en": "Open Diagnostics",
+      "zh-CN": "打开 Diagnostics"
+    }
+  },
+  "summary": { "en": "Status summary", "zh-CN": "状态摘要" },
+  "metrics": {
+    "domains": {
+      "title": { "en": "Domains", "zh-CN": "域名" },
+      "description": {
+        "en": "{{count}} enabled",
+        "zh-CN": "{{count}} 个已启用"
+      }
+    },
+    "certificates": {
+      "title": { "en": "Certificates", "zh-CN": "证书" },
+      "description": {
+        "en": "{{expiring}} expiring · {{renewing}} renewing",
+        "zh-CN": "{{expiring}} 个即将过期 · {{renewing}} 个续期中"
+      }
+    },
+    "nginx": {
+      "title": { "en": "Nginx", "zh-CN": "Nginx" },
+      "waitingRuntime": {
+        "en": "Awaiting runtime diagnostics",
+        "zh-CN": "等待运行时诊断"
+      }
+    },
+    "lastDeployment": {
+      "title": { "en": "Last deployment", "zh-CN": "最近发布" },
+      "none": { "en": "No deployments yet", "zh-CN": "尚无发布记录" },
+      "noneValue": { "en": "none", "zh-CN": "无" }
+    }
+  },
+  "attention": {
+    "title": { "en": "Needs attention", "zh-CN": "需要处理" },
+    "description": {
+      "en": "Drafts and failed states in one place.",
+      "zh-CN": "草稿和失败状态集中在这里。"
+    },
+    "drafts": { "en": "Unpublished drafts", "zh-CN": "未发布草稿" },
+    "failedDomains": { "en": "Failed domains", "zh-CN": "失败域名" },
+    "certificateIssues": { "en": "Certificate issues", "zh-CN": "证书问题" },
+    "manualDns": {
+      "title": {
+        "en": "Manual DNS renewals pending",
+        "zh-CN": "Manual DNS 续期等待处理"
+      },
+      "description": {
+        "en": "{{count}} renewal orders waiting for TXT records.",
+        "zh-CN": "{{count}} 个续期订单正在等待 TXT 记录。"
+      }
+    }
+  },
+  "recentActivity": {
+    "title": { "en": "Recent activity", "zh-CN": "最近活动" },
+    "description": {
+      "en": "Most recently created deployment tasks.",
+      "zh-CN": "最近创建的部署任务。"
+    },
+    "empty": { "en": "No deployment activity yet", "zh-CN": "尚无部署活动" }
+  },
+  "recentDomains": {
+    "title": { "en": "Recent domains", "zh-CN": "最近域名" },
+    "description": {
+      "en": "Sorted by most recent modification.",
+      "zh-CN": "按最近修改时间排序。"
+    },
+    "viewAll": { "en": "View all", "zh-CN": "查看全部" },
+    "columns": {
+      "domain": { "en": "Domain", "zh-CN": "域名" },
+      "runtimeStatus": { "en": "Runtime status", "zh-CN": "运行状态" },
+      "activeVersion": { "en": "Current version", "zh-CN": "当前版本" },
+      "lastModified": { "en": "Last modified", "zh-CN": "最后修改" }
+    },
+    "notPublished": { "en": "Not published", "zh-CN": "未发布" },
+    "empty": {
+      "title": { "en": "No domains yet", "zh-CN": "还没有域名" },
+      "description": {
+        "en": "Create your first domain to see runtime status and deployment history here.",
+        "zh-CN": "创建第一个域名后，运行状态和发布记录会显示在这里。"
+      },
+      "createFirst": {
+        "en": "Create your first domain",
+        "zh-CN": "创建第一个域名"
+      }
+    }
+  }
+}

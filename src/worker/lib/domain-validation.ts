@@ -9,8 +9,8 @@ function assertManagerHostnameAvailable(hostnames: string[]) {
   if (!configuredUrl) return;
   const managerHostname = configuredUrl.hostname.toLowerCase().replace(/\.$/, "");
   if (hostnames.includes(managerHostname)) {
-    throw new BusinessError("该域名已被管理端保留", 409, "DOMAIN_CONFLICT", {
-      fieldErrors: { "config.primaryHostname": ["该域名已被管理端保留"] },
+    throw new BusinessError("errors:domainConflict", 409, "DOMAIN_CONFLICT", {
+      fieldErrors: { "config.primaryHostname": ["errors:domainConflict"] },
     });
   }
 }
@@ -30,8 +30,9 @@ export async function assertHostnamesAvailable(
     ...aliasMatches,
   ].find((row) => row.domainId !== excludedDomainId);
   if (conflict) {
-    throw new BusinessError(`${conflict.hostname} 已被其他域名使用`, 409, "DOMAIN_CONFLICT", {
-      fieldErrors: { "config.primaryHostname": [`${conflict.hostname} 已被使用`] },
+    throw new BusinessError("errors:domainConflictHost", 409, "DOMAIN_CONFLICT", {
+      params: { hostname: conflict.hostname },
+      fieldErrors: { "config.primaryHostname": ["errors:domainConflictHost"] },
     });
   }
 }
@@ -50,5 +51,5 @@ export async function assertHostnamesMutable(
   const activeOrder = await db.query.acmeOrders.findFirst({
     where: and(eq(acmeOrders.domainId, domainId), notInArray(acmeOrders.status, ["succeeded", "failed", "expired", "cancelled"])),
   });
-  if (activeOrder) throw new BusinessError("请先取消进行中的证书订单，再修改主域名或别名", 409, "DOMAIN_HAS_ACTIVE_ORDER");
+  if (activeOrder) throw new BusinessError("errors:domainHasActiveOrder", 409, "DOMAIN_HAS_ACTIVE_ORDER");
 }

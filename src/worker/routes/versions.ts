@@ -24,13 +24,13 @@ import { createPublishDeployment, createRollbackDeployment, enqueuePublish } fro
 
 async function domainOrThrow(db: AppEnv["Variables"]["db"], id: string) {
   const domain = await db.query.domains.findFirst({ where: and(eq(domains.id, id), isNull(domains.deletedAt)) });
-  if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   return domain;
 }
 
 async function versionOrThrow(db: AppEnv["Variables"]["db"], domainId: string, versionId: string) {
   const version = await db.query.configVersions.findFirst({ where: and(eq(configVersions.id, versionId), eq(configVersions.domainId, domainId)) });
-  if (!version) throw new BusinessError("配置版本不存在", 404, "VERSION_NOT_FOUND");
+  if (!version) throw new BusinessError("errors:versionNotFound", 404, "VERSION_NOT_FOUND");
   return version;
 }
 
@@ -52,7 +52,7 @@ versionsRoute.post("/domains/:id/versions", jsonValidator(createConfigVersionSch
   const domainId = c.req.param("id");
   const expected = c.req.header("If-Match")?.replace(/^W\//, "").replace(/^\"|\"$/g, "");
   if (!expected) {
-    throw new BusinessError("草稿已被其他会话修改，请刷新后重试", 409, "VERSION_CONFLICT");
+    throw new BusinessError("errors:versionConflict", 409, "VERSION_CONFLICT");
   }
   const { config, changeSummary } = c.req.valid("json");
   await assertHostnamesMutable(db, domainId, [config.primaryHostname, ...config.aliases]);
@@ -66,7 +66,7 @@ versionsRoute.post("/domains/:id/versions", jsonValidator(createConfigVersionSch
         .where(eq(domains.id, domainId))
         .get();
       if (!freshDomain || freshDomain.deletedAt !== null) {
-        throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+        throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
       }
       const freshCurrentId = freshDomain?.draftVersionId ?? freshDomain?.activeVersionId;
       const freshCurrent = freshCurrentId
@@ -75,7 +75,7 @@ versionsRoute.post("/domains/:id/versions", jsonValidator(createConfigVersionSch
             .get()
         : undefined;
       if (!freshCurrent || freshCurrent.snapshotChecksum !== expected) {
-        throw new BusinessError("草稿已被其他会话修改，请刷新后重试", 409, "VERSION_CONFLICT");
+        throw new BusinessError("errors:versionConflict", 409, "VERSION_CONFLICT");
       }
       if (snapshot.checksum === freshCurrent.snapshotChecksum) {
         return { changed: false, mode: "unchanged" as const, version: freshCurrent };
@@ -113,7 +113,7 @@ versionsRoute.get("/domains/:id/versions/:versionId/diff", async (c) => {
   await domainOrThrow(db, c.req.param("id"));
   const target = await versionOrThrow(db, c.req.param("id"), c.req.param("versionId"));
   const baseId = c.req.query("base");
-  if (!baseId) throw new BusinessError("缺少 base 版本", 400, "VALIDATION_ERROR");
+  if (!baseId) throw new BusinessError("errors:validationError", 400, "VALIDATION_ERROR");
   const base = await versionOrThrow(db, c.req.param("id"), baseId);
   const baseConfig = configFrom(base);
   const targetConfig = configFrom(target);
@@ -133,7 +133,7 @@ versionsRoute.get("/domains/:id/versions/:versionId/publish-preview", async (c) 
   const domain = await domainOrThrow(db, c.req.param("id"));
   const target = await versionOrThrow(db, domain.id, c.req.param("versionId"));
   if (domain.draftVersionId !== target.id || target.status !== "draft") {
-    throw new BusinessError("发布目标已不是当前草稿", 409, "DRAFT_CHANGED");
+    throw new BusinessError("errors:draftChanged", 409, "DRAFT_CHANGED");
   }
   const targetConfig = configFrom(target);
   const base = domain.activeVersionId
@@ -147,7 +147,7 @@ versionsRoute.get("/domains/:id/versions/:versionId/publish-preview", async (c) 
     targetSnapshotChecksum: target.snapshotChecksum,
     changes: baseConfig
       ? diffDomainConfigs(baseConfig, targetConfig)
-      : [{ section: "domain", kind: "added" as const, label: targetConfig.primaryHostname, after: "首次发布配置" }],
+      : [{ section: "domain", kind: "added" as const, label: targetConfig.primaryHostname, after: "Initial publish" }],
     baseJson: baseConfig ? JSON.stringify(baseConfig, null, 2) : null,
     targetJson: JSON.stringify(targetConfig, null, 2),
     baseNginx: baseConfig ? renderDomainPreview(baseConfig) : null,
@@ -179,7 +179,7 @@ versionsRoute.post("/domains/:id/versions/:versionId/test", jsonValidator(testVe
 });
 
 versionsRoute.post("/domains/:id/versions/:versionId/deploy", jsonValidator(deployVersionInputSchema), async (c) => {
-  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("发布只允许在生产 runtime 中执行", 409, "DEPLOYMENT_UNAVAILABLE");
+  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("errors:deploymentUnavailable", 409, "DEPLOYMENT_UNAVAILABLE");
   const db = c.get("db");
   await domainOrThrow(db, c.req.param("id"));
   await versionOrThrow(db, c.req.param("id"), c.req.param("versionId"));
@@ -190,7 +190,7 @@ versionsRoute.post("/domains/:id/versions/:versionId/deploy", jsonValidator(depl
 });
 
 versionsRoute.post("/domains/:id/versions/:versionId/rollback", async (c) => {
-  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("回滚只允许在生产 runtime 中执行", 409, "DEPLOYMENT_UNAVAILABLE");
+  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("errors:deploymentUnavailable", 409, "DEPLOYMENT_UNAVAILABLE");
   const db = c.get("db");
   const result = await createRollbackDeployment(db, {
     domainId: c.req.param("id"),

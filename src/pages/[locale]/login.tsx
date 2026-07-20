@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoginForm } from "@/components/pages/login/forms/login-form";
 
 export const getStaticPaths = getLocaleStaticPaths;
-export const getStaticProps = makeStaticProps(["common"]);
+export const getStaticProps = makeStaticProps(["common", "login"]);
 
 export default function LoginPage() {
   return (

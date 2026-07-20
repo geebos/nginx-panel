@@ -25,10 +25,10 @@ logsRoute.get("/logs/domains", async (c) => {
 logsRoute.get("/logs/history", queryValidator(logQuerySchema), async (c) => {
   const query = c.req.valid("query");
   const domain = await c.get("db").query.domains.findFirst({ where: and(eq(domains.id, query.domainId), isNull(domains.deletedAt)) });
-  if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   if (!domain.activeVersionId) return c.json({ items: [], truncated: false, unpublished: true });
   const root = process.env.NGINX_LOG_DIR;
-  if (!root) throw new BusinessError("日志目录未配置", 503, "LOG_FILE_UNAVAILABLE");
+  if (!root) throw new BusinessError("errors:logFileUnavailable", 503, "LOG_FILE_UNAVAILABLE");
   const records: LogRecord[] = [];
   let truncated = false;
   for (const type of query.types) {
@@ -37,7 +37,7 @@ logsRoute.get("/logs/history", queryValidator(logQuerySchema), async (c) => {
       result = await readLastLines(controlledLogPath(root, domain.primaryHostname, `${type}.log`), query.limit);
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") continue;
-      throw new BusinessError("日志文件不可读", 503, "LOG_FILE_UNAVAILABLE");
+      throw new BusinessError("errors:logFileUnavailable", 503, "LOG_FILE_UNAVAILABLE");
     }
     truncated ||= result.truncated;
     result.lines.forEach((line, index) => {
@@ -54,10 +54,10 @@ logsRoute.get("/logs/follow", queryValidator(logStreamQuerySchema), async (c) =>
   assertAcceptingLogStreams();
   const query = c.req.valid("query");
   const domain = await c.get("db").query.domains.findFirst({ where: and(eq(domains.id, query.domainId), isNull(domains.deletedAt)) });
-  if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
-  if (!domain.activeVersionId) throw new BusinessError("Domain 尚未发布", 409, "DOMAIN_NOT_PUBLISHED");
+  if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
+  if (!domain.activeVersionId) throw new BusinessError("errors:domainNotPublished", 409, "DOMAIN_NOT_PUBLISHED");
   const root = process.env.NGINX_LOG_DIR;
-  if (!root) throw new BusinessError("日志目录未配置", 503, "LOG_FILE_UNAVAILABLE");
+  if (!root) throw new BusinessError("errors:logFileUnavailable", 503, "LOG_FILE_UNAVAILABLE");
 
   const sources = query.types.map((logType) => ({
     domainId: domain.id,
@@ -157,11 +157,11 @@ logsRoute.get("/logs/follow", queryValidator(logStreamQuerySchema), async (c) =>
 });
 
 logsRoute.post("/logs/rotate", jsonValidator(logRotationRequestSchema), async (c) => {
-  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("日志轮动只允许在 Nginx runtime 中执行", 409, "DEPLOYMENT_UNAVAILABLE");
+  if (process.env.RUNTIME_MODE !== "nginx-manager") throw new BusinessError("errors:deploymentUnavailable", 409, "DEPLOYMENT_UNAVAILABLE");
   const body = c.req.valid("json");
   if (body.domainId) {
     const domain = await c.get("db").query.domains.findFirst({ where: and(eq(domains.id, body.domainId), isNull(domains.deletedAt)) });
-    if (!domain) throw new BusinessError("域名不存在", 404, "DOMAIN_NOT_FOUND");
+    if (!domain) throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   }
   const deployment = await createLogRotationDeployment(c.get("db"), {
     domainId: body.domainId,

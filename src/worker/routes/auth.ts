@@ -49,7 +49,7 @@ authRoute.post("/setup/admin", jsonValidator(setupAdminSchema), async (c) => {
   db.transaction((tx) => {
     const result = tx.select({ count: count() }).from(users).get();
     if ((result?.count ?? 0) > 0) {
-      throw new BusinessError("管理员已经初始化", 409, "SETUP_ALREADY_COMPLETED");
+      throw new BusinessError("errors:setupAlreadyCompleted", 409, "SETUP_ALREADY_COMPLETED");
     }
     tx.insert(users).values(user).run();
   });
@@ -66,7 +66,7 @@ authRoute.post("/auth/login", jsonValidator(loginSchema), async (c) => {
   const valid = await verifyPassword(input.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
   if (!user || !valid) {
     await recordLoginFailure(db, attemptId);
-    throw new BusinessError("用户名或密码错误", 401, "INVALID_CREDENTIALS");
+    throw new BusinessError("errors:invalidCredentials", 401, "INVALID_CREDENTIALS");
   }
 
   await clearLoginFailures(db, attemptId);

@@ -38,13 +38,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { getDashboard } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
-
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+import { useLocale } from "@/hooks/use-locale";
+import { formatErrorMessage } from "@/lib/i18n-error";
+import { useTranslation } from "react-i18next";
 
 function MetricCard({
   title,
@@ -84,38 +80,46 @@ function MetricCard({
 }
 
 export function DashboardContent() {
+  const { t } = useTranslation(["common", "dashboard"]);
+  const locale = useLocale();
   const query = useApiQuery(getDashboard);
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <>
       <PageHeader
-        title="Dashboard"
+        title={t("dashboard:title")}
         description={
           query.data
-            ? `最后刷新 ${dateFormatter.format(query.data.refreshedAt)}`
-            : "查看域名、证书和 Nginx 的当前状态。"
+            ? t("dashboard:lastRefreshed", { time: dateFormatter.format(query.data.refreshedAt) })
+            : t("dashboard:description")
         }
         action={
           <Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}>
             <RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />
-            刷新
+            {t("dashboard:refresh")}
           </Button>
         }
       />
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-4 py-6 md:px-8">
         {query.error ? (
           <Alert variant="destructive">
-            <AlertTitle>Dashboard 加载失败</AlertTitle>
-            <AlertDescription>{query.error.message}</AlertDescription>
+            <AlertTitle>{t("dashboard:loadFailed")}</AlertTitle>
+            <AlertDescription>{formatErrorMessage(t, query.error)}</AlertDescription>
           </Alert>
         ) : null}
 
         {query.data?.runtime.status === "degraded" ? (
           <Alert variant="destructive">
-            <AlertTitle>运行配置处于 degraded 状态</AlertTitle>
+            <AlertTitle>{t("dashboard:degraded.title")}</AlertTitle>
             <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-              普通发布与日志轮动已暂停，请检查一致性并按 SQLite 安全重建。
-              <Button asChild size="sm" variant="outline"><LocalizedLink href="/settings/diagnostics">打开 Diagnostics</LocalizedLink></Button>
+              {t("dashboard:degraded.description")}
+              <Button asChild size="sm" variant="outline"><LocalizedLink href="/settings/diagnostics">{t("dashboard:degraded.openDiagnostics")}</LocalizedLink></Button>
             </AlertDescription>
           </Alert>
         ) : null}
@@ -128,35 +132,35 @@ export function DashboardContent() {
           </div>
         ) : query.data ? (
           <>
-            <section aria-label="状态摘要" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <section aria-label={t("dashboard:summary")} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <MetricCard
-                title="Domains"
-                description={`${query.data.domains.enabled} 个已启用`}
+                title={t("dashboard:metrics.domains.title")}
+                description={t("dashboard:metrics.domains.description", { count: query.data.domains.enabled })}
                 value={String(query.data.domains.total)}
                 icon={Globe2Icon}
                 href="/domains"
               />
               <MetricCard
-                title="Certificates"
-                description={`${query.data.certificates.expiring} 个即将过期 · ${query.data.certificates.renewing} 个续期中`}
+                title={t("dashboard:metrics.certificates.title")}
+                description={t("dashboard:metrics.certificates.description", { expiring: query.data.certificates.expiring, renewing: query.data.certificates.renewing })}
                 value={String(query.data.certificates.active)}
                 icon={ShieldCheckIcon}
                 href="/certificates"
               />
               <MetricCard
-                title="Nginx"
-                description={query.data.nginx.version ?? "等待运行时诊断"}
+                title={t("dashboard:metrics.nginx.title")}
+                description={query.data.nginx.version ?? t("dashboard:metrics.nginx.waitingRuntime")}
                 value={query.data.nginx.status}
                 icon={ServerIcon}
               />
               <MetricCard
-                title="Last deployment"
+                title={t("dashboard:metrics.lastDeployment.title")}
                 description={
                   query.data.lastDeployment
                     ? dateFormatter.format(query.data.lastDeployment.createdAt)
-                    : "尚无发布记录"
+                    : t("dashboard:metrics.lastDeployment.none")
                 }
-                value={query.data.lastDeployment?.status ?? "none"}
+                value={query.data.lastDeployment?.status ?? t("dashboard:metrics.lastDeployment.noneValue")}
                 icon={ActivityIcon}
                 href="/deployments"
               />
@@ -165,32 +169,32 @@ export function DashboardContent() {
             <section className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
               <Card className="border border-border">
                 <CardHeader>
-                  <CardTitle>需要处理</CardTitle>
-                  <CardDescription>草稿和失败状态集中在这里。</CardDescription>
+                  <CardTitle>{t("dashboard:attention.title")}</CardTitle>
+                  <CardDescription>{t("dashboard:attention.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                   <div className="flex items-center justify-between border-b border-border pb-3">
-                    <span className="text-sm text-muted-foreground">未发布草稿</span>
+                    <span className="text-sm text-muted-foreground">{t("dashboard:attention.drafts")}</span>
                     <span className="font-mono text-base">{query.data.domains.drafts}</span>
                   </div>
                   <div className="flex items-center justify-between border-b border-border pb-3">
-                    <span className="text-sm text-muted-foreground">失败域名</span>
+                    <span className="text-sm text-muted-foreground">{t("dashboard:attention.failedDomains")}</span>
                     <span className="font-mono text-base">{query.data.domains.failed}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">证书问题</span>
+                    <span className="text-sm text-muted-foreground">{t("dashboard:attention.certificateIssues")}</span>
                     <span className="font-mono text-base">
                       {query.data.certificates.expiring + query.data.certificates.failed + query.data.certificates.waitingManual}
                     </span>
                   </div>
-                  {query.data.certificates.waitingManual ? <Alert><AlertTitle>Manual DNS 续期等待处理</AlertTitle><AlertDescription className="flex flex-col items-start gap-2"><span>{query.data.certificates.waitingManual} 个续期订单正在等待 TXT 记录。</span>{query.data.renewalAttention.map((item) => <Button asChild size="sm" variant="outline" key={item.orderId}><LocalizedLink href={`/domains/ssl?id=${item.domainId}&orderId=${item.orderId}`}>{item.hostname}</LocalizedLink></Button>)}</AlertDescription></Alert> : null}
+                  {query.data.certificates.waitingManual ? <Alert><AlertTitle>{t("dashboard:attention.manualDns.title")}</AlertTitle><AlertDescription className="flex flex-col items-start gap-2"><span>{t("dashboard:attention.manualDns.description", { count: query.data.certificates.waitingManual })}</span>{query.data.renewalAttention.map((item) => <Button asChild size="sm" variant="outline" key={item.orderId}><LocalizedLink href={`/domains/ssl?id=${item.domainId}&orderId=${item.orderId}`}>{item.hostname}</LocalizedLink></Button>)}</AlertDescription></Alert> : null}
                 </CardContent>
               </Card>
 
               <Card className="border border-border">
                 <CardHeader>
-                  <CardTitle>最近活动</CardTitle>
-                  <CardDescription>最近创建的部署任务。</CardDescription>
+                  <CardTitle>{t("dashboard:recentActivity.title")}</CardTitle>
+                  <CardDescription>{t("dashboard:recentActivity.description")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {query.data.recentDeployments.length ? (
@@ -212,7 +216,7 @@ export function DashboardContent() {
                       ))}
                     </div>
                   ) : (
-                    <p className="py-6 text-center text-sm text-muted-foreground">尚无部署活动</p>
+                    <p className="py-6 text-center text-sm text-muted-foreground">{t("dashboard:recentActivity.empty")}</p>
                   )}
                 </CardContent>
               </Card>
@@ -221,12 +225,12 @@ export function DashboardContent() {
             <section className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">最近域名</h2>
-                  <p className="text-sm text-muted-foreground">按最近修改时间排序。</p>
+                  <h2 className="text-lg font-semibold">{t("dashboard:recentDomains.title")}</h2>
+                  <p className="text-sm text-muted-foreground">{t("dashboard:recentDomains.description")}</p>
                 </div>
                 <Button asChild size="sm" variant="ghost">
                   <LocalizedLink href="/domains">
-                    查看全部
+                    {t("dashboard:recentDomains.viewAll")}
                     <ArrowRightIcon data-icon="inline-end" />
                   </LocalizedLink>
                 </Button>
@@ -236,10 +240,10 @@ export function DashboardContent() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Domain</TableHead>
-                        <TableHead>运行状态</TableHead>
-                        <TableHead>当前版本</TableHead>
-                        <TableHead>最后修改</TableHead>
+                        <TableHead>{t("dashboard:recentDomains.columns.domain")}</TableHead>
+                        <TableHead>{t("dashboard:recentDomains.columns.runtimeStatus")}</TableHead>
+                        <TableHead>{t("dashboard:recentDomains.columns.activeVersion")}</TableHead>
+                        <TableHead>{t("dashboard:recentDomains.columns.lastModified")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -254,7 +258,7 @@ export function DashboardContent() {
                             <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {domain.activeVersionId ? domain.activeVersionId.slice(0, 8) : "Not published"}
+                            {domain.activeVersionId ? domain.activeVersionId.slice(0, 8) : t("dashboard:recentDomains.notPublished")}
                           </TableCell>
                           <TableCell>{dateFormatter.format(domain.updatedAt)}</TableCell>
                         </TableRow>
@@ -268,12 +272,12 @@ export function DashboardContent() {
                     <EmptyMedia variant="icon">
                       <Globe2Icon />
                     </EmptyMedia>
-                    <EmptyTitle>还没有域名</EmptyTitle>
-                    <EmptyDescription>创建第一个域名后，运行状态和发布记录会显示在这里。</EmptyDescription>
+                    <EmptyTitle>{t("dashboard:recentDomains.empty.title")}</EmptyTitle>
+                    <EmptyDescription>{t("dashboard:recentDomains.empty.description")}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
                     <Button asChild>
-                      <LocalizedLink href="/domains/create">创建第一个域名</LocalizedLink>
+                      <LocalizedLink href="/domains/create">{t("dashboard:recentDomains.empty.createFirst")}</LocalizedLink>
                     </Button>
                   </EmptyContent>
                 </Empty>

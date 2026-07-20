@@ -38,7 +38,7 @@ async function evaluateHealth(db: AppEnv["Variables"]["db"], dependencies: Healt
         setRuntimeState(runtime);
       }
     } catch {
-      runtime = { status: "degraded", checkedAt: now(), activeRevision: runtime.activeRevision, issues: [{ code: "HEALTH_RUNTIME_CHECK_FAILED", message: "Active revision 健康检查失败" }] };
+      runtime = { status: "degraded", checkedAt: now(), activeRevision: runtime.activeRevision, issues: [{ code: "HEALTH_RUNTIME_CHECK_FAILED", message: "Active revision health check failed" }] };
       setRuntimeState(runtime);
     }
   }

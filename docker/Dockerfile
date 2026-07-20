@@ -46,18 +46,19 @@ COPY --from=worker-build /app/dist/worker.mjs ./worker/serve.mjs
 COPY package.json ./package.json
 COPY drizzle ./drizzle
 COPY docker/nginx/nginx.conf.template /etc/nginx/templates/nginx-manager.conf.template
-COPY docker/scripts/start-production.mjs /usr/local/bin/start-nginx-manager.mjs
+COPY docker/scripts/start.mjs /usr/local/bin/start-nginx-manager.mjs
 COPY docker/scripts/runtime-root.mjs /usr/local/bin/runtime-root.mjs
 
-RUN mkdir -p /data/acme /data/certs /data/db /data/logs /data/nginx /run/nginx \
+RUN mkdir -p /data/acme /data/certs /data/db /data/logs /data/nginx /data/secrets /run/nginx \
     && chown -R nginx-manager:nginx-manager /data /opt/nginx-manager /run/nginx
 
 ENV APP_ENV=production \
     DB_ENGINE=sqlite \
     DB_SQLITE_DIR=/data/db \
-    MANAGER_TLS_CERT_FILE=/run/secrets/manager_tls_cert \
-    MANAGER_TLS_KEY_FILE=/run/secrets/manager_tls_key \
+    MANAGER_TLS_CERT_FILE=/run/secrets/manager.crt \
+    MANAGER_TLS_KEY_FILE=/run/secrets/manager.key \
     NGINX_LOG_DIR=/data/logs \
+    NGINX_MANAGER_MASTER_KEY_FILE=/run/secrets/nginx_manager_master_key \
     PORT=8787 \
     RUNTIME_MODE=nginx-manager
 

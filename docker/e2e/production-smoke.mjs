@@ -263,7 +263,7 @@ function cleanup() {
 async function main() {
   try {
     step("building the pinned production image");
-    docker(["build", "--file", "docker/Dockerfile.production", "--tag", image, "."], { stdio: "inherit" });
+    docker(["build", "--file", "docker/Dockerfile", "--tag", image, "."], { stdio: "inherit" });
     createVolumes();
     populateSecrets(volumes.secrets, true);
     populateSecrets(volumes["invalid-secrets"], false);

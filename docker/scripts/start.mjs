@@ -1,13 +1,28 @@
+import { randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { accessSync, constants, lstatSync, mkdirSync, readFileSync, readlinkSync, renameSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  accessSync,
+  constants,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  renameSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { refreshActiveRoot } from "./runtime-root.mjs";
+
+const DEFAULT_CERT_FILE = "/run/secrets/manager.crt";
+const DEFAULT_KEY_FILE = "/run/secrets/manager.key";
+const DEFAULT_MASTER_KEY_FILE = "/run/secrets/nginx_manager_master_key";
+const GENERATED_SECRETS_DIR = "/data/secrets";
 
 const requiredEnvironment = [
   "MANAGER_HOST",
   "MANAGER_URL",
-  "MANAGER_TLS_CERT_FILE",
-  "MANAGER_TLS_KEY_FILE",
   "NGINX_LOG_DIR",
 ];
 
@@ -25,18 +40,121 @@ if (
   throw new Error("MANAGER_URL must be HTTPS and match the normalized MANAGER_HOST");
 }
 
-const secretFiles = [
-  process.env.MANAGER_TLS_CERT_FILE,
-  process.env.MANAGER_TLS_KEY_FILE,
-  "/run/secrets/nginx_manager_master_key",
-];
-for (const file of secretFiles) {
-  accessSync(file, constants.R_OK);
-  if (statSync(file).size === 0) throw new Error(`Required secret is empty: ${file}`);
+function isReadableNonEmpty(file) {
+  try {
+    accessSync(file, constants.R_OK);
+    return statSync(file).size > 0;
+  } catch {
+    return false;
+  }
 }
-if (statSync("/run/secrets/nginx_manager_master_key").size !== 32) {
-  throw new Error("nginx_manager_master_key must contain exactly 32 bytes");
+
+function ensureGeneratedSecretsDir() {
+  mkdirSync(GENERATED_SECRETS_DIR, { recursive: true, mode: 0o700 });
 }
+
+function generateTlsMaterial() {
+  ensureGeneratedSecretsDir();
+  const certFile = join(GENERATED_SECRETS_DIR, "manager.crt");
+  const keyFile = join(GENERATED_SECRETS_DIR, "manager.key");
+  if (isReadableNonEmpty(certFile) && isReadableNonEmpty(keyFile)) {
+    return { certFile, keyFile };
+  }
+
+  const result = spawnSync(
+    "openssl",
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-days",
+      "825",
+      "-subj",
+      `/CN=${managerHost}`,
+      "-addext",
+      `subjectAltName=DNS:${managerHost}`,
+      "-keyout",
+      keyFile,
+      "-out",
+      certFile,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `Failed to generate manager TLS material\n${result.stdout ?? ""}${result.stderr ?? ""}`,
+    );
+  }
+  return { certFile, keyFile };
+}
+
+function resolveTlsFiles() {
+  const certFile = process.env.MANAGER_TLS_CERT_FILE || DEFAULT_CERT_FILE;
+  const keyFile = process.env.MANAGER_TLS_KEY_FILE || DEFAULT_KEY_FILE;
+  const certReady = isReadableNonEmpty(certFile);
+  const keyReady = isReadableNonEmpty(keyFile);
+
+  if (certReady && keyReady) {
+    return { certFile, keyFile };
+  }
+  if (certReady !== keyReady) {
+    throw new Error(
+      `Manager TLS secrets are incomplete: cert=${certReady ? "present" : "missing"}, key=${keyReady ? "present" : "missing"}`,
+    );
+  }
+
+  const usingDefaults =
+    certFile === DEFAULT_CERT_FILE && keyFile === DEFAULT_KEY_FILE;
+  if (!usingDefaults) {
+    throw new Error(`Required secret is missing: ${certReady ? keyFile : certFile}`);
+  }
+
+  console.warn(
+    `[supervisor] Manager TLS secrets not provided; generating a self-signed certificate for ${managerHost}`,
+  );
+  const generated = generateTlsMaterial();
+  process.env.MANAGER_TLS_CERT_FILE = generated.certFile;
+  process.env.MANAGER_TLS_KEY_FILE = generated.keyFile;
+  return generated;
+}
+
+function resolveMasterKeyFile() {
+  const masterKeyFile =
+    process.env.NGINX_MANAGER_MASTER_KEY_FILE || DEFAULT_MASTER_KEY_FILE;
+
+  if (isReadableNonEmpty(masterKeyFile)) {
+    if (statSync(masterKeyFile).size !== 32) {
+      throw new Error("nginx_manager_master_key must contain exactly 32 bytes");
+    }
+    return masterKeyFile;
+  }
+
+  if (masterKeyFile !== DEFAULT_MASTER_KEY_FILE) {
+    throw new Error(`Required secret is missing: ${masterKeyFile}`);
+  }
+
+  ensureGeneratedSecretsDir();
+  const generatedFile = join(GENERATED_SECRETS_DIR, "nginx_manager_master_key");
+  if (isReadableNonEmpty(generatedFile)) {
+    if (statSync(generatedFile).size !== 32) {
+      throw new Error("generated nginx_manager_master_key must contain exactly 32 bytes");
+    }
+    process.env.NGINX_MANAGER_MASTER_KEY_FILE = generatedFile;
+    return generatedFile;
+  }
+
+  console.warn(
+    "[supervisor] Master key not provided; generating a persistent 32-byte key under /data/secrets",
+  );
+  writeFileSync(generatedFile, randomBytes(32), { mode: 0o400 });
+  process.env.NGINX_MANAGER_MASTER_KEY_FILE = generatedFile;
+  return generatedFile;
+}
+
+const tlsFiles = resolveTlsFiles();
+resolveMasterKeyFile();
 
 const logDirectory = process.env.NGINX_LOG_DIR;
 if (!isAbsolute(logDirectory) || logDirectory === "/") {
@@ -54,7 +172,11 @@ const nginxTemplate = readFileSync(
 );
 const nginxConfig = nginxTemplate.replace(
   /\$\{(MANAGER_HOST|MANAGER_TLS_CERT_FILE|MANAGER_TLS_KEY_FILE)\}/g,
-  (_, name) => process.env[name],
+  (_, name) => {
+    if (name === "MANAGER_TLS_CERT_FILE") return tlsFiles.certFile;
+    if (name === "MANAGER_TLS_KEY_FILE") return tlsFiles.keyFile;
+    return process.env[name];
+  },
 );
 const runtimeRoot = "/data/nginx";
 const revisionsRoot = join(runtimeRoot, "revisions");

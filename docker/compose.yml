@@ -1,36 +1,56 @@
-name: nginx-panel-development
+name: nginx-panel
 
 services:
   manager:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.development
+      dockerfile: docker/Dockerfile
     environment:
-      APP_ENV: development
+      APP_ENV: production
       DB_ENGINE: sqlite
-      DB_SQLITE_DIR: /app/.sqlite
-      NEXT_TELEMETRY_DISABLED: "1"
+      DB_SQLITE_DIR: /data/db
+      MANAGER_HOST: ${MANAGER_HOST:?MANAGER_HOST must be set}
+      MANAGER_TLS_CERT_FILE: /run/secrets/manager.crt
+      MANAGER_TLS_KEY_FILE: /run/secrets/manager.key
+      MANAGER_URL: ${MANAGER_URL:?MANAGER_URL must be set}
       NGINX_LOG_DIR: /data/logs
-      NGINX_RUNTIME_ROOT: /data/nginx
-      NGINX_TEMPLATE_FILE: /etc/nginx/nginx.development.conf
+      NGINX_MANAGER_MASTER_KEY_FILE: /run/secrets/nginx_manager_master_key
+      PORT: "8787"
       RUNTIME_MODE: nginx-manager
-    init: true
     ports:
-      - "3000:8080"
-      - "8443:8443"
+      - "80:8080"
+      - "443:8443"
+    read_only: true
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.0
+    stop_grace_period: 30s
+    tmpfs:
+      - /run/nginx:uid=10001,gid=10001,mode=0750
+      - /tmp:uid=10001,gid=10001,mode=1770
     volumes:
-      - node_modules:/app/node_modules
-      - sqlite_data:/app/.sqlite
+      - type: bind
+        source: ./secrets
+        target: /run/secrets
+        read_only: true
+        bind:
+          create_host_path: true
+      - sqlite_data:/data/db
       - nginx_data:/data/nginx
       - certificate_data:/data/certs
       - acme_data:/data/acme
       - nginx_logs:/data/logs
+      - generated_secrets:/data/secrets
 
 volumes:
-  node_modules:
   sqlite_data:
   nginx_data:
   certificate_data:
   acme_data:
   nginx_logs:
+  generated_secrets:

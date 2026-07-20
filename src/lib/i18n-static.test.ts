@@ -25,11 +25,31 @@ test("getI18nProps loads current and fallback messages", async () => {
   assert.deepEqual(props?.messages, {
     common: {
       language: { label: "语言", en: "English", "zh-CN": "简体中文" },
+      settings: {
+        general: {
+          title: "通用",
+          description: "管理显示语言等通用偏好。",
+          language: {
+            title: "语言",
+            description: "选择面板的显示语言。",
+          },
+        },
+      },
     },
   });
   assert.deepEqual(props?.fallbackMessages, {
     common: {
       language: { label: "Language", en: "English", "zh-CN": "简体中文" },
+      settings: {
+        general: {
+          title: "General",
+          description: "Manage general preferences such as display language.",
+          language: {
+            title: "Language",
+            description: "Choose the display language for this panel.",
+          },
+        },
+      },
     },
   });
 });

@@ -1,5 +1,5 @@
 import * as React from "react";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
 import { RefreshCwIcon, SearchIcon, ShieldCheckIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getCertificates, renewCertificate, type CertificateSummary } from "@/lib/api";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 
 const DAY = 24 * 60 * 60 * 1000;
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" });
@@ -40,6 +42,7 @@ function CertificateStatus({ certificate, now }: { certificate: CertificateSumma
 
 export function CertificateList() {
   const router = useRouter();
+  const locale = useLocale();
   const query = useApiQuery(React.useCallback(() => getCertificates(), []));
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState("all");
@@ -67,7 +70,7 @@ export function CertificateList() {
     try {
       const result = await renewCertificate(certificate.domainId);
       toast.success("续期订单已创建");
-      await router.push(`/domains/ssl?id=${certificate.domainId}&orderId=${result.order.id}`);
+      await router.push(localizePath(`/domains/ssl?id=${certificate.domainId}&orderId=${result.order.id}`, locale));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "续期订单创建失败");
       setRenewingId(undefined);
@@ -96,14 +99,14 @@ export function CertificateList() {
         <label className="flex h-10 items-center gap-3 rounded-md border border-border px-3 text-sm"><Switch checked={autoRenewOnly} onCheckedChange={setAutoRenewOnly} />仅自动续期</label>
       </div>
 
-      {!query.loading && !items.length ? <Empty className="border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><ShieldCheckIcon /></EmptyMedia><EmptyTitle>尚无证书</EmptyTitle><EmptyDescription>进入 Domain 的 SSL 页面启用 HTTPS 并创建证书订单。</EmptyDescription></EmptyHeader><Button asChild><Link href="/domains">查看 Domains</Link></Button></Empty> : null}
+      {!query.loading && !items.length ? <Empty className="border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><ShieldCheckIcon /></EmptyMedia><EmptyTitle>尚无证书</EmptyTitle><EmptyDescription>进入 Domain 的 SSL 页面启用 HTTPS 并创建证书订单。</EmptyDescription></EmptyHeader><Button asChild><LocalizedLink href="/domains">查看 Domains</LocalizedLink></Button></Empty> : null}
       {!query.loading && items.length && !filtered.length ? <Empty className="border border-dashed"><EmptyHeader><EmptyTitle>没有匹配的证书</EmptyTitle><EmptyDescription>调整搜索词、状态或自动续期筛选。</EmptyDescription></EmptyHeader></Empty> : null}
 
       {filtered.length ? <>
         <div className="hidden overflow-hidden rounded-md border border-border md:block">
-          <Table><TableHeader><TableRow><TableHead>Primary Domain</TableHead><TableHead>SAN</TableHead><TableHead>Provider</TableHead><TableHead>Expires</TableHead><TableHead>Auto Renew</TableHead><TableHead>Status</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader><TableBody>{filtered.map((certificate) => <TableRow key={certificate.id}><TableCell><Link className="font-medium hover:underline" href={`/domains/ssl?id=${certificate.domainId}`}>{certificate.primaryHostname}</Link>{!certificate.domainEnabled ? <p className="mt-1 text-xs text-muted-foreground">业务请求当前返回 503</p> : null}</TableCell><TableCell className="max-w-72 truncate text-sm text-muted-foreground">{certificate.sans.join(", ")}</TableCell><TableCell>{certificate.provider}</TableCell><TableCell>{certificate.notAfter ? dateFormatter.format(certificate.notAfter) : "未知"}</TableCell><TableCell>{certificate.autoRenew ? "On" : "Off"}</TableCell><TableCell><CertificateStatus certificate={certificate} now={now} /></TableCell><TableCell><div className="flex justify-end gap-2"><Button size="sm" variant="outline" asChild><Link href={`/domains/ssl?id=${certificate.domainId}&orderId=${certificate.acmeOrderId}`}>来源 Order</Link></Button><Button size="sm" variant="outline" asChild><Link href={`/domains/ssl?id=${certificate.domainId}`}>管理</Link></Button>{certificate.status === "active" ? <Button size="sm" disabled={Boolean(renewingId)} onClick={() => void renew(certificate)}>{renewingId === certificate.id ? <RefreshCwIcon className="animate-spin" /> : null}续期</Button> : null}</div></TableCell></TableRow>)}</TableBody></Table>
+          <Table><TableHeader><TableRow><TableHead>Primary Domain</TableHead><TableHead>SAN</TableHead><TableHead>Provider</TableHead><TableHead>Expires</TableHead><TableHead>Auto Renew</TableHead><TableHead>Status</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader><TableBody>{filtered.map((certificate) => <TableRow key={certificate.id}><TableCell><LocalizedLink className="font-medium hover:underline" href={`/domains/ssl?id=${certificate.domainId}`}>{certificate.primaryHostname}</LocalizedLink>{!certificate.domainEnabled ? <p className="mt-1 text-xs text-muted-foreground">业务请求当前返回 503</p> : null}</TableCell><TableCell className="max-w-72 truncate text-sm text-muted-foreground">{certificate.sans.join(", ")}</TableCell><TableCell>{certificate.provider}</TableCell><TableCell>{certificate.notAfter ? dateFormatter.format(certificate.notAfter) : "未知"}</TableCell><TableCell>{certificate.autoRenew ? "On" : "Off"}</TableCell><TableCell><CertificateStatus certificate={certificate} now={now} /></TableCell><TableCell><div className="flex justify-end gap-2"><Button size="sm" variant="outline" asChild><LocalizedLink href={`/domains/ssl?id=${certificate.domainId}&orderId=${certificate.acmeOrderId}`}>来源 Order</LocalizedLink></Button><Button size="sm" variant="outline" asChild><LocalizedLink href={`/domains/ssl?id=${certificate.domainId}`}>管理</LocalizedLink></Button>{certificate.status === "active" ? <Button size="sm" disabled={Boolean(renewingId)} onClick={() => void renew(certificate)}>{renewingId === certificate.id ? <RefreshCwIcon className="animate-spin" /> : null}续期</Button> : null}</div></TableCell></TableRow>)}</TableBody></Table>
         </div>
-        <div className="grid gap-3 md:hidden">{filtered.map((certificate) => <Card className="border border-border shadow-none" key={certificate.id}><CardHeader><div className="flex items-start justify-between gap-3"><div className="min-w-0"><CardTitle className="truncate text-base">{certificate.primaryHostname}</CardTitle><p className="mt-1 truncate text-xs text-muted-foreground">{certificate.sans.join(", ")}</p></div><CertificateStatus certificate={certificate} now={now} /></div></CardHeader><CardContent className="flex flex-col gap-4"><dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">Expires</dt><dd className="mt-1">{certificate.notAfter ? dateFormatter.format(certificate.notAfter) : "未知"}</dd></div><div><dt className="text-xs text-muted-foreground">Auto Renew</dt><dd className="mt-1">{certificate.autoRenew ? "On" : "Off"}</dd></div></dl><div className="grid grid-cols-2 gap-2"><Button variant="outline" asChild><Link href={`/domains/ssl?id=${certificate.domainId}&orderId=${certificate.acmeOrderId}`}>来源 Order</Link></Button><Button asChild><Link href={`/domains/ssl?id=${certificate.domainId}`}>管理</Link></Button></div></CardContent></Card>)}</div>
+        <div className="grid gap-3 md:hidden">{filtered.map((certificate) => <Card className="border border-border shadow-none" key={certificate.id}><CardHeader><div className="flex items-start justify-between gap-3"><div className="min-w-0"><CardTitle className="truncate text-base">{certificate.primaryHostname}</CardTitle><p className="mt-1 truncate text-xs text-muted-foreground">{certificate.sans.join(", ")}</p></div><CertificateStatus certificate={certificate} now={now} /></div></CardHeader><CardContent className="flex flex-col gap-4"><dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">Expires</dt><dd className="mt-1">{certificate.notAfter ? dateFormatter.format(certificate.notAfter) : "未知"}</dd></div><div><dt className="text-xs text-muted-foreground">Auto Renew</dt><dd className="mt-1">{certificate.autoRenew ? "On" : "Off"}</dd></div></dl><div className="grid grid-cols-2 gap-2"><Button variant="outline" asChild><LocalizedLink href={`/domains/ssl?id=${certificate.domainId}&orderId=${certificate.acmeOrderId}`}>来源 Order</LocalizedLink></Button><Button asChild><LocalizedLink href={`/domains/ssl?id=${certificate.domainId}`}>管理</LocalizedLink></Button></div></CardContent></Card>)}</div>
       </> : null}
     </div>
   </>;

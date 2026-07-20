@@ -26,6 +26,8 @@ import { getCurrentUser, getSetupStatus, login, setupAdmin } from "@/lib/api";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { passwordSchema, usernameSchema } from "@/shared/schemas";
 import { useApiQuery } from "@/hooks/use-api-query";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 
 const formSchema = z.object({
   username: usernameSchema,
@@ -38,6 +40,7 @@ type LoginFormValues = z.infer<typeof formSchema>;
 
 export function LoginForm() {
   const router = useRouter();
+  const locale = useLocale();
   const setupQuery = useApiQuery(getSetupStatus);
   const [showPassword, setShowPassword] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -50,9 +53,9 @@ export function LoginForm() {
   React.useEffect(() => {
     if (!router.isReady) return;
     void getCurrentUser()
-      .then(() => router.replace("/dashboard"))
+      .then(() => router.replace(localizePath("/dashboard", locale)))
       .catch(() => undefined);
-  }, [router]);
+  }, [router, locale]);
 
   const submit = form.handleSubmit(async (values) => {
     setServerError(null);
@@ -74,7 +77,7 @@ export function LoginForm() {
       } else {
         await login({ username: values.username, password: values.password, remember: values.remember });
       }
-      await router.replace(safeRedirectPath(router.query.redirect));
+      await router.replace(localizePath(safeRedirectPath(router.query.redirect), locale));
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "登录失败");
     }

@@ -1,5 +1,7 @@
 import * as React from "react";
 import { useRouter } from "next/router";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 import { CheckCircle2Icon, CircleAlertIcon, MinusIcon, PlusIcon, RocketIcon, TestTube2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -76,6 +78,7 @@ export function PublishDomainDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const locale = useLocale();
   const [step, setStep] = React.useState<PublishStep>("diff");
   const [preview, setPreview] = React.useState<PublishPreviewResponse>();
   const [deployment, setDeployment] = React.useState<DeploymentDetailResponse>();
@@ -167,7 +170,7 @@ export function PublishDomainDialog({
     try {
       const result = await deployDomainVersion(domainId, preview.targetVersion.id, preview.targetSnapshotChecksum, deployment.deployment.id, idempotencyKey.current);
       changeOpen(false);
-      await router.push(`/deployments/detail?id=${result.deploymentId}`);
+      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === "PREFLIGHT_STALE") {
         setStep("diff");

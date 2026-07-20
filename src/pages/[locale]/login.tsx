@@ -1,6 +1,10 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import { Page } from "@/components/layout/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoginForm } from "@/components/pages/login/forms/login-form";
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function LoginPage() {
   return (

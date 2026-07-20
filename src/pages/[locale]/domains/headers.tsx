@@ -1,3 +1,4 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
@@ -98,6 +99,9 @@ function DomainHeaders({ domainId }: { domainId: string }) {
     </>
   );
 }
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DomainHeadersPage() {
   const router = useRouter();

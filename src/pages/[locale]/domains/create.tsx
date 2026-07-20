@@ -1,7 +1,11 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { DomainForm } from "@/components/pages/domains/forms/domain-form";
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function CreateDomainPage() {
   return (

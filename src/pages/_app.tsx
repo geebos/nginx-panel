@@ -81,7 +81,7 @@ export default function App({ Component, pageProps }: AppProps<I18nPageProps>) {
           />
         </Head>
         <TooltipProvider>
-          {router.pathname === "/login" ? page : <AuthGate><Layout>{page}</Layout></AuthGate>}
+          {router.pathname === "/[locale]/login" ? page : <AuthGate><Layout>{page}</Layout></AuthGate>}
         </TooltipProvider>
       </div>
     </I18nextProvider>

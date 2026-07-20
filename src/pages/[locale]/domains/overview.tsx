@@ -1,3 +1,4 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
 import { useRouter } from "next/router";
 import {
@@ -224,6 +225,9 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
 function CheckCreatedIcon() {
   return <CheckCircle2Icon aria-hidden="true" />;
 }
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DomainOverviewPage() {
   const router = useRouter();

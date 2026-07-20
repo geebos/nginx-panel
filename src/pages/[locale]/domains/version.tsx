@@ -1,5 +1,6 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
 import { ArrowLeftIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
@@ -36,7 +37,7 @@ function DomainVersion({ domainId, versionId, base }: { domainId: string; versio
         title={diff ? `Compare v${diff.base.versionNumber} and v${diff.target.versionNumber}` : detail ? `Version v${detail.version.versionNumber}` : "Version"}
         description={diff ? `${diff.changes.length} 项语义变化` : detail ? `${detail.version.changeSummary}。${detail.version.status === "draft" ? "当前草稿可继续编辑" : "该已发布快照不可变"}` : "读取配置快照。"}
         breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: domainQuery.data?.domain.primaryHostname ?? "Domain", href: `/domains/overview?id=${domainId}` }, { label: "History", href: `/domains/history?id=${domainId}` }, { label: isDiff ? "Diff" : "Version" }]}
-        action={<Button size="sm" variant="outline" asChild><Link href={`/domains/history?id=${domainId}`}><ArrowLeftIcon data-icon="inline-start" />返回历史</Link></Button>}
+        action={<Button size="sm" variant="outline" asChild><LocalizedLink href={`/domains/history?id=${domainId}`}><ArrowLeftIcon data-icon="inline-start" />返回历史</LocalizedLink></Button>}
       />
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>版本加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
@@ -52,6 +53,9 @@ function DomainVersion({ domainId, versionId, base }: { domainId: string; versio
     </>
   );
 }
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DomainVersionPage() {
   const router = useRouter();

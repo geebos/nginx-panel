@@ -1,5 +1,9 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import { Page } from "@/components/layout/page";
 import { CertificateList } from "@/components/pages/certificates/certificate-list";
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function CertificatesPage() {
   return (

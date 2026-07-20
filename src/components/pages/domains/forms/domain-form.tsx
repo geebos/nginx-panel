@@ -21,6 +21,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { hostnameSchema, type DomainConfig, type RouteConfig } from "@/shared/schemas";
 import { ApiError, createDomain } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 
 const formSchema = z
   .object({
@@ -101,6 +103,7 @@ function buildRoute(values: DomainFormValues): RouteConfig[] {
 
 export function DomainForm() {
   const router = useRouter();
+  const locale = useLocale();
   const [step, setStep] = React.useState(0);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const form = useForm<DomainFormValues>({
@@ -160,7 +163,7 @@ export function DomainForm() {
 
     try {
       const result = await createDomain({ config });
-      await router.push(`/domains/overview?id=${result.domainId}&created=1`);
+      await router.push(localizePath(`/domains/overview?id=${result.domainId}&created=1`, locale));
     } catch (error) {
       if (error instanceof ApiError) {
         setServerError(error.message);
@@ -405,7 +408,7 @@ export function DomainForm() {
         <Button
           type="button"
           variant="ghost"
-          onClick={() => (step === 0 ? void router.push("/domains") : setStep((current) => current - 1))}
+          onClick={() => (step === 0 ? void router.push(localizePath("/domains", locale)) : setStep((current) => current - 1))}
         >
           <ArrowLeftIcon data-icon="inline-start" />
           {step === 0 ? "取消" : "上一步"}

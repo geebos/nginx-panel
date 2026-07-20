@@ -1,3 +1,4 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
 import { useRouter } from "next/router";
 import { Page } from "@/components/layout/page";
@@ -15,6 +16,9 @@ function DomainLogs({ domainId }: { domainId: string }) {
   const hostname = query.data?.domain.primaryHostname ?? "Domain";
   return <><PageHeader title={query.data ? <span className="flex flex-wrap items-center gap-3">{query.data.domain.primaryHostname}<StatusBadge status={query.data.domain.enabled ? query.data.domain.runtimeStatus : "disabled"} /></span> : "Logs"} description="查看当前 Domain 最近的结构化 access/error 日志。" breadcrumbs={[{ label: "Domains", href: "/domains" }, { label: hostname, href: `/domains/overview?id=${domainId}` }, { label: "Logs" }]} /><DomainTabs domainId={domainId} active="logs" /><div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-8"><LogViewer domainId={domainId} /></div></>;
 }
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DomainLogsPage() {
   const router = useRouter();

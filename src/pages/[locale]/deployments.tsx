@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { RefreshCwIcon, RocketIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
@@ -12,6 +13,9 @@ import { useApiQuery } from "@/hooks/use-api-query";
 import { getDeployments } from "@/lib/api";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DeploymentsPage() {
   const query = useApiQuery(getDeployments);
@@ -29,7 +33,7 @@ export default function DeploymentsPage() {
           <div className="rounded-md border border-border bg-card">
             <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Domain</TableHead><TableHead>Started</TableHead><TableHead>Duration</TableHead></TableRow></TableHeader><TableBody>
               {query.data.items.map((item) => (
-                <TableRow key={item.id}><TableCell><Link className="font-mono text-xs underline-offset-4 hover:underline" href={`/deployments/detail?id=${item.id}`}>{item.id.slice(0, 8)}</Link></TableCell><TableCell className="capitalize">{item.type}</TableCell><TableCell><StatusBadge status={item.status} /></TableCell><TableCell className="font-mono text-xs">{item.domainId?.slice(0, 8) ?? "Global"}</TableCell><TableCell>{dateFormatter.format(item.startedAt ?? item.createdAt)}</TableCell><TableCell>{item.startedAt && item.finishedAt ? `${item.finishedAt - item.startedAt} ms` : "-"}</TableCell></TableRow>
+                <TableRow key={item.id}><TableCell><LocalizedLink className="font-mono text-xs underline-offset-4 hover:underline" href={`/deployments/detail?id=${item.id}`}>{item.id.slice(0, 8)}</LocalizedLink></TableCell><TableCell className="capitalize">{item.type}</TableCell><TableCell><StatusBadge status={item.status} /></TableCell><TableCell className="font-mono text-xs">{item.domainId?.slice(0, 8) ?? "Global"}</TableCell><TableCell>{dateFormatter.format(item.startedAt ?? item.createdAt)}</TableCell><TableCell>{item.startedAt && item.finishedAt ? `${item.finishedAt - item.startedAt} ms` : "-"}</TableCell></TableRow>
               ))}
             </TableBody></Table>
           </div>

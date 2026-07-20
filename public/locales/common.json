@@ -3,5 +3,21 @@
     "label": { "en": "Language", "zh-CN": "语言" },
     "en": { "en": "English", "zh-CN": "English" },
     "zh-CN": { "en": "简体中文", "zh-CN": "简体中文" }
+  },
+  "settings": {
+    "general": {
+      "title": { "en": "General", "zh-CN": "通用" },
+      "description": {
+        "en": "Manage general preferences such as display language.",
+        "zh-CN": "管理显示语言等通用偏好。"
+      },
+      "language": {
+        "title": { "en": "Language", "zh-CN": "语言" },
+        "description": {
+          "en": "Choose the display language for this panel.",
+          "zh-CN": "选择面板的显示语言。"
+        }
+      }
+    }
   }
 }

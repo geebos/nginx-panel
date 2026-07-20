@@ -22,15 +22,19 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { changePassword, getSessionPolicy, revokeAllSessions, updateSessionPolicy } from "@/lib/api";
+import { changePassword, getSessionPolicy, logout, revokeAllSessions, updateSessionPolicy } from "@/lib/api";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 import { changePasswordSchema, sessionPolicySchema, type ChangePasswordInput, type SessionPolicy } from "@/shared/schemas";
 
 export function SecuritySettingsForm() {
   const router = useRouter();
+  const locale = useLocale();
   const [showPasswords, setShowPasswords] = React.useState(false);
   const [serverError, setServerError] = React.useState<string>();
   const [policyError, setPolicyError] = React.useState<string>();
   const [revoking, setRevoking] = React.useState(false);
+  const [loggingOut, setLoggingOut] = React.useState(false);
   const policyQuery = useApiQuery(getSessionPolicy);
   const form = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
@@ -61,10 +65,22 @@ export function SecuritySettingsForm() {
     setServerError(undefined);
     try {
       await revokeAllSessions();
-      await router.replace("/login");
+      await router.replace(localizePath("/login", locale));
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "会话撤销失败");
       setRevoking(false);
+    }
+  };
+
+  const signOut = async () => {
+    setLoggingOut(true);
+    setServerError(undefined);
+    try {
+      await logout();
+      await router.replace(localizePath("/login", locale));
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : "退出登录失败");
+      setLoggingOut(false);
     }
   };
 
@@ -177,6 +193,29 @@ export function SecuritySettingsForm() {
         </Card>
       </form>
 
+      <Card className="border border-border">
+        <CardHeader>
+          <CardTitle>退出当前会话</CardTitle>
+          <CardDescription>退出当前浏览器的登录会话，其他设备不受影响。</CardDescription>
+        </CardHeader>
+        <CardFooter className="justify-end">
+          <AlertDialog>
+            <AlertDialogTrigger asChild><Button variant="outline"><LogOutIcon data-icon="inline-start" />退出登录</Button></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认退出登录？</AlertDialogTitle>
+                <AlertDialogDescription>将退出当前浏览器会话并跳转到登录页。</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={loggingOut}>取消</AlertDialogCancel>
+                <AlertDialogAction disabled={loggingOut} onClick={(event) => { event.preventDefault(); void signOut(); }}>
+                  {loggingOut ? <LoaderCircleIcon className="animate-spin" /> : null}确认退出
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardFooter>
+      </Card>
       <Card className="border border-destructive/30">
         <CardHeader>
           <CardTitle>退出全部会话</CardTitle>

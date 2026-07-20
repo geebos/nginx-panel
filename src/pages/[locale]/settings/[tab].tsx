@@ -1,7 +1,9 @@
 import * as React from "react";
-import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
+import { LocalizedLink } from "@/components/i18n/localized-link";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { SettingsTabs } from "@/components/pages/settings/settings-tabs";
 import { LogSettingsForm } from "@/components/pages/settings/forms/log-settings-form";
 import { RuntimeDiagnosticsForm } from "@/components/pages/settings/forms/runtime-diagnostics-form";
@@ -9,22 +11,50 @@ import { SecuritySettingsForm } from "@/components/pages/settings/forms/security
 import { NginxSettingsForm } from "@/components/pages/settings/forms/nginx-settings-form";
 import { CloudflareCredentialCard, CreateCloudflareCredentialForm } from "@/components/pages/settings/forms/cloudflare-credential-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createCloudflareCredential, deleteCloudflareCredential, getCloudflareCredentials, getLogSettings, getNginxSettings, getRuntimeDiagnostics, replaceCloudflareCredentialToken } from "@/lib/api";
 import { toast } from "sonner";
+import { getI18nProps, SUPPORTED_LOCALES, type StaticPageContext } from "@/lib/i18n-static";
 
-const SETTINGS_TABS = ["nginx", "security", "cloudflare", "logs", "diagnostics"] as const;
+const SETTINGS_TABS = ["general", "nginx", "security", "cloudflare", "logs", "diagnostics"] as const;
 
 export async function getStaticPaths() {
   return {
-    paths: SETTINGS_TABS.map((tab) => ({ params: { tab } })),
+    paths: SUPPORTED_LOCALES.flatMap((locale) =>
+      SETTINGS_TABS.map((tab) => ({ params: { locale, tab } })),
+    ),
     fallback: false,
   };
 }
 
-export async function getStaticProps({ params }: { params: { tab: string } }) {
-  return { props: { tab: params.tab } };
+export async function getStaticProps(ctx: StaticPageContext) {
+  const tab = ctx.params?.tab;
+  const i18n = await getI18nProps(ctx, ["common"]);
+  if (!i18n || typeof tab !== "string") return { notFound: true };
+  return { props: { ...i18n, tab } };
+}
+
+function GeneralSettingsPage() {
+  const { t } = useTranslation(["common"]);
+  return (
+    <>
+      <PageHeader title={t("common:settings.general.title")} description={t("common:settings.general.description")} breadcrumbs={[{ label: "Settings", href: "/settings/general" }, { label: "General" }]} />
+      <SettingsTabs active="general" />
+      <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("common:settings.general.language.title")}</CardTitle>
+            <CardDescription>{t("common:settings.general.language.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LanguageSwitcher variant="card" />
+          </CardContent>
+        </Card>
+      </div>
+    </>
+  );
 }
 
 function LogSettingsPage() {
@@ -35,7 +65,7 @@ function LogSettingsPage() {
       <SettingsTabs active="logs" />
       <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>日志设置加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}
-        {query.data?.pendingDeploymentId ? <Alert><AlertTitle>日志设置正在应用</AlertTitle><AlertDescription><Link className="underline underline-offset-4" href={`/deployments/detail?id=${query.data.pendingDeploymentId}`}>查看 Deployment</Link></AlertDescription></Alert> : null}
+        {query.data?.pendingDeploymentId ? <Alert><AlertTitle>日志设置正在应用</AlertTitle><AlertDescription><LocalizedLink className="underline underline-offset-4" href={`/deployments/detail?id=${query.data.pendingDeploymentId}`}>查看 Deployment</LocalizedLink></AlertDescription></Alert> : null}
         {query.loading && !query.data ? <Skeleton className="h-[640px]" /> : query.data ? <LogSettingsForm key={query.data.active.revision} active={query.data.active} preview={query.data.preview} logRootConfigured={query.data.logRootConfigured} /> : null}
       </div>
     </>
@@ -106,7 +136,8 @@ function NginxSettingsPage() {
 }
 
 export default function SettingsTabPage({ tab }: { tab: string }) {
-  const content = tab === "logs" ? <LogSettingsPage />
+  const content = tab === "general" ? <GeneralSettingsPage />
+    : tab === "logs" ? <LogSettingsPage />
     : tab === "diagnostics" ? <DiagnosticsPage />
     : tab === "cloudflare" ? <CloudflareSettingsPage />
     : tab === "security" ? <SecuritySettingsPage />

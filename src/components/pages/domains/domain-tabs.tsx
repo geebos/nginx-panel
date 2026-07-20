@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -17,7 +17,7 @@ export function DomainTabs({ domainId, active }: { domainId: string; active: str
       <nav className="mx-auto flex w-full max-w-[1440px] gap-1 overflow-x-auto" aria-label="Domain sections">
         {tabs.map((tab) =>
           tab.enabled ? (
-            <Link
+            <LocalizedLink
               aria-current={tab.slug === active ? "page" : undefined}
               className={cn(
                 "shrink-0 border-b-2 px-3 py-3 text-sm font-medium",
@@ -29,7 +29,7 @@ export function DomainTabs({ domainId, active }: { domainId: string; active: str
               key={tab.slug}
             >
               {tab.label}
-            </Link>
+            </LocalizedLink>
           ) : (
             <span
               aria-disabled="true"

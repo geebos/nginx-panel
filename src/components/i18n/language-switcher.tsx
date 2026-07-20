@@ -17,7 +17,13 @@ import {
 } from "@/i18n/settings";
 import { replacePathLocale } from "@/lib/i18n-utils";
 
-export function LanguageSwitcher({ collapsed = false }: { collapsed?: boolean }) {
+export function LanguageSwitcher({
+  collapsed = false,
+  variant = "sidebar",
+}: {
+  collapsed?: boolean;
+  variant?: "sidebar" | "card";
+}) {
   const router = useRouter();
   const { t } = useTranslation(["common"]);
   const currentLocale =
@@ -38,10 +44,14 @@ export function LanguageSwitcher({ collapsed = false }: { collapsed?: boolean })
         <Button
           variant="ghost"
           aria-label={t("common:language.label")}
-          className={cn(
-            "rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            collapsed ? "mx-auto size-8 p-0" : "w-full justify-start gap-2 py-2",
-          )}
+          className={
+            variant === "card"
+              ? cn("w-full justify-start gap-2 py-2", collapsed && "mx-auto size-8 p-0")
+              : cn(
+                  "rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  collapsed ? "mx-auto size-8 p-0" : "w-full justify-start gap-2 py-2",
+                )
+          }
         >
           <LanguagesIcon className="size-4 shrink-0" />
           {!collapsed && (

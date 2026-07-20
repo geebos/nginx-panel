@@ -12,6 +12,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getActiveRuntimeConfig, getDomains, rebuildActiveRuntime, reloadManagerTls, runDiagnosticNginxTest, type ActiveRuntimeConfig, type RuntimeDiagnostics } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 
 function formatBytes(value: number | null) {
   if (value === null) return "N/A";
@@ -27,6 +29,7 @@ function formatBytes(value: number | null) {
 
 export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDiagnostics }) {
   const router = useRouter();
+  const locale = useLocale();
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string>();
@@ -45,7 +48,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setSubmitting(true);
     try {
       const result = await rebuildActiveRuntime(currentPassword);
-      await router.push(`/deployments/detail?id=${result.deploymentId}`);
+      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "运行配置重建失败");
       setSubmitting(false);
@@ -57,7 +60,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setReloadingTls(true);
     try {
       const result = await reloadManagerTls();
-      await router.push(`/deployments/detail?id=${result.deploymentId}`);
+      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "管理端 TLS 重新加载失败");
       setReloadingTls(false);
@@ -69,7 +72,7 @@ export function RuntimeDiagnosticsForm({ diagnostics }: { diagnostics: RuntimeDi
     setTestingNginx(true);
     try {
       const result = await runDiagnosticNginxTest();
-      await router.push(`/deployments/detail?id=${result.deploymentId}`);
+      await router.push(localizePath(`/deployments/detail?id=${result.deploymentId}`, locale));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Nginx 配置测试失败");
       setTestingNginx(false);

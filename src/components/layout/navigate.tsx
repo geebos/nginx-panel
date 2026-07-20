@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
 import {
   Sidebar as SidebarPrimitive,
@@ -12,7 +12,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +19,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { getDashboard, logout } from "@/lib/api";
+import { getDashboard } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { EllipsisIcon, FileTextIcon, GaugeIcon, Globe2Icon, LogOutIcon, RocketIcon, SettingsIcon, ShieldCheckIcon, type LucideIcon } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
+import { EllipsisIcon, FileTextIcon, GaugeIcon, Globe2Icon, RocketIcon, SettingsIcon, ShieldCheckIcon, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -36,12 +37,12 @@ export const navItems: NavItem[] = [
   { title: "Certificates", href: "/certificates", icon: ShieldCheckIcon },
   { title: "Deployments", href: "/deployments", icon: RocketIcon },
   { title: "Logs", href: "/logs", icon: FileTextIcon },
-  { title: "Settings", href: "/settings/nginx", icon: SettingsIcon },
+  { title: "Settings", href: "/settings/general", icon: SettingsIcon },
 ];
 
-// `useRouter().pathname` returns the route without a trailing slash (e.g. "/buttons"),
-// while navItems hrefs are stored with one (e.g. "/buttons/") per trailingSlash: true.
-// Normalize both sides before comparing.
+// `useRouter().pathname` returns the route pattern (e.g. "/[locale]/dashboard"),
+// while navItems hrefs are stored without the locale prefix. Strip the leading
+// "/[locale]" segment so active-state comparison keeps working post-localization.
 function isActive(pathname: string, href: string) {
   const current = pathname.replace(/\/$/, "");
   const target = href.replace(/\/$/, "");
@@ -53,7 +54,7 @@ function NavButton({ item, active }: { item: NavItem; active: boolean }) {
   const collapsed = state === "collapsed";
   const Icon = item.icon;
   return (
-    <Link
+    <LocalizedLink
       href={item.href}
       data-collapsed={collapsed}
       aria-current={active ? "page" : undefined}
@@ -69,14 +70,14 @@ function NavButton({ item, active }: { item: NavItem; active: boolean }) {
     >
       <Icon className={cn("shrink-0", collapsed ? "size-3.5" : "size-4")} />
       <span className={cn("truncate", collapsed && "max-w-full")}>{item.title}</span>
-    </Link>
+    </LocalizedLink>
   );
 }
 
 export function Sidebar() {
   const router = useRouter();
   const dashboard = useApiQuery(getDashboard);
-  const { pathname } = router;
+  const pathname = router.pathname.replace(/^\/\[locale\]/, "");
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   return (
@@ -115,18 +116,6 @@ export function Sidebar() {
             ? "N/A"
             : `Nginx status: ${dashboard.data?.nginx.status ?? (dashboard.error ? "unavailable" : "checking")}`}
         </div>
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon-sm" : "sm"}
-          className={cn(collapsed ? "mx-auto" : "w-full justify-start")}
-          onClick={async () => {
-            await logout();
-            await router.push("/login");
-          }}
-        >
-          <LogOutIcon data-icon="inline-start" />
-          {collapsed ? <span className="sr-only">退出登录</span> : "退出登录"}
-        </Button>
         <SidebarTrigger className="w-full rounded-md py-2 hover:bg-sidebar-accent" />
       </SidebarFooter>
     </SidebarPrimitive>
@@ -135,7 +124,8 @@ export function Sidebar() {
 
 export function Tabbar() {
   const router = useRouter();
-  const { pathname } = router;
+  const locale = useLocale();
+  const pathname = router.pathname.replace(/^\/\[locale\]/, "");
   const primaryItems = navItems.filter((item) => ["/dashboard", "/domains", "/logs"].includes(item.href));
   const moreItems = navItems.filter((item) => !primaryItems.includes(item));
   const moreActive = moreItems.some((item) => isActive(pathname, item.href));
@@ -149,7 +139,7 @@ export function Tabbar() {
         const Icon = item.icon;
         const isActiveItem = isActive(pathname, item.href);
         return (
-          <Link
+          <LocalizedLink
             key={item.href}
             href={item.href}
             aria-current={isActiveItem ? "page" : undefined}
@@ -157,7 +147,7 @@ export function Tabbar() {
               if (event.pointerType === "mouse" || isActiveItem) return;
 
               event.preventDefault();
-              void router.push(item.href);
+              void router.push(localizePath(item.href, locale));
             }}
             className={cn(
               "flex flex-1 flex-col items-center gap-1 py-2 transition-colors",
@@ -168,7 +158,7 @@ export function Tabbar() {
           >
             <Icon className="size-5" />
             <span className="text-[10px] leading-none">{item.title}</span>
-          </Link>
+          </LocalizedLink>
         );
       })}
       <DropdownMenu>
@@ -189,10 +179,10 @@ export function Tabbar() {
             const Icon = item.icon;
             return (
               <DropdownMenuItem asChild key={item.href}>
-                <Link href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined}>
+                <LocalizedLink href={item.href} aria-current={isActive(pathname, item.href) ? "page" : undefined}>
                   <Icon />
                   {item.title}
-                </Link>
+                </LocalizedLink>
               </DropdownMenuItem>
             );
           })}

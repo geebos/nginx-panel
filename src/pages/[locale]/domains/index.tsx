@@ -1,5 +1,6 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
 import { Globe2Icon, MoreHorizontalIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { Page } from "@/components/layout/page";
@@ -60,6 +61,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { deleteDomain, getDomains, type DomainListItem } from "@/lib/api";
 import { useApiQuery } from "@/hooks/use-api-query";
+import { useLocale } from "@/hooks/use-locale";
+import { localizePath } from "@/lib/i18n-utils";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
@@ -101,7 +104,7 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href={`/domains/overview?id=${domain.id}`}>管理</Link>
+              <LocalizedLink href={`/domains/overview?id=${domain.id}`}>管理</LocalizedLink>
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
@@ -137,6 +140,7 @@ function DomainActions({ domain, onDeleted }: { domain: DomainListItem; onDelete
 
 function DomainList() {
   const router = useRouter();
+  const locale = useLocale();
   const page = Number(queryValue(router.query.page, "1"));
   const status = queryValue(router.query.status, "all");
   const sort = queryValue(router.query.sort, "updated_desc");
@@ -175,7 +179,7 @@ function DomainList() {
   const pageHref = (nextPage: number) => {
     const next = new URLSearchParams(params);
     next.set("page", String(nextPage));
-    return `/domains?${next.toString()}`;
+    return localizePath(`/domains?${next.toString()}`, locale);
   };
 
   return (
@@ -186,10 +190,10 @@ function DomainList() {
         breadcrumbs={[{ label: "Domains" }]}
         action={
           <Button asChild size="sm">
-            <Link href="/domains/create">
+            <LocalizedLink href="/domains/create">
               <PlusIcon data-icon="inline-start" />
               添加域名
-            </Link>
+            </LocalizedLink>
           </Button>
         }
       />
@@ -262,9 +266,9 @@ function DomainList() {
                   {query.data.items.map((domain) => (
                     <TableRow key={domain.id}>
                       <TableCell>
-                        <Link className="font-medium hover:underline" href={`/domains/overview?id=${domain.id}`}>
+                        <LocalizedLink className="font-medium hover:underline" href={`/domains/overview?id=${domain.id}`}>
                           {domain.primaryHostname}
-                        </Link>
+                        </LocalizedLink>
                       </TableCell>
                       <TableCell className="max-w-56 truncate text-muted-foreground">
                         {domain.aliases.length ? domain.aliases.join(", ") : "None"}
@@ -291,7 +295,7 @@ function DomainList() {
                 <Card className="border border-border" key={domain.id}>
                   <CardHeader>
                     <CardTitle>
-                      <Link href={`/domains/overview?id=${domain.id}`}>{domain.primaryHostname}</Link>
+                      <LocalizedLink href={`/domains/overview?id=${domain.id}`}>{domain.primaryHostname}</LocalizedLink>
                     </CardTitle>
                     <CardDescription>
                       {domain.aliases.length ? domain.aliases.join(", ") : "无别名"}
@@ -355,13 +359,13 @@ function DomainList() {
                   variant="outline"
                   onClick={() => {
                     setSearch("");
-                    void router.replace("/domains");
+                    void router.replace(localizePath("/domains", locale));
                   }}
                 >
                   清除筛选
                 </Button>
               ) : (
-                <Button asChild><Link href="/domains/create">创建第一个域名</Link></Button>
+                <Button asChild><LocalizedLink href="/domains/create">创建第一个域名</LocalizedLink></Button>
               )}
             </EmptyContent>
           </Empty>
@@ -370,6 +374,9 @@ function DomainList() {
     </>
   );
 }
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DomainsPage() {
   return (

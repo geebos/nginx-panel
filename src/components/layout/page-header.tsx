@@ -7,6 +7,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 
 export type BreadcrumbEntry = { label: string; href?: string };
 
@@ -32,7 +33,9 @@ export function PageHeader({
                   {index > 0 ? <BreadcrumbSeparator /> : null}
                   <BreadcrumbItem>
                     {entry.href ? (
-                      <BreadcrumbLink href={entry.href}>{entry.label}</BreadcrumbLink>
+                      <BreadcrumbLink asChild>
+                        <LocalizedLink href={entry.href}>{entry.label}</LocalizedLink>
+                      </BreadcrumbLink>
                     ) : (
                       <BreadcrumbPage>{entry.label}</BreadcrumbPage>
                     )}

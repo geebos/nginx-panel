@@ -1,7 +1,8 @@
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { cn } from "@/lib/utils";
 
 const tabs = [
+  { label: "General", slug: "general" },
   { label: "Nginx", slug: "nginx" },
   { label: "Security", slug: "security" },
   { label: "Cloudflare DNS", slug: "cloudflare" },
@@ -14,7 +15,7 @@ export function SettingsTabs({ active }: { active: string }) {
     <div className="border-b border-border bg-background px-4 md:px-8">
       <nav className="mx-auto flex w-full max-w-[1440px] gap-1 overflow-x-auto" aria-label="Settings sections">
         {tabs.map((tab) => (
-          <Link
+          <LocalizedLink
             aria-current={tab.slug === active ? "page" : undefined}
             className={cn(
               "shrink-0 border-b-2 px-3 py-3 text-sm font-medium",
@@ -26,7 +27,7 @@ export function SettingsTabs({ active }: { active: string }) {
             key={tab.slug}
           >
             {tab.label}
-          </Link>
+          </LocalizedLink>
         ))}
       </nav>
     </div>

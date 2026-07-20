@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import {
   ActivityIcon,
   ArrowRightIcon,
@@ -75,9 +75,9 @@ function MetricCard({
   );
 
   return href ? (
-    <Link className="rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={href}>
+    <LocalizedLink className="rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={href}>
       {card}
-    </Link>
+    </LocalizedLink>
   ) : (
     card
   );
@@ -115,7 +115,7 @@ export function DashboardContent() {
             <AlertTitle>运行配置处于 degraded 状态</AlertTitle>
             <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
               普通发布与日志轮动已暂停，请检查一致性并按 SQLite 安全重建。
-              <Button asChild size="sm" variant="outline"><Link href="/settings/diagnostics">打开 Diagnostics</Link></Button>
+              <Button asChild size="sm" variant="outline"><LocalizedLink href="/settings/diagnostics">打开 Diagnostics</LocalizedLink></Button>
             </AlertDescription>
           </Alert>
         ) : null}
@@ -183,7 +183,7 @@ export function DashboardContent() {
                       {query.data.certificates.expiring + query.data.certificates.failed + query.data.certificates.waitingManual}
                     </span>
                   </div>
-                  {query.data.certificates.waitingManual ? <Alert><AlertTitle>Manual DNS 续期等待处理</AlertTitle><AlertDescription className="flex flex-col items-start gap-2"><span>{query.data.certificates.waitingManual} 个续期订单正在等待 TXT 记录。</span>{query.data.renewalAttention.map((item) => <Button asChild size="sm" variant="outline" key={item.orderId}><Link href={`/domains/ssl?id=${item.domainId}&orderId=${item.orderId}`}>{item.hostname}</Link></Button>)}</AlertDescription></Alert> : null}
+                  {query.data.certificates.waitingManual ? <Alert><AlertTitle>Manual DNS 续期等待处理</AlertTitle><AlertDescription className="flex flex-col items-start gap-2"><span>{query.data.certificates.waitingManual} 个续期订单正在等待 TXT 记录。</span>{query.data.renewalAttention.map((item) => <Button asChild size="sm" variant="outline" key={item.orderId}><LocalizedLink href={`/domains/ssl?id=${item.domainId}&orderId=${item.orderId}`}>{item.hostname}</LocalizedLink></Button>)}</AlertDescription></Alert> : null}
                 </CardContent>
               </Card>
 
@@ -196,7 +196,7 @@ export function DashboardContent() {
                   {query.data.recentDeployments.length ? (
                     <div className="flex flex-col">
                       {query.data.recentDeployments.map((deployment) => (
-                        <Link
+                        <LocalizedLink
                           className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0"
                           href={`/deployments/detail?id=${deployment.id}`}
                           key={deployment.id}
@@ -208,7 +208,7 @@ export function DashboardContent() {
                             </p>
                           </div>
                           <StatusBadge status={deployment.status} />
-                        </Link>
+                        </LocalizedLink>
                       ))}
                     </div>
                   ) : (
@@ -225,10 +225,10 @@ export function DashboardContent() {
                   <p className="text-sm text-muted-foreground">按最近修改时间排序。</p>
                 </div>
                 <Button asChild size="sm" variant="ghost">
-                  <Link href="/domains">
+                  <LocalizedLink href="/domains">
                     查看全部
                     <ArrowRightIcon data-icon="inline-end" />
-                  </Link>
+                  </LocalizedLink>
                 </Button>
               </div>
               {query.data.recentDomains.length ? (
@@ -246,9 +246,9 @@ export function DashboardContent() {
                       {query.data.recentDomains.map((domain) => (
                         <TableRow key={domain.id}>
                           <TableCell>
-                            <Link className="font-medium hover:underline" href={`/domains/overview?id=${domain.id}`}>
+                            <LocalizedLink className="font-medium hover:underline" href={`/domains/overview?id=${domain.id}`}>
                               {domain.primaryHostname}
-                            </Link>
+                            </LocalizedLink>
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
@@ -273,7 +273,7 @@ export function DashboardContent() {
                   </EmptyHeader>
                   <EmptyContent>
                     <Button asChild>
-                      <Link href="/domains/create">创建第一个域名</Link>
+                      <LocalizedLink href="/domains/create">创建第一个域名</LocalizedLink>
                     </Button>
                   </EmptyContent>
                 </Empty>

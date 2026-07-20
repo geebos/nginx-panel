@@ -1,5 +1,6 @@
+import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n-static";
 import * as React from "react";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useRouter } from "next/router";
 import { CheckCircle2Icon, CircleDashedIcon, LoaderCircleIcon, XCircleIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
@@ -19,6 +20,9 @@ function StepIcon({ status }: { status: string }) {
   if (status === "running") return <LoaderCircleIcon className="animate-spin text-primary" />;
   return <CircleDashedIcon className="text-muted-foreground" />;
 }
+
+export const getStaticPaths = getLocaleStaticPaths;
+export const getStaticProps = makeStaticProps(["common"]);
 
 export default function DeploymentDetailPage() {
   const router = useRouter();
@@ -42,7 +46,7 @@ export default function DeploymentDetailPage() {
         title={<span className="flex flex-wrap items-center gap-3">Deployment <span className="font-mono text-lg">{deploymentId.slice(0, 8)}</span>{deployment ? <StatusBadge status={deployment.status} /> : null}</span>}
         description={deployment ? `${deployment.type} · ${deployment.configVersionId ? `Version ${deployment.configVersionId.slice(0, 8)}` : "Global task"}` : "读取任务状态。"}
         breadcrumbs={[{ label: "Deployments", href: "/deployments" }, { label: deploymentId.slice(0, 8) }]}
-        action={deployment?.domainId ? <Button size="sm" variant="outline" asChild><Link href={`/domains/overview?id=${deployment.domainId}`}>返回 Domain</Link></Button> : undefined}
+        action={deployment?.domainId ? <Button size="sm" variant="outline" asChild><LocalizedLink href={`/domains/overview?id=${deployment.domainId}`}>返回 Domain</LocalizedLink></Button> : undefined}
       />
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 md:px-8">
         {query.error ? <Alert variant="destructive"><AlertTitle>任务加载失败</AlertTitle><AlertDescription>{query.error.message}</AlertDescription></Alert> : null}

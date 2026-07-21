@@ -1,5 +1,4 @@
-import { BOOTSTRAP_HOSTS } from "@/shared/schemas";
-import { bootstrapOrigins, originsForHosts, managerUrl } from "@/worker/lib/runtime/env";
+import { bootstrapOrigins, getBootstrapHosts, originsForHosts, managerUrl } from "@/worker/lib/runtime/env";
 
 /**
  * Allowed browser Origins for mutating requests.
@@ -13,7 +12,7 @@ export function computeAllowedOrigins(userHosts: string[] = []) {
 
   // Development: any loopback origin is fine.
   if (process.env.APP_ENV === "development") {
-    for (const host of [...BOOTSTRAP_HOSTS, "::1"]) {
+    for (const host of [...getBootstrapHosts(), "::1"]) {
       allowed.add(`http://${host}`);
       allowed.add(`http://${host}:3000`);
       allowed.add(`http://${host}:8787`);

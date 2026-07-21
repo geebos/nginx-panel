@@ -1,6 +1,5 @@
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import {
-  BOOTSTRAP_HOSTS,
   MANAGER_PLACEHOLDER_HOSTNAME,
   acmeOrders,
   configVersions,
@@ -11,12 +10,13 @@ import {
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
+import { getBootstrapHosts } from "@/worker/lib/runtime/env";
 
 export async function collectReservedHostnames(
   db: AppEnv["Variables"]["db"],
   excludedDomainId?: string,
 ) {
-  const reserved = new Set<string>([...BOOTSTRAP_HOSTS, MANAGER_PLACEHOLDER_HOSTNAME]);
+  const reserved = new Set<string>([...getBootstrapHosts(), MANAGER_PLACEHOLDER_HOSTNAME]);
 
   const domainRows = await db
     .select({

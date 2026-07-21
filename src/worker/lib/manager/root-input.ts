@@ -1,6 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
 import {
-  BOOTSTRAP_HOSTS,
   certificates,
   configVersions,
   domains,
@@ -10,6 +9,7 @@ import {
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import type { RenderManagerRootInput } from "@/worker/lib/nginx/config";
+import { getBootstrapHosts } from "@/worker/lib/runtime/env";
 
 type AppDb = AppEnv["Variables"]["db"];
 
@@ -75,7 +75,7 @@ export async function buildManagerRootInput(
   }
 
   return {
-    bootstrapHosts: [...BOOTSTRAP_HOSTS],
+    bootstrapHosts: getBootstrapHosts(),
     userHostnames,
     listeners: { http: 8080, https: 8443 },
     tls,

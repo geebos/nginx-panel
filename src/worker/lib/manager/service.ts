@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import {
-  BOOTSTRAP_HOSTS,
   MANAGER_PLACEHOLDER_HOSTNAME,
   buildBoundManagerConfig,
   buildUnboundManagerConfig,
@@ -17,6 +16,7 @@ import { BusinessError } from "@/worker/lib/errors";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain/validation";
 import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
+import { getBootstrapHosts } from "@/worker/lib/runtime/env";
 
 type AppDb = AppEnv["Variables"]["db"];
 type AppTransaction = Parameters<Parameters<AppDb["transaction"]>[0]>[0];
@@ -97,7 +97,7 @@ export async function getManagerStatus(db: AppDb) {
         bound: boolean;
         primaryHostname: string;
       }>,
-      localEntrypoints: [...BOOTSTRAP_HOSTS],
+      localEntrypoints: getBootstrapHosts(),
       canPublish: false,
       canReset: false,
     };
@@ -152,7 +152,7 @@ export async function getManagerStatus(db: AppDb) {
         primaryHostname,
       };
     }),
-    localEntrypoints: [...BOOTSTRAP_HOSTS],
+    localEntrypoints: getBootstrapHosts(),
     canPublish: Boolean(manager.draftVersionId),
     canReset: Boolean(manager.activeVersionId && config?.bound),
   };
@@ -164,7 +164,8 @@ export async function upsertManagerDraft(
   userId: string,
 ) {
   const hostnames = [input.primaryHostname, ...(input.aliases ?? [])];
-  if (hostnames.some((h) => (BOOTSTRAP_HOSTS as readonly string[]).includes(h) || h === MANAGER_PLACEHOLDER_HOSTNAME)) {
+  const bootstrapHosts = new Set(getBootstrapHosts());
+  if (hostnames.some((h) => bootstrapHosts.has(h) || h === MANAGER_PLACEHOLDER_HOSTNAME)) {
     throw new BusinessError("errors:validation.bootstrapHostnameReserved", 400, "HOSTNAME_RESERVED");
   }
 

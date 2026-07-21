@@ -146,6 +146,60 @@ const revisionsRoot = join(runtimeRoot, "revisions");
 const bootstrapRoot = join(revisionsRoot, "bootstrap");
 const activePath = join(runtimeRoot, "active");
 
+/** Fixed loopback hosts always present in bootstrap-http server_name. */
+const FIXED_BOOTSTRAP_HOSTS = ["127.0.0.1", "localhost"];
+const IPV4_PATTERN =
+  /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+const BOOTSTRAP_HOSTNAME_PATTERN =
+  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * BOOTSTRAP_EXTRA_HOSTS: comma/whitespace separated server IPs (or hostnames)
+ * so remote access via http://<server-ip> hits bootstrap-http instead of 444.
+ */
+function parseBootstrapExtraHosts(raw) {
+  if (!raw || !String(raw).trim()) return [];
+  const parts = String(raw)
+    .split(/[,\s]+/)
+    .map((part) => part.trim().toLowerCase().replace(/\.$/, ""))
+    .filter(Boolean);
+  const hosts = [];
+  const seen = new Set();
+  for (const host of parts) {
+    if (seen.has(host)) continue;
+    const looksLikeIpv4 = /^\d+(?:\.\d+)+$/.test(host);
+    const ok = looksLikeIpv4
+      ? IPV4_PATTERN.test(host)
+      : BOOTSTRAP_HOSTNAME_PATTERN.test(host);
+    if (!ok) {
+      throw new Error(
+        `BOOTSTRAP_EXTRA_HOSTS entry is invalid (use IPv4 or DNS hostname): ${host}`,
+      );
+    }
+    if (FIXED_BOOTSTRAP_HOSTS.includes(host)) continue;
+    seen.add(host);
+    hosts.push(host);
+  }
+  return hosts;
+}
+
+function bootstrapServerNameList() {
+  return [...FIXED_BOOTSTRAP_HOSTS, ...parseBootstrapExtraHosts(process.env.BOOTSTRAP_EXTRA_HOSTS)];
+}
+
+/** Rewrite bootstrap-http server_name to include BOOTSTRAP_EXTRA_HOSTS. */
+function injectBootstrapHosts(conf) {
+  const serverNames = bootstrapServerNameList().join(" ");
+  const next = conf.replace(
+    /server_name 127\.0\.0\.1 localhost(?:\s+[^;]+)?;/,
+    `server_name ${serverNames};`,
+  );
+  if (next === conf && !conf.includes(`server_name ${serverNames};`)) {
+    throw new Error("Failed to inject BOOTSTRAP_EXTRA_HOSTS into nginx bootstrap server_name");
+  }
+  return next;
+}
+
 function hasActiveSymlink() {
   try {
     const activeStat = lstatSync(activePath);
@@ -206,6 +260,13 @@ function migrateActiveRootIfNeeded() {
     changed = true;
   }
 
+  // Keep bootstrap-http server_name aligned with BOOTSTRAP_EXTRA_HOSTS on restart.
+  const withBootstrapHosts = injectBootstrapHosts(conf);
+  if (withBootstrapHosts !== conf) {
+    conf = withBootstrapHosts;
+    changed = true;
+  }
+
   if (!changed) {
     console.log("[supervisor] active revision present; no root migration needed");
     return;
@@ -256,12 +317,16 @@ function migrateActiveRootIfNeeded() {
   }
 }
 
+const extraBootstrapHosts = parseBootstrapExtraHosts(process.env.BOOTSTRAP_EXTRA_HOSTS);
+if (extraBootstrapHosts.length > 0) {
+  console.log(`[supervisor] BOOTSTRAP_EXTRA_HOSTS: ${extraBootstrapHosts.join(", ")}`);
+}
+
 if (!activeExists) {
   // Contract A: only write bootstrap root when there is no active revision.
   // Do NOT call refreshActiveRoot when active already exists — that would wipe published manager segments.
-  const nginxTemplate = readFileSync(
-    "/etc/nginx/templates/nginx-manager.conf.template",
-    "utf8",
+  const nginxTemplate = injectBootstrapHosts(
+    readFileSync("/etc/nginx/templates/nginx-manager.conf.template", "utf8"),
   );
   mkdirSync(join(bootstrapRoot, "domains"), { recursive: true });
   writeFileSync(join(bootstrapRoot, "nginx.conf"), nginxTemplate, { mode: 0o640 });

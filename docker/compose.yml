@@ -9,7 +9,9 @@ services:
       APP_ENV: production
       DB_ENGINE: sqlite
       DB_SQLITE_DIR: /data/db
-      # Optional: migration seed / emergency file cert. Not required for greenfield.
+      # Optional server IP for remote bootstrap (http://IP).
+      BOOTSTRAP_EXTRA_HOSTS: ${BOOTSTRAP_EXTRA_HOSTS:-}
+      # Optional migration seed / emergency file cert.
       MANAGER_HOST: ${MANAGER_HOST:-}
       MANAGER_URL: ${MANAGER_URL:-}
       MANAGER_TLS_CERT_FILE: ${MANAGER_TLS_CERT_FILE:-}

@@ -11,8 +11,10 @@ supply a stable master key or an emergency file certificate:
 
 You can start without `MANAGER_HOST`, `MANAGER_URL`, or manager certificate files.
 The container serves bootstrap HTTP on `127.0.0.1` / `localhost` (mapped host
-ports 80→8080). Complete setup in the panel, then bind a public hostname under
-**Settings → Manager**.
+ports 80→8080). To open the panel from another machine via the server IP before
+binding a domain, set `BOOTSTRAP_EXTRA_HOSTS` in `docker/.env` (see
+`.env.example`), then `docker compose up`. Complete setup in the panel, then bind
+a public hostname under **Settings → Manager**.
 
 If the master key is omitted, the container generates a persistent 32-byte key
 under the `/data/secrets` volume so restarts of the same volume keep encryption

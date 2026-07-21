@@ -1112,6 +1112,362 @@
       "sslBoundRequired": {
         "en": "Bind and publish a manager hostname before issuing HTTPS.",
         "zh-CN": "请先绑定并发布管理端域名，再签发 HTTPS。"
+      },
+      "sslForm": {
+        "cardTitle": {
+          "en": "HTTPS settings",
+          "zh-CN": "HTTPS 设置"
+        },
+        "cardDescription": {
+          "en": "Saving only updates the draft; certificate request and manager publish are separate steps.",
+          "zh-CN": "保存只更新草稿；证书申请与管理端发布是两个独立步骤。"
+        },
+        "summaryDescription": {
+          "en": "DNS-01 only (manual or Cloudflare). Environment is always production.",
+          "zh-CN": "仅支持 DNS-01（手动或 Cloudflare）。环境固定为 production。"
+        },
+        "edit": {
+          "en": "Edit",
+          "zh-CN": "编辑"
+        },
+        "cancelEdit": {
+          "en": "Cancel",
+          "zh-CN": "取消"
+        },
+        "invalidAlert": {
+          "en": "Invalid settings",
+          "zh-CN": "设置无效"
+        },
+        "enableHttps": {
+          "en": "Enable HTTPS",
+          "zh-CN": "启用 HTTPS"
+        },
+        "acmeEmail": {
+          "en": "ACME Email",
+          "zh-CN": "ACME 邮箱"
+        },
+        "acmeEmailDesc": {
+          "en": "Used for Let's Encrypt expiry and account notifications.",
+          "zh-CN": "用于 Let's Encrypt 到期和账户通知。"
+        },
+        "environment": {
+          "en": "Environment",
+          "zh-CN": "环境"
+        },
+        "environmentProduction": {
+          "en": "Production",
+          "zh-CN": "Production"
+        },
+        "environmentProductionFixed": {
+          "en": "Production (manager certificates always use the production CA).",
+          "zh-CN": "Production（管理端证书始终使用生产 CA）。"
+        },
+        "validationMethod": {
+          "en": "Validation method",
+          "zh-CN": "验证方式"
+        },
+        "validationDnsManual": {
+          "en": "DNS-01 Manual",
+          "zh-CN": "DNS-01 手动"
+        },
+        "validationDnsCloudflare": {
+          "en": "DNS-01 Cloudflare",
+          "zh-CN": "DNS-01 Cloudflare"
+        },
+        "validationDescCloudflare": {
+          "en": "Cloudflare mode creates and deletes TXT records precisely at terminal state.",
+          "zh-CN": "Cloudflare 模式会自动创建并在终态精确删除 TXT 记录。"
+        },
+        "validationDescEmpty": {
+          "en": "Add credentials under Settings → Cloudflare DNS first.",
+          "zh-CN": "请先在 设置 → Cloudflare DNS 添加凭据。"
+        },
+        "cloudflareCredential": {
+          "en": "Cloudflare credential",
+          "zh-CN": "Cloudflare 凭据"
+        },
+        "autoRenew": {
+          "en": "Auto renew",
+          "zh-CN": "自动续期"
+        },
+        "forceHttps": {
+          "en": "Force HTTPS (308)",
+          "zh-CN": "强制 HTTPS（308）"
+        },
+        "saveDraft": {
+          "en": "Save draft",
+          "zh-CN": "保存草稿"
+        },
+        "requestCertificate": {
+          "en": "Request certificate",
+          "zh-CN": "申请证书"
+        },
+        "on": {
+          "en": "On",
+          "zh-CN": "开"
+        },
+        "off": {
+          "en": "Off",
+          "zh-CN": "关"
+        }
+      },
+      "sslPage": {
+        "title": {
+          "en": "Manager HTTPS",
+          "zh-CN": "管理端 HTTPS"
+        },
+        "description": {
+          "en": "Configure control-plane HTTPS with DNS-01, request certificates, and track issuance.",
+          "zh-CN": "通过 DNS-01 配置控制面 HTTPS、申请证书并跟踪签发流程。"
+        },
+        "breadcrumb": {
+          "en": "HTTPS",
+          "zh-CN": "HTTPS"
+        },
+        "refresh": {
+          "en": "Refresh",
+          "zh-CN": "刷新"
+        },
+        "loadFailed": {
+          "en": "HTTPS operation failed",
+          "zh-CN": "HTTPS 操作失败"
+        },
+        "saveFailed": {
+          "en": "Failed to save HTTPS settings",
+          "zh-CN": "HTTPS 设置保存失败"
+        },
+        "orderCreateFailed": {
+          "en": "Failed to create certificate order",
+          "zh-CN": "创建证书订单失败"
+        },
+        "draftSaved": {
+          "en": "HTTPS draft saved",
+          "zh-CN": "HTTPS 草稿已保存"
+        },
+        "backToHost": {
+          "en": "Back to hostname",
+          "zh-CN": "返回主机绑定"
+        },
+        "ordersCard": {
+          "title": {
+            "en": "Recent orders",
+            "zh-CN": "最近订单"
+          },
+          "description": {
+            "en": "Issuance status and manager publish are independent.",
+            "zh-CN": "签发状态与管理端发布相互独立。"
+          },
+          "renewal": {
+            "en": "Renewal",
+            "zh-CN": "续期"
+          },
+          "apply": {
+            "en": "Apply",
+            "zh-CN": "申请"
+          },
+          "empty": {
+            "en": "No certificate orders yet.",
+            "zh-CN": "尚无证书订单。"
+          }
+        },
+        "certsCard": {
+          "title": {
+            "en": "Certificate assets",
+            "zh-CN": "证书资产"
+          },
+          "description": {
+            "en": "Active certificates enter renewal 30 days before expiry.",
+            "zh-CN": "Active 证书会在到期前 30 天自动进入续期。"
+          },
+          "expireOn": {
+            "en": "Expires {{date}}",
+            "zh-CN": "到期 {{date}}"
+          },
+          "unknownExpiry": {
+            "en": "Validity unknown",
+            "zh-CN": "有效期未知"
+          },
+          "renewNow": {
+            "en": "Renew now",
+            "zh-CN": "立即续期"
+          },
+          "empty": {
+            "en": "No downloaded certificates yet.",
+            "zh-CN": "尚无已下载证书。"
+          }
+        },
+        "orderDetail": {
+          "titleRenewal": {
+            "en": "Certificate renewal",
+            "zh-CN": "证书续期"
+          },
+          "titleOrder": {
+            "en": "Certificate order",
+            "zh-CN": "证书订单"
+          },
+          "titleFallback": {
+            "en": "Certificate order",
+            "zh-CN": "证书订单"
+          },
+          "description": {
+            "en": "Order status comes from the server-side state machine.",
+            "zh-CN": "订单状态来自服务端状态机。"
+          },
+          "breadcrumb": {
+            "en": "Order",
+            "zh-CN": "订单"
+          },
+          "backToSsl": {
+            "en": "Back to HTTPS",
+            "zh-CN": "返回 HTTPS"
+          },
+          "loadFailed": {
+            "en": "Failed to load order",
+            "zh-CN": "订单加载失败"
+          },
+          "statusCard": {
+            "title": {
+              "en": "Order status",
+              "zh-CN": "订单状态"
+            }
+          },
+          "identifiers": {
+            "en": "Identifiers",
+            "zh-CN": "标识"
+          },
+          "createdAt": {
+            "en": "Created",
+            "zh-CN": "创建时间"
+          },
+          "processFailed": {
+            "en": "Order processing failed",
+            "zh-CN": "订单处理失败"
+          },
+          "preparingTitle": {
+            "en": "Preparing ACME order",
+            "zh-CN": "正在准备 ACME 订单"
+          },
+          "preparingDesc": {
+            "en": "Account and order keys are persisted; the server is obtaining challenges from the CA.",
+            "zh-CN": "账户和订单密钥已持久化；服务端正在向 CA 获取 Challenge。"
+          },
+          "challengesTitle": {
+            "en": "Challenges",
+            "zh-CN": "Challenges"
+          },
+          "challengesDescDns": {
+            "en": "Add the corresponding TXT for each hostname; do not overwrite other records with the same name.",
+            "zh-CN": "为每个 hostname 添加对应 TXT；不要覆盖同名的其他记录。"
+          },
+          "recheck": {
+            "en": "Recheck",
+            "zh-CN": "重新校验"
+          },
+          "waitingChallenge": {
+            "en": "Waiting for challenge details…",
+            "zh-CN": "等待 Challenge 详情…"
+          },
+          "activationTitle": {
+            "en": "Certificate activation",
+            "zh-CN": "证书激活"
+          },
+          "activationDesc": {
+            "en": "Issuance is complete; activation publishes manager TLS separately.",
+            "zh-CN": "签发已完成；激活会单独发布管理端 TLS。"
+          },
+          "certificate": {
+            "en": "Certificate",
+            "zh-CN": "证书"
+          },
+          "configVersion": {
+            "en": "Config version",
+            "zh-CN": "配置版本"
+          },
+          "waitingCreate": {
+            "en": "Waiting for creation",
+            "zh-CN": "等待创建"
+          },
+          "viewDeployment": {
+            "en": "View deployment · {{status}}",
+            "zh-CN": "查看部署 · {{status}}"
+          },
+          "activationFailed": {
+            "en": "Certificate activation failed",
+            "zh-CN": "证书激活失败"
+          },
+          "retryActivation": {
+            "en": "Retry activation",
+            "zh-CN": "重试激活"
+          },
+          "activationRetried": {
+            "en": "Certificate activation rescheduled",
+            "zh-CN": "已重新安排证书激活"
+          },
+          "operationFailed": {
+            "en": "Order operation failed",
+            "zh-CN": "订单操作失败"
+          },
+          "toastDebounced": {
+            "en": "Check requested just now",
+            "zh-CN": "刚刚已请求检查"
+          },
+          "toastScheduled": {
+            "en": "Check scheduled immediately",
+            "zh-CN": "已安排立即检查"
+          }
+        }
+      },
+      "summary": {
+        "title": {
+          "en": "Hostname & HTTPS",
+          "zh-CN": "域名与 HTTPS"
+        },
+        "description": {
+          "en": "Bound hostname and control-plane HTTPS settings. Edit to change the draft.",
+          "zh-CN": "绑定域名与控制面 HTTPS 设置。点击编辑修改草稿。"
+        },
+        "edit": {
+          "en": "Edit",
+          "zh-CN": "编辑"
+        },
+        "notBound": {
+          "en": "Not bound",
+          "zh-CN": "未绑定"
+        },
+        "certificate": {
+          "en": "Certificate",
+          "zh-CN": "证书"
+        },
+        "noCertificate": {
+          "en": "No active certificate",
+          "zh-CN": "无有效证书"
+        }
+      },
+      "editForm": {
+        "title": {
+          "en": "Edit manager binding",
+          "zh-CN": "编辑管理端绑定"
+        },
+        "description": {
+          "en": "Update the hostname binding and optional HTTPS settings as a draft, then publish from Manager.",
+          "zh-CN": "将域名绑定与可选 HTTPS 设置保存为草稿，再在管理端页发布。"
+        },
+        "breadcrumb": {
+          "en": "Edit",
+          "zh-CN": "编辑"
+        },
+        "back": {
+          "en": "Back",
+          "zh-CN": "返回"
+        },
+        "enableSsl": {
+          "en": "Enable SSL",
+          "zh-CN": "启用 SSL"
+        },
+        "enableSslDesc": {
+          "en": "When enabled, configure DNS-01 HTTPS for the bound host (production only).",
+          "zh-CN": "启用后为绑定域名配置 DNS-01 HTTPS（仅 production）。"
+        }
       }
     }
   },

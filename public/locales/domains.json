@@ -26,18 +26,18 @@
       "notPublished": { "en": "Not published", "zh-CN": "未发布" }
     },
     "breadcrumbs": {
-      "domains": { "en": "Domains", "zh-CN": "Domains" },
-      "domain": { "en": "Domain", "zh-CN": "Domain" },
-      "overview": { "en": "Overview", "zh-CN": "Overview" },
-      "routes": { "en": "Routes", "zh-CN": "Routes" },
+      "domains": { "en": "Domains", "zh-CN": "域名" },
+      "domain": { "en": "Domain", "zh-CN": "域名" },
+      "overview": { "en": "Overview", "zh-CN": "概览" },
+      "routes": { "en": "Routes", "zh-CN": "路由" },
       "ssl": { "en": "SSL", "zh-CN": "SSL" },
-      "headers": { "en": "Headers", "zh-CN": "Headers" },
-      "advanced": { "en": "Advanced", "zh-CN": "Advanced" },
-      "logs": { "en": "Logs", "zh-CN": "Logs" },
-      "history": { "en": "History", "zh-CN": "History" },
-      "version": { "en": "Version", "zh-CN": "Version" },
-      "diff": { "en": "Diff", "zh-CN": "Diff" },
-      "order": { "en": "Order", "zh-CN": "Order" },
+      "headers": { "en": "Headers", "zh-CN": "请求头" },
+      "advanced": { "en": "Advanced", "zh-CN": "高级" },
+      "logs": { "en": "Logs", "zh-CN": "日志" },
+      "history": { "en": "History", "zh-CN": "历史" },
+      "version": { "en": "Version", "zh-CN": "版本" },
+      "diff": { "en": "Diff", "zh-CN": "对比" },
+      "order": { "en": "Order", "zh-CN": "订单" },
       "addDomain": { "en": "Add domain", "zh-CN": "添加域名" }
     },
     "errors": {
@@ -50,14 +50,14 @@
     }
   },
   "tabs": {
-    "ariaLabel": { "en": "Domain sections", "zh-CN": "Domain 分区" },
-    "overview": { "en": "Overview", "zh-CN": "Overview" },
-    "routes": { "en": "Routes", "zh-CN": "Routes" },
+    "ariaLabel": { "en": "Domain sections", "zh-CN": "域名分区" },
+    "overview": { "en": "Overview", "zh-CN": "概览" },
+    "routes": { "en": "Routes", "zh-CN": "路由" },
     "ssl": { "en": "SSL", "zh-CN": "SSL" },
-    "headers": { "en": "Headers", "zh-CN": "Headers" },
-    "advanced": { "en": "Advanced", "zh-CN": "Advanced" },
-    "logs": { "en": "Logs", "zh-CN": "Logs" },
-    "history": { "en": "History", "zh-CN": "History" },
+    "headers": { "en": "Headers", "zh-CN": "请求头" },
+    "advanced": { "en": "Advanced", "zh-CN": "高级" },
+    "logs": { "en": "Logs", "zh-CN": "日志" },
+    "history": { "en": "History", "zh-CN": "历史" },
     "disabledTitle": { "en": "Added in later phase", "zh-CN": "后续阶段接入" }
   },
   "list": {
@@ -78,7 +78,7 @@
     },
     "loadFailed": { "en": "Failed to load domains", "zh-CN": "域名列表加载失败" },
     "columns": {
-      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "domain": { "en": "Domain", "zh-CN": "域名" },
       "aliases": { "en": "Aliases", "zh-CN": "Aliases" },
       "ssl": { "en": "SSL", "zh-CN": "SSL" },
       "runtime": { "en": "Runtime", "zh-CN": "运行状态" },
@@ -222,6 +222,8 @@
       "unknownExpiry": { "en": "Validity unknown", "zh-CN": "有效期未知" },
       "nextCheck": { "en": "Next check {{date}}", "zh-CN": "下次检查 {{date}}" },
       "renewNow": { "en": "Renew now", "zh-CN": "立即续期" },
+      "autoRenewOn": { "en": "Auto Renew On", "zh-CN": "自动续期 开" },
+      "autoRenewOff": { "en": "Auto Renew Off", "zh-CN": "自动续期 关" },
       "empty": { "en": "No downloaded certificates yet.", "zh-CN": "尚无已下载证书。" }
     },
     "orderDetail": {
@@ -331,7 +333,7 @@
     "description": { "en": "Published versions are immutable; the current draft updates in place until it is frozen by publish.", "zh-CN": "已发布版本不可变；当前 Draft 会原位更新，直到发布后冻结。" },
     "loadFailed": { "en": "Failed to load version history", "zh-CN": "版本历史加载失败" },
     "columns": {
-      "version": { "en": "Version", "zh-CN": "Version" },
+      "version": { "en": "Version", "zh-CN": "版本" },
       "status": { "en": "Status", "zh-CN": "Status" },
       "summary": { "en": "Summary", "zh-CN": "Summary" },
       "created": { "en": "Created", "zh-CN": "Created" },
@@ -407,7 +409,7 @@
     "testPassedDesc": { "en": "Test result is bound to the current Version and checksum.", "zh-CN": "测试结果已绑定当前 Version 和 checksum。" },
     "testingDesc": { "en": "The system is generating the candidate config and running nginx -t.", "zh-CN": "系统正在生成候选配置并执行 nginx -t。" },
     "summaryCard": {
-      "domain": { "en": "Domain", "zh-CN": "Domain" },
+      "domain": { "en": "Domain", "zh-CN": "域名" },
       "targetVersion": { "en": "Target version", "zh-CN": "目标版本" },
       "checksum": { "en": "Checksum", "zh-CN": "Checksum" },
       "testPassedAt": { "en": "Test passed at", "zh-CN": "测试通过时间" },

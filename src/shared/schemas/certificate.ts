@@ -152,3 +152,9 @@ export const recheckableOrderStatuses: string[] = [
   "validating",
 ];
 
+/** Certificate statuses that may be referenced by runtime/nginx config. */
+export const usableCertificateStatuses: string[] = ["ready", "active"];
+
+/** 30-day window for certificate renewal scheduling and expiring-soon display. */
+export const certificateRenewalWindowMs = 30 * 24 * 60 * 60 * 1000;
+

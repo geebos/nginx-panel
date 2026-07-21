@@ -17,8 +17,8 @@ export default function GeneralSettingsPage() {
         title={t("common:settings.general.title")}
         description={t("common:settings.general.description")}
         breadcrumbs={[
-          { label: "Settings", href: "/settings/general" },
-          { label: "General" },
+          { label: t("common:settings.breadcrumbs.settings"), href: "/settings/nginx" },
+          { label: t("common:settings.general.breadcrumb") },
         ]}
       />
       <SettingsTabs active="general" />

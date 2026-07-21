@@ -10,6 +10,7 @@ import { createSnapshot } from "@/worker/lib/snapshot";
 import { getActiveLogSettings, logSettingsChecksum } from "@/worker/lib/log-settings";
 import { checksum, runtimeManifestSchema } from "@/worker/lib/runtime/manifest";
 import type { RuntimeIssue, RuntimeState } from "@/worker/lib/runtime/state";
+import { nginxRuntimeRoot } from "@/worker/lib/runtime/paths";
 
 const execFileAsync = promisify(execFile);
 
@@ -50,7 +51,7 @@ export async function verifyRuntime(
     return { status: "healthy", checkedAt: Date.now(), activeRevision: null, issues: [] };
   }
 
-  const runtimeRoot = normalize(options.runtimeRoot ?? process.env.NGINX_RUNTIME_ROOT ?? "/data/nginx");
+  const runtimeRoot = normalize(options.runtimeRoot ?? nginxRuntimeRoot());
   const logsRoot = normalize(options.logsRoot ?? process.env.NGINX_LOG_DIR ?? "");
   const activeRoot = join(runtimeRoot, "active");
   let activeRevision: string | null = null;

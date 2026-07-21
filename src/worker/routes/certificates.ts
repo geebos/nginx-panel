@@ -13,11 +13,12 @@ import {
   domainAliases,
   domains,
 } from "@/shared/schemas";
-import { retryCertificateActivation } from "@/worker/lib/acme/activation";
+import { retryAcmeOrderActivation } from "@/worker/lib/acme/retry-activation";
 import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
-import { cleanupCloudflareOrder } from "@/worker/lib/acme/cloudflare-cleanup";
-import { orderCleanupStatus } from "@/worker/lib/acme/order-cleanup-fields";
-import { RECHECK_DEBOUNCE_MS, recheckableOrderStatuses, terminalOrderStatuses } from "@/worker/lib/acme/order-status";
+import { cancelAcmeOrder } from "@/worker/lib/acme/cancel-order";
+import { recheckAcmeOrder } from "@/worker/lib/acme/recheck-order";
+import { retryCloudflareOrderCleanup } from "@/worker/lib/acme/retry-cleanup";
+import { terminalOrderStatuses } from "@/worker/lib/acme/order-status";
 import { publicCertificate, publicChallenge, publicOrder } from "@/worker/lib/acme/public";
 import { createRenewalOrder } from "@/worker/lib/acme/renewal";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
@@ -150,56 +151,28 @@ certificatesRoute.post("/domains/:id/certificate/orders/:orderId/activation/retr
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  const certificate = await db.query.certificates.findFirst({ where: eq(certificates.acmeOrderId, order.id) });
-  const activation = certificate ? await db.query.certificateActivations.findFirst({ where: eq(certificateActivations.certificateId, certificate.id) }) : null;
-  if (!activation) throw new BusinessError("errors:certificateActivationNotFound", 409, "CERTIFICATE_ACTIVATION_NOT_FOUND");
-  const result = await retryCertificateActivation(db, activation.id);
-  return c.json(result, 202);
+  return c.json(await retryAcmeOrderActivation(db, order), 202);
 });
 
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/recheck", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (!recheckableOrderStatuses.includes(order.status)) return c.json({ order: publicOrder(order) });
-  const now = Date.now();
-  if (order.lastPolledAt && now - order.lastPolledAt < RECHECK_DEBOUNCE_MS) return c.json({ order: publicOrder(order), debounced: true });
-  await db.update(acmeOrders).set({ nextPollAt: now, updatedAt: now }).where(eq(acmeOrders.id, order.id));
-  const scheduled = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
-  return c.json({ order: publicOrder(scheduled!), debounced: false });
+  return c.json(await recheckAcmeOrder(db, order));
 });
 
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/cleanup/retry", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (order.dnsProvider !== "cloudflare" || !terminalOrderStatuses.includes(order.status)) {
-    throw new BusinessError("errors:cloudflareCleanupNotAvailable", 409, "CLOUDFLARE_CLEANUP_NOT_AVAILABLE");
-  }
-  await db.update(acmeOrders).set({ cleanupStatus: "pending", nextPollAt: Date.now(), updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
-  await cleanupCloudflareOrder(db, order.id);
-  const updated = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
-  return c.json({ order: publicOrder(updated!) });
+  return c.json(await retryCloudflareOrderCleanup(db, order));
 });
 
 certificatesRoute.post("/domains/:id/certificate/orders/:orderId/cancel", async (c) => {
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (terminalOrderStatuses.includes(order.status)) return c.json({ order: publicOrder(order) });
-  const now = Date.now();
-  db.transaction((tx) => {
-    tx.update(acmeOrders).set({ status: "cancelled", cleanupStatus: orderCleanupStatus(order.dnsProvider), nextPollAt: null, updatedAt: now }).where(eq(acmeOrders.id, order.id)).run();
-    if (order.replacesCertificateId) {
-      tx.update(certificates).set({ lastErrorCode: "RENEWAL_CANCELLED", nextCheckAt: now + 24 * 60 * 60 * 1000 }).where(and(eq(certificates.id, order.replacesCertificateId), eq(certificates.status, "active"))).run();
-    }
-    if (order.dnsProvider !== "cloudflare") {
-      tx.update(acmeChallenges).set({ token: null, keyAuthorization: null, dnsRecordValue: null, status: "cleaned", cleanedAt: now, updatedAt: now }).where(eq(acmeChallenges.orderId, order.id)).run();
-    }
-  });
-  if (order.dnsProvider === "cloudflare") await cleanupCloudflareOrder(db, order.id);
-  const cancelled = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
-  return c.json({ order: publicOrder(cancelled!) });
+  return c.json(await cancelAcmeOrder(db, order));
 });
 
 export const acmeChallengeRoute = new Hono<AppEnv>();

@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
-import { acmeOrders, changePasswordSchema, cloudflareCredentialInputSchema, cloudflareCredentials, deployments, nginxLogSettingsInputSchema, rebuildActiveSchema, replaceCloudflareCredentialTokenSchema, runtimeStorageSettingsSchema, sessionPolicySchema, sessions, settings, users } from "@/shared/schemas";
+import { acmeOrders, changePasswordSchema, cloudflareCredentialInputSchema, cloudflareCredentials, deployments, nginxLogSettingsInputSchema, rebuildActiveSchema, replaceCloudflareCredentialTokenSchema, runtimeStorageSettingsSchema, sessionPolicySchema, sessions, settings, usableCertificateStatuses, users } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { parseStringArrayJson } from "@/worker/lib/json-array";
@@ -19,6 +19,7 @@ import { getCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { validateManagerTlsFiles } from "@/worker/lib/runtime/manager-tls";
 import { collectRuntimeDiagnostics, getActiveRuntimeConfig } from "@/worker/lib/runtime/diagnostics";
 import { cleanupRuntimeStorage, getRuntimeStorageSnapshot } from "@/worker/lib/runtime/storage";
+import { nginxRuntimeRoot } from "@/worker/lib/runtime/paths";
 
 export const settingsRoute = new Hono<AppEnv>();
 const execFileAsync = promisify(execFile);
@@ -138,7 +139,7 @@ settingsRoute.get("/settings/nginx", async (c) => {
   return c.json({
     nginx: { version },
     paths: {
-      configRoot: process.env.NGINX_RUNTIME_ROOT || "/data/nginx",
+      configRoot: nginxRuntimeRoot(),
       staticAllowedRoots: ["/srv/sites"],
     },
     storage,
@@ -291,7 +292,7 @@ settingsRoute.get("/settings/diagnostics", async (c) => {
         const cert = await c.get("db").query.certificates.findFirst({
           where: eq(certificates.id, active.config.ssl.certificateId),
         });
-        if (cert && ["ready", "active"].includes(cert.status) && cert.notAfter && cert.notAfter > Date.now()) {
+        if (cert && usableCertificateStatuses.includes(cert.status) && cert.notAfter && cert.notAfter > Date.now()) {
           managerTls = {
             status: "valid",
             source: "acme",

@@ -9,6 +9,7 @@ import { BusinessError } from "@/worker/lib/errors";
 import { checksum, runtimeManifestSchema } from "@/worker/lib/runtime/manifest";
 import { getRuntimeState } from "@/worker/lib/runtime/state";
 import { createSnapshot } from "@/worker/lib/snapshot";
+import { certificateDataRoot, nginxRuntimeRoot } from "@/worker/lib/runtime/paths";
 
 export type StorageDiagnostic = {
   key: "sqlite" | "runtime" | "certificates" | "logs" | "revisions";
@@ -29,8 +30,8 @@ type DiagnosticPaths = {
 function runtimePaths(): DiagnosticPaths {
   return {
     sqliteDirectory: process.env.DB_SQLITE_DIR,
-    runtimeRoot: process.env.NGINX_RUNTIME_ROOT || "/data/nginx",
-    certificateRoot: process.env.CERTIFICATE_DATA_ROOT || "/data/certs",
+    runtimeRoot: nginxRuntimeRoot(),
+    certificateRoot: certificateDataRoot(),
     logsRoot: process.env.NGINX_LOG_DIR,
   };
 }

@@ -14,6 +14,7 @@ import {
   domains,
   nginxLogSettingsSchema,
   settings,
+  usableCertificateStatuses,
   type NginxLogSettingsInput,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
@@ -28,6 +29,8 @@ import { validateManagerTlsEnvironment } from "@/worker/lib/runtime/manager-tls"
 import { assertRuntimeStorageCapacity, cleanupRuntimeStorage } from "@/worker/lib/runtime/storage";
 import { touchJobRunnerHeartbeat } from "@/worker/lib/service-lifecycle";
 import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
+import { certificateDataRoot, nginxRuntimeRoot } from "@/worker/lib/runtime/paths";
+import { updateDeploymentStep } from "@/worker/lib/deployment/update-step";
 import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
 import type { ManagerConfig } from "@/shared/schemas";
 
@@ -41,18 +44,10 @@ class RebuildSourceError extends Error {
 
 function runtimePaths() {
   if (process.env.RUNTIME_MODE !== "nginx-manager") throw new Error("Deploy is only allowed in the nginx-manager runtime");
-  const root = process.env.NGINX_RUNTIME_ROOT || "/data/nginx";
+  const root = nginxRuntimeRoot();
   const logsRoot = process.env.NGINX_LOG_DIR;
   if (!logsRoot) throw new Error("NGINX_LOG_DIR is not set");
   return { root, logsRoot, active: join(root, "active"), candidates: join(root, "candidates"), revisions: join(root, "revisions") };
-}
-
-async function updateStep(db: AppEnv["Variables"]["db"], deploymentId: string, sequence: number, status: string, message?: string, logExcerpt?: string) {
-  await db.update(deploymentSteps).set({
-    status, message, logExcerpt,
-    ...(status === "running" ? { startedAt: Date.now() } : {}),
-    ...(["succeeded", "failed"].includes(status) ? { finishedAt: Date.now() } : {}),
-  }).where(and(eq(deploymentSteps.deploymentId, deploymentId), eq(deploymentSteps.sequence, sequence)));
 }
 
 async function renderRuntimeRoot(
@@ -286,7 +281,7 @@ function redactDiagnosticOutput(value: string, paths: ReturnType<typeof runtimeP
     [paths.active, "<runtime>/active"],
     [paths.root, "<runtime>"],
     [paths.logsRoot, "<logs>"],
-    [process.env.CERTIFICATE_DATA_ROOT || "/data/certs", "<certificates>"],
+    [certificateDataRoot(), "<certificates>"],
     [process.env.DB_SQLITE_DIR, "<sqlite>"],
     [process.env.MANAGER_TLS_CERT_FILE, "<manager-certificate>"],
     [process.env.MANAGER_TLS_KEY_FILE, "<manager-private-key>"],
@@ -303,15 +298,15 @@ async function runDiagnosticNginxTest(db: AppEnv["Variables"]["db"], deploymentI
     if (!deployment || deployment.status !== "queued" || deployment.type !== "diagnostic_test") return;
     paths = runtimePaths();
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
-    await updateStep(db, deploymentId, 0, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "running");
     const result = await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
     const output = redactDiagnosticOutput(`${result.stdout}\n${result.stderr}`.trim(), paths);
-    await updateStep(db, deploymentId, 0, "succeeded", "Active config test passed", output);
+    await updateDeploymentStep(db, deploymentId, 0, "succeeded", "Active config test passed", output);
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   } catch (error) {
     const raw = error instanceof Error ? error.message : "Active config test failed";
     const message = paths ? redactDiagnosticOutput(raw, paths) : "Active config test failed";
-    await updateStep(db, deploymentId, 0, "failed", message, message);
+    await updateDeploymentStep(db, deploymentId, 0, "failed", message, message);
     await db.update(deployments).set({ status: "failed", errorCode: "NGINX_TEST_FAILED", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   }
 }
@@ -345,29 +340,29 @@ async function runReloadManagerTls(db: AppEnv["Variables"]["db"], deploymentId: 
     const nginx = process.env.NGINX_BIN || "/usr/sbin/nginx";
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
 
-    await updateStep(db, deploymentId, 0, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "running");
     const certificate = validateManagerTlsEnvironment();
-    await updateStep(db, deploymentId, 0, "succeeded", `Certificate valid until ${new Date(certificate.validTo).toISOString()}`);
+    await updateDeploymentStep(db, deploymentId, 0, "succeeded", `Certificate valid until ${new Date(certificate.validTo).toISOString()}`);
 
-    await updateStep(db, deploymentId, 1, "running");
+    await updateDeploymentStep(db, deploymentId, 1, "running");
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
-    await updateStep(db, deploymentId, 1, "succeeded", "Active config test passed");
+    await updateDeploymentStep(db, deploymentId, 1, "succeeded", "Active config test passed");
 
-    await updateStep(db, deploymentId, 2, "running");
+    await updateDeploymentStep(db, deploymentId, 2, "running");
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-s", "reload", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
-    await updateStep(db, deploymentId, 2, "succeeded", "Nginx graceful reload completed");
+    await updateDeploymentStep(db, deploymentId, 2, "succeeded", "Nginx graceful reload completed");
 
-    await updateStep(db, deploymentId, 3, "running");
+    await updateDeploymentStep(db, deploymentId, 3, "running");
     await verifyManagerHttps(certificate.hostname);
-    await updateStep(db, deploymentId, 3, "succeeded", "Manager HTTPS verification passed");
+    await updateDeploymentStep(db, deploymentId, 3, "succeeded", "Manager HTTPS verification passed");
 
-    await updateStep(db, deploymentId, 4, "running");
-    await updateStep(db, deploymentId, 4, "succeeded", "Manager TLS reloaded");
+    await updateDeploymentStep(db, deploymentId, 4, "running");
+    await updateDeploymentStep(db, deploymentId, 4, "succeeded", "Manager TLS reloaded");
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Manager TLS reload failed";
     const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), inArray(deploymentSteps.status, ["pending", "running"])) });
-    if (pending) await updateStep(db, deploymentId, pending.sequence, "failed", message, message.slice(0, 8_000));
+    if (pending) await updateDeploymentStep(db, deploymentId, pending.sequence, "failed", message, message.slice(0, 8_000));
     await db.update(deployments).set({ status: "failed", errorCode: "MANAGER_TLS_INVALID", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   }
 }
@@ -418,7 +413,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       if (logSettings.revision !== active.revision + 1) throw new Error("Log settings revision is stale");
     }
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
-    await updateStep(db, deploymentId, 0, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "running");
     if (rebuildActive) {
       const integrity = await db.all<{ integrity_check: string }>(sql.raw("PRAGMA integrity_check"));
       if (integrity.some((row) => row.integrity_check !== "ok")) throw new RebuildSourceError("SQLite integrity check failed");
@@ -458,7 +453,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       const snapshot = snapshots.get(version.id)!;
       if (createSnapshot(snapshot).checksum !== version.snapshotChecksum) throw new RebuildSourceError("Active config snapshot checksum invalid");
       const certificate = snapshot.ssl.certificateId ? certificatesById.get(snapshot.ssl.certificateId) : undefined;
-      if (snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !["ready", "active"].includes(certificate.status))) throw new RebuildSourceError("Referenced certificate asset is unavailable");
+      if (snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !usableCertificateStatuses.includes(certificate.status))) throw new RebuildSourceError("Referenced certificate asset is unavailable");
       await mkdir(join(paths.logsRoot, snapshot.primaryHostname), { recursive: true });
       const enabled = !appliesLogSettings && !rebuildActive && domain.id === deployment.domainId && !certificateActivation ? true : domain.enabled;
       const config = renderDomainConfig({ mode: "runtime", domainId: domain.id, snapshot, enabled, logs: { root: paths.logsRoot, errorLevel: logSettings.errorLevel }, listeners: { http: 8080, https: 8443 }, certificate: certificate ? { fullchainPath: certificate.certPath, privateKeyPath: certificate.keyPath } : undefined });
@@ -467,14 +462,14 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     }
     const manifest = createRuntimeManifest({ rootConfig, logSettings: { revision: logSettings.revision, checksum: logSettingsChecksum(logSettings) }, rootInputs: { logsRoot: paths.logsRoot, runtimeRoot: paths.root }, domains: manifestDomains });
     await writeFile(join(candidate, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o640 });
-    await updateStep(db, deploymentId, 0, "succeeded", rebuildActive ? `SQLite source check passed, generated ${selected.length} Domain configs` : `Generated ${selected.length} Domain configs`);
-    await updateStep(db, deploymentId, 1, "running");
-    await updateStep(db, deploymentId, 1, "succeeded", "Schema, path, and checksum validation passed");
-    await updateStep(db, deploymentId, 2, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "succeeded", rebuildActive ? `SQLite source check passed, generated ${selected.length} Domain configs` : `Generated ${selected.length} Domain configs`);
+    await updateDeploymentStep(db, deploymentId, 1, "running");
+    await updateDeploymentStep(db, deploymentId, 1, "succeeded", "Schema, path, and checksum validation passed");
+    await updateDeploymentStep(db, deploymentId, 2, "running");
     const nginx = process.env.NGINX_BIN || "/usr/sbin/nginx";
     await execFileAsync(nginx, ["-p", `${candidate}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
-    await updateStep(db, deploymentId, 2, "succeeded", "Candidate config test passed");
-    await updateStep(db, deploymentId, 3, "running");
+    await updateDeploymentStep(db, deploymentId, 2, "succeeded", "Candidate config test passed");
+    await updateDeploymentStep(db, deploymentId, 3, "running");
     previousTarget = await readlink(paths.active);
     await rename(candidate, revision);
     const next = join(paths.root, `.active-${deploymentId}`);
@@ -482,15 +477,15 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     await rename(next, paths.active);
     activated = true;
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000 });
-    await updateStep(db, deploymentId, 3, "succeeded", "Runtime revision activated atomically");
-    await updateStep(db, deploymentId, 4, "running");
+    await updateDeploymentStep(db, deploymentId, 3, "succeeded", "Runtime revision activated atomically");
+    await updateDeploymentStep(db, deploymentId, 4, "running");
     await execFileAsync(nginx, ["-p", `${paths.active}/`, "-s", "reload", "-c", "nginx.conf"], { timeout: 10_000 });
-    await updateStep(db, deploymentId, 4, "succeeded", "Nginx graceful reload completed");
-    await updateStep(db, deploymentId, 5, "running");
+    await updateDeploymentStep(db, deploymentId, 4, "succeeded", "Nginx graceful reload completed");
+    await updateDeploymentStep(db, deploymentId, 5, "running");
     const response = await fetch("http://127.0.0.1:8082/internal/health", { signal: AbortSignal.timeout(5_000) });
     if (!response.ok) throw new Error("Manager health check failed");
-    await updateStep(db, deploymentId, 5, "succeeded", "Manager health check passed");
-    await updateStep(db, deploymentId, 6, "running");
+    await updateDeploymentStep(db, deploymentId, 5, "succeeded", "Manager health check passed");
+    await updateDeploymentStep(db, deploymentId, 6, "running");
     db.transaction((tx) => {
       if (appliesLogSettings) {
         tx.insert(settings).values({ key: "nginx_logs", valueJson: JSON.stringify(logSettings), updatedAt: logSettings.updatedAt })
@@ -525,7 +520,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       tx.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId)).run();
     });
     if (rebuildActive) setRuntimeHealthy(deploymentId);
-    await updateStep(db, deploymentId, 6, "succeeded", rebuildActive ? "Runtime rebuilt from SQLite and restored to healthy" : appliesLogSettings ? `Log settings revision ${logSettings.revision} committed` : "Active Version committed");
+    await updateDeploymentStep(db, deploymentId, 6, "succeeded", rebuildActive ? "Runtime rebuilt from SQLite and restored to healthy" : appliesLogSettings ? `Log settings revision ${logSettings.revision} committed` : "Active Version committed");
     void cleanupRuntimeStorage(db).catch((error) => console.error("[runtime-storage] post-deployment cleanup failed", error));
     completed = true;
   } catch (error) {
@@ -547,7 +542,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       }
     }
     const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), inArray(deploymentSteps.status, ["pending", "running"])) });
-    if (pending) await updateStep(db, deploymentId, pending.sequence, "failed", message, message.slice(0, 8_000));
+    if (pending) await updateDeploymentStep(db, deploymentId, pending.sequence, "failed", message, message.slice(0, 8_000));
     await db.update(deployments).set({
       status: "failed",
       errorCode: recoveryFailed ? "RECOVERY_FAILED" : rebuildActive && error instanceof RebuildSourceError ? "ACTIVE_REBUILD_SOURCE_UNAVAILABLE" : rebuildActive ? "ACTIVE_REBUILD_FAILED" : activated ? "NGINX_RELOAD_FAILED" : "NGINX_TEST_FAILED",

@@ -15,14 +15,15 @@ import {
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { findManagerDomain, parseManagerSnapshot } from "@/worker/lib/manager/service";
-import { orderCleanupStatus } from "@/worker/lib/acme/order-cleanup-fields";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { createRenewalOrder } from "@/worker/lib/acme/renewal";
-import { cleanupCloudflareOrder } from "@/worker/lib/acme/cloudflare-cleanup";
-import { RECHECK_DEBOUNCE_MS, recheckableOrderStatuses, terminalOrderStatuses } from "@/worker/lib/acme/order-status";
+import { cancelAcmeOrder } from "@/worker/lib/acme/cancel-order";
+import { recheckAcmeOrder } from "@/worker/lib/acme/recheck-order";
+import { retryCloudflareOrderCleanup } from "@/worker/lib/acme/retry-cleanup";
+import { terminalOrderStatuses } from "@/worker/lib/acme/order-status";
 import { publicCertificate, publicChallenge, publicOrder } from "@/worker/lib/acme/public";
-import { retryCertificateActivation } from "@/worker/lib/acme/activation";
+import { retryAcmeOrderActivation } from "@/worker/lib/acme/retry-activation";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
 import { z } from "zod";
@@ -239,12 +240,7 @@ export async function recheckManagerOrder(db: AppDb, orderId: string) {
     where: and(eq(acmeOrders.id, orderId), eq(acmeOrders.domainId, manager.id)),
   });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (!recheckableOrderStatuses.includes(order.status)) return { order: publicOrder(order), debounced: false };
-  const now = Date.now();
-  if (order.lastPolledAt && now - order.lastPolledAt < RECHECK_DEBOUNCE_MS) return { order: publicOrder(order), debounced: true };
-  await db.update(acmeOrders).set({ nextPollAt: now, updatedAt: now }).where(eq(acmeOrders.id, order.id));
-  const scheduled = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
-  return { order: publicOrder(scheduled!), debounced: false };
+  return recheckAcmeOrder(db, order);
 }
 
 export async function cancelManagerOrder(db: AppDb, orderId: string) {
@@ -253,33 +249,7 @@ export async function cancelManagerOrder(db: AppDb, orderId: string) {
     where: and(eq(acmeOrders.id, orderId), eq(acmeOrders.domainId, manager.id)),
   });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (terminalOrderStatuses.includes(order.status)) return { order: publicOrder(order) };
-  const now = Date.now();
-  db.transaction((tx) => {
-    tx.update(acmeOrders).set({
-      status: "cancelled",
-      cleanupStatus: orderCleanupStatus(order.dnsProvider),
-      nextPollAt: null,
-      updatedAt: now,
-    }).where(eq(acmeOrders.id, order.id)).run();
-    if (order.replacesCertificateId) {
-      tx.update(certificates).set({ lastErrorCode: "RENEWAL_CANCELLED", nextCheckAt: now + 24 * 60 * 60 * 1000 })
-        .where(and(eq(certificates.id, order.replacesCertificateId), eq(certificates.status, "active"))).run();
-    }
-    if (order.dnsProvider !== "cloudflare") {
-      tx.update(acmeChallenges).set({
-        token: null,
-        keyAuthorization: null,
-        dnsRecordValue: null,
-        status: "cleaned",
-        cleanedAt: now,
-        updatedAt: now,
-      }).where(eq(acmeChallenges.orderId, order.id)).run();
-    }
-  });
-  if (order.dnsProvider === "cloudflare") await cleanupCloudflareOrder(db, order.id);
-  const cancelled = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
-  return { order: publicOrder(cancelled!) };
+  return cancelAcmeOrder(db, order);
 }
 
 export async function retryManagerActivation(db: AppDb, orderId: string) {
@@ -288,12 +258,7 @@ export async function retryManagerActivation(db: AppDb, orderId: string) {
     where: and(eq(acmeOrders.id, orderId), eq(acmeOrders.domainId, manager.id)),
   });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  const certificate = await db.query.certificates.findFirst({ where: eq(certificates.acmeOrderId, order.id) });
-  const activation = certificate
-    ? await db.query.certificateActivations.findFirst({ where: eq(certificateActivations.certificateId, certificate.id) })
-    : null;
-  if (!activation) throw new BusinessError("errors:certificateActivationNotFound", 409, "CERTIFICATE_ACTIVATION_NOT_FOUND");
-  return retryCertificateActivation(db, activation.id);
+  return retryAcmeOrderActivation(db, order);
 }
 
 export async function retryManagerCleanup(db: AppDb, orderId: string) {
@@ -302,11 +267,5 @@ export async function retryManagerCleanup(db: AppDb, orderId: string) {
     where: and(eq(acmeOrders.id, orderId), eq(acmeOrders.domainId, manager.id)),
   });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (order.dnsProvider !== "cloudflare" || !terminalOrderStatuses.includes(order.status)) {
-    throw new BusinessError("errors:cloudflareCleanupNotAvailable", 409, "CLOUDFLARE_CLEANUP_NOT_AVAILABLE");
-  }
-  await db.update(acmeOrders).set({ cleanupStatus: "pending", nextPollAt: Date.now(), updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
-  await cleanupCloudflareOrder(db, order.id);
-  const updated = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
-  return { order: publicOrder(updated!) };
+  return retryCloudflareOrderCleanup(db, order);
 }

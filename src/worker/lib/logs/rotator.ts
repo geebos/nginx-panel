@@ -6,9 +6,11 @@ import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { deploymentSteps, deployments, domains } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { enqueueRuntimeOperation } from "@/worker/lib/deployment/runner";
+import { updateDeploymentStep } from "@/worker/lib/deployment/update-step";
 import { getActiveLogSettings } from "@/worker/lib/log-settings";
 import { assertRuntimeMutable, getRuntimeState } from "@/worker/lib/runtime/state";
 import { controlledLogPath } from "@/worker/lib/logs/path";
+import { nginxRuntimeRoot } from "@/worker/lib/runtime/paths";
 
 const execFileAsync = promisify(execFile);
 const stepNames = ["Inspect log files", "Rotate files", "Reopen Nginx", "Commit rotation"];
@@ -18,15 +20,6 @@ type RotatedFile = { path: string; retainedFiles: number; backupPath: string };
 
 function isMissing(error: unknown) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === "ENOENT");
-}
-
-async function updateStep(db: AppEnv["Variables"]["db"], deploymentId: string, sequence: number, status: string, message?: string) {
-  await db.update(deploymentSteps).set({
-    status,
-    message,
-    ...(status === "running" ? { startedAt: Date.now() } : {}),
-    ...(["succeeded", "failed", "skipped"].includes(status) ? { finishedAt: Date.now() } : {}),
-  }).where(and(eq(deploymentSteps.deploymentId, deploymentId), eq(deploymentSteps.sequence, sequence)));
 }
 
 export async function createLogRotationDeployment(
@@ -121,30 +114,30 @@ async function runLogRotation(db: AppEnv["Variables"]["db"], deploymentId: strin
   const rotated: RotatedFile[] = [];
   try {
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
-    await updateStep(db, deploymentId, 0, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "running");
     const candidates = await rotationCandidates(db, input);
-    await updateStep(db, deploymentId, 0, "succeeded", `Found ${candidates.paths.length} log files to rotate`);
-    await updateStep(db, deploymentId, 1, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "succeeded", `Found ${candidates.paths.length} log files to rotate`);
+    await updateDeploymentStep(db, deploymentId, 1, "running");
     for (const path of candidates.paths) rotated.push(await rotateFile(path, candidates.retainedFiles));
-    await updateStep(db, deploymentId, 1, "succeeded", `Rotated ${rotated.length} files`);
+    await updateDeploymentStep(db, deploymentId, 1, "succeeded", `Rotated ${rotated.length} files`);
     if (rotated.length) {
-      await updateStep(db, deploymentId, 2, "running");
-      const runtimeRoot = process.env.NGINX_RUNTIME_ROOT || "/data/nginx";
+      await updateDeploymentStep(db, deploymentId, 2, "running");
+      const runtimeRoot = nginxRuntimeRoot();
       await execFileAsync(process.env.NGINX_BIN || "/usr/sbin/nginx", ["-p", `${runtimeRoot}/active/`, "-s", "reopen", "-c", "nginx.conf"], { timeout: 10_000 });
       await waitForCurrentFiles(rotated);
       await Promise.all(rotated.map((file) => rm(file.backupPath, { force: true })));
-      await updateStep(db, deploymentId, 2, "succeeded", "Nginx reopened and created current log files");
+      await updateDeploymentStep(db, deploymentId, 2, "succeeded", "Nginx reopened and created current log files");
     } else {
-      await updateStep(db, deploymentId, 2, "skipped", "No log files need rotation");
+      await updateDeploymentStep(db, deploymentId, 2, "skipped", "No log files need rotation");
     }
-    await updateStep(db, deploymentId, 3, "running");
+    await updateDeploymentStep(db, deploymentId, 3, "running");
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
-    await updateStep(db, deploymentId, 3, "succeeded", "Log rotation completed");
+    await updateDeploymentStep(db, deploymentId, 3, "succeeded", "Log rotation completed");
   } catch (error) {
     await Promise.all(rotated.map(restoreFile));
     const message = error instanceof Error ? error.message : "Log rotation failed";
     const pending = await db.query.deploymentSteps.findFirst({ where: and(eq(deploymentSteps.deploymentId, deploymentId), isNull(deploymentSteps.finishedAt)) });
-    if (pending) await updateStep(db, deploymentId, pending.sequence, "failed", message);
+    if (pending) await updateDeploymentStep(db, deploymentId, pending.sequence, "failed", message);
     await db.update(deployments).set({ status: "failed", errorCode: "LOG_ROTATION_FAILED", errorMessage: message, finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   }
 }

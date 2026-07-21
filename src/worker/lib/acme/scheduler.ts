@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
-import { acmeChallenges, acmeOrders, certificates, cloudflareCredentials, configVersions, domains } from "@/shared/schemas";
+import { acmeChallenges, acmeOrders, certificateRenewalWindowMs, certificates, cloudflareCredentials, configVersions, domains } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { AcmeRecoveryError, getAcmeAdapter, type AcmeAdapter, type ExistingAcmeOrderInput } from "@/worker/lib/acme/client";
 import { getCertificateStore, type CertificateStore } from "@/worker/lib/acme/certificate-store";
@@ -279,7 +279,7 @@ async function downloadCertificate(db: AppEnv["Variables"]["db"], order: typeof 
       lastDnsProvider: order.dnsProvider,
       cloudflareCredentialId: order.cloudflareCredentialId,
       issuedAt: now,
-      nextCheckAt: persisted.notAfter - 30 * 24 * 60 * 60 * 1000 + Math.floor(Math.random() * 2 * 60 * 60 * 1000),
+      nextCheckAt: persisted.notAfter - certificateRenewalWindowMs + Math.floor(Math.random() * 2 * 60 * 60 * 1000),
     }).run();
     tx.update(acmeOrders).set({ status: "succeeded", cleanupStatus: orderCleanupStatus(order.dnsProvider), nextPollAt: orderCleanupNextPollAt(order.dnsProvider, now), lastPolledAt: now, errorCode: null, errorMessage: null, updatedAt: now })
       .where(and(eq(acmeOrders.id, order.id), inArray(acmeOrders.status, downloadableOrderStatuses))).run();

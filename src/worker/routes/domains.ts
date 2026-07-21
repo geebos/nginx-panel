@@ -10,6 +10,7 @@ import {
   domainConfigSchema,
   domainListQuerySchema,
   domains,
+  sslConfigStatus,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
@@ -92,13 +93,10 @@ domainsRoute.get("/domains", async (c) => {
         .from(configVersions)
         .where(inArray(configVersions.id, versionIds))
     : [];
-  const sslStatusByVersion = new Map<string, "active" | "pending" | "disabled">();
+  const sslStatusByVersion = new Map<string, ReturnType<typeof sslConfigStatus>>();
   for (const version of versionRows) {
     const config = parseDomainSnapshot(version.snapshotJson);
-    sslStatusByVersion.set(
-      version.id,
-      config.ssl.certificateId ? "active" : config.ssl.enabled ? "pending" : "disabled",
-    );
+    sslStatusByVersion.set(version.id, sslConfigStatus(config.ssl));
   }
 
   const items = domainRows.map((domain) => {

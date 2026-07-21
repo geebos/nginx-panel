@@ -20,23 +20,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
 import { getCertificates, renewCertificate, type CertificateSummary } from "@/lib/api";
+import { certificateDisplayStatus } from "@/lib/certificate-status";
 import { formatErrorMessage } from "@/lib/i18n/error";
 import { getLocaleStaticPaths, makeStaticProps } from "@/lib/i18n/static";
 
-const DAY = 24 * 60 * 60 * 1000;
-
-type DisplayStatus = "ready" | "active" | "expiring" | "expired" | "failed" | "superseded";
-
-function displayStatus(certificate: CertificateSummary, now: number): DisplayStatus {
-  if (certificate.status === "failed") return "failed";
-  if (certificate.notAfter && certificate.notAfter <= now) return "expired";
-  if (certificate.status === "active" && certificate.notAfter && certificate.notAfter - now <= 30 * DAY) return "expiring";
-  return certificate.status as DisplayStatus;
-}
-
 function CertificateStatus({ certificate, now }: { certificate: CertificateSummary; now: number }) {
   const { t } = useTranslation(["common", "certificates"]);
-  const status = displayStatus(certificate, now);
+  const status = certificateDisplayStatus(certificate, now);
   if (status === "active" && !certificate.domainEnabled) {
     return <Badge variant="outline">{t("certificates:activeDomainDisabled")}</Badge>;
   }
@@ -57,17 +47,17 @@ function CertificateList() {
   const items = query.data?.items ?? [];
   const normalizedSearch = search.trim().toLowerCase();
   const filtered = items.filter((certificate) => {
-    const effectiveStatus = displayStatus(certificate, now);
+    const effectiveStatus = certificateDisplayStatus(certificate, now);
     return (!normalizedSearch || certificate.primaryHostname.includes(normalizedSearch) || certificate.sans.some((san) => san.includes(normalizedSearch)))
       && (status === "all" || effectiveStatus === status)
       && (!autoRenewOnly || certificate.autoRenew);
   });
   const summary = {
-    ready: items.filter((item) => displayStatus(item, now) === "ready").length,
+    ready: items.filter((item) => certificateDisplayStatus(item, now) === "ready").length,
     active: items.filter((item) => item.status === "active").length,
-    expiring: items.filter((item) => displayStatus(item, now) === "expiring").length,
-    expired: items.filter((item) => displayStatus(item, now) === "expired").length,
-    failed: items.filter((item) => displayStatus(item, now) === "failed").length,
+    expiring: items.filter((item) => certificateDisplayStatus(item, now) === "expiring").length,
+    expired: items.filter((item) => certificateDisplayStatus(item, now) === "expired").length,
+    failed: items.filter((item) => certificateDisplayStatus(item, now) === "failed").length,
   };
 
   const renew = async (certificate: CertificateSummary) => {

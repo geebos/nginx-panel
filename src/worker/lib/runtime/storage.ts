@@ -5,6 +5,7 @@ import { deployments, runtimeStorageSettingsSchema, settings } from "@/shared/sc
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { getRuntimeState } from "@/worker/lib/runtime/state";
+import { nginxRuntimeRoot } from "@/worker/lib/runtime/paths";
 
 export const MIB = 1024 * 1024;
 export const DEFAULT_REVISION_MAX_BYTES = 2 * 1024 * MIB;
@@ -44,7 +45,7 @@ export type RuntimeStorageCleanupResult = RuntimeStorageSnapshot & {
 };
 
 function runtimeRoot(options: RuntimeStorageOptions) {
-  return options.runtimeRoot ?? process.env.NGINX_RUNTIME_ROOT ?? "/data/nginx";
+  return options.runtimeRoot ?? nginxRuntimeRoot();
 }
 
 async function directorySize(root: string): Promise<number> {

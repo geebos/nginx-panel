@@ -3,6 +3,7 @@ import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import * as acme from "acme-client";
 import { normalizeHostnames } from "@/worker/lib/hostnames";
+import { certificateDataRoot } from "@/worker/lib/runtime/paths";
 
 export type PersistCertificateInput = {
   certificateId: string;
@@ -31,9 +32,6 @@ function acmeRoot() {
   return process.env.ACME_DATA_ROOT || "/data/acme";
 }
 
-function certificateRoot() {
-  return process.env.CERTIFICATE_DATA_ROOT || "/data/certs";
-}
 
 function checksum(value: string | Buffer) {
   return createHash("sha256").update(value).digest("hex");
@@ -66,7 +64,7 @@ export class FileCertificateStore implements CertificateStore {
     const notAfter = info.notAfter.getTime();
     if (!Number.isFinite(notBefore) || !Number.isFinite(notAfter) || notAfter <= Date.now()) throw new Error("Certificate validity period is invalid");
 
-    const target = join(certificateRoot(), input.domainId, input.certificateId);
+    const target = join(certificateDataRoot(), input.domainId, input.certificateId);
     const temporary = `${target}.tmp`;
     await mkdir(dirname(target), { recursive: true, mode: 0o700 });
     await rm(temporary, { recursive: true, force: true });

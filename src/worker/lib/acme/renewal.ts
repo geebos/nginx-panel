@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, count, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
-import { acmeOrders, certificates, cloudflareCredentials, domainAliases, domains } from "@/shared/schemas";
+import { acmeOrders, certificateRenewalWindowMs, certificates, cloudflareCredentials, domainAliases, domains } from "@/shared/schemas";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider, type CloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { activeOrderStatuses } from "@/worker/lib/acme/order-status";
@@ -10,7 +10,6 @@ import { parseStringArrayJson } from "@/worker/lib/json-array";
 import { createSerialQueue } from "@/worker/lib/serial-queue";
 import type { AppEnv } from "@/worker/types";
 
-const renewalWindow = 30 * 24 * 60 * 60 * 1000;
 const RENEWAL_RETRY_DELAYS_MS = [60 * 60 * 1000, 6 * 60 * 60 * 1000, 24 * 60 * 60 * 1000] as const;
 
 /** 1-based failed attempt count → backoff delay; clamps to last ladder step. */
@@ -161,7 +160,7 @@ export async function runRenewalSchedulerOnce(
     eq(certificates.status, "active"),
     eq(certificates.autoRenew, true),
     isNull(certificates.lastErrorCode),
-    lte(certificates.notAfter, now + renewalWindow),
+    lte(certificates.notAfter, now + certificateRenewalWindowMs),
     or(isNull(certificates.nextCheckAt), lte(certificates.nextCheckAt, now)),
   )).limit(25);
   await processDueRenewals(db, due, now, options.cloudflare);
@@ -176,7 +175,7 @@ export async function runRenewalRetryOnce(
     eq(certificates.status, "active"),
     eq(certificates.autoRenew, true),
     isNotNull(certificates.lastErrorCode),
-    lte(certificates.notAfter, now + renewalWindow),
+    lte(certificates.notAfter, now + certificateRenewalWindowMs),
     or(isNull(certificates.nextCheckAt), lte(certificates.nextCheckAt, now)),
   )).limit(25);
   await processDueRenewals(db, due, now, options.cloudflare);
@@ -202,4 +201,4 @@ export function waitForRenewalScheduler() {
   return renewalQueue.wait();
 }
 
-export const certificateRenewalWindowMs = renewalWindow;
+export { certificateRenewalWindowMs };

@@ -1,6 +1,6 @@
 import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
-import { acmeOrders, certificates, deployments, domains } from "@/shared/schemas";
+import { acmeOrders, certificateRenewalWindowMs, certificates, deployments, domains } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { getRuntimeState } from "@/worker/lib/runtime/state";
 
@@ -8,7 +8,7 @@ export const dashboardRoute = new Hono<AppEnv>();
 
 dashboardRoute.get("/dashboard", async (c) => {
   const db = c.get("db");
-  const renewalWindowEnd = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const renewalWindowEnd = Date.now() + certificateRenewalWindowMs;
   const [metricRows, certificateRows, orderRows, renewalAttention, recentDomains, recentDeployments] = await Promise.all([
     db.select({
       total: count(),

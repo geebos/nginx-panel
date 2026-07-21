@@ -4,6 +4,7 @@ import {
   configVersions,
   domains,
   managerUserHostnames,
+  usableCertificateStatuses,
   type ManagerConfig,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
@@ -57,7 +58,7 @@ export async function buildManagerRootInput(
     const cert = await db.query.certificates.findFirst({
       where: eq(certificates.id, config.ssl.certificateId),
     });
-    if (cert && ["ready", "active"].includes(cert.status)) {
+    if (cert && usableCertificateStatuses.includes(cert.status)) {
       tls = { fullchainPath: cert.certPath, privateKeyPath: cert.keyPath };
     }
   } else if (

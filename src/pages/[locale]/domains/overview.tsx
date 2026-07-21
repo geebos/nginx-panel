@@ -29,6 +29,7 @@ import { DomainTabs } from "@/components/pages/domains/tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
 import { domainDisplayStatus } from "@/lib/domain-status";
 import { getDomain } from "@/lib/api";
+import { sslConfigStatus } from "@/shared/schemas";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useLocale } from "@/hooks/use-locale";
 import { formatErrorMessage } from "@/lib/i18n/error";
@@ -214,7 +215,7 @@ function DomainOverview({ domainId, created }: { domainId: string; created: bool
                 <CardAction><ShieldCheckIcon className="size-4 text-muted-foreground" /></CardAction>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-4">
-                <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.status")}</p><div className="mt-1"><StatusBadge status={config.ssl.certificateId ? "active" : config.ssl.enabled ? "pending" : "disabled"} /></div></div>
+                <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.status")}</p><div className="mt-1"><StatusBadge status={sslConfigStatus(config.ssl)} /></div></div>
                 <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.environment")}</p><p className="mt-1 text-sm capitalize">{config.ssl.environment}</p></div>
                 <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.autoRenew")}</p><p className="mt-1 text-sm">{config.ssl.autoRenew ? t("domains:common.status.enabled") : t("domains:common.status.disabled")}</p></div>
                 <div><p className="text-xs text-muted-foreground">{t("domains:overview.httpsCard.forceHttps")}</p><p className="mt-1 text-sm">{config.ssl.forceHttps ? t("domains:common.status.enabled") : t("domains:common.status.disabled")}</p></div>

@@ -12,6 +12,7 @@ import {
   deploymentSteps,
   deployments,
   domains,
+  usableCertificateStatuses,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
@@ -23,6 +24,7 @@ import {
   renderRootConfig,
 } from "@/worker/lib/nginx/config";
 import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
+import { updateDeploymentStep } from "@/worker/lib/deployment/update-step";
 import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
 
@@ -92,26 +94,6 @@ function redactRuntimePath(value: string, candidateRoot: string) {
   return value.split(candidateRoot).join("<candidate>");
 }
 
-async function updateStep(
-  db: AppEnv["Variables"]["db"],
-  deploymentId: string,
-  sequence: number,
-  status: string,
-  message?: string,
-  logExcerpt?: string,
-) {
-  await db
-    .update(deploymentSteps)
-    .set({
-      status,
-      message,
-      logExcerpt,
-      ...(status === "running" ? { startedAt: Date.now() } : {}),
-      ...(["succeeded", "failed"].includes(status) ? { finishedAt: Date.now() } : {}),
-    })
-    .where(and(eq(deploymentSteps.deploymentId, deploymentId), eq(deploymentSteps.sequence, sequence)));
-}
-
 export async function createConfigTestDeployment(
   db: AppEnv["Variables"]["db"],
   input: { domainId: string; versionId: string; requestedBy: string; idempotencyKey: string; expectedSnapshotChecksum: string },
@@ -166,7 +148,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
 
     candidateRoot = await mkdtemp(join(tmpdir(), `nginx-manager-test-${deploymentId}-`));
     await db.update(deployments).set({ status: "running", startedAt: Date.now() }).where(eq(deployments.id, deploymentId));
-    await updateStep(db, deploymentId, 0, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "running");
     const domainRows = await db.select().from(domains).where(and(
       isNull(domains.deletedAt),
       or(isNotNull(domains.activeVersionId), eq(domains.id, targetDomain.id)),
@@ -225,7 +207,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       const certificate = snapshot.ssl.enabled && snapshot.ssl.certificateId
         ? certificatesById.get(snapshot.ssl.certificateId)
         : undefined;
-      if (snapshot.ssl.enabled && snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !["ready", "active"].includes(certificate.status))) {
+      if (snapshot.ssl.enabled && snapshot.ssl.certificateId && (!certificate || certificate.domainId !== domain.id || !usableCertificateStatuses.includes(certificate.status))) {
         throw new Error("Referenced certificate asset is unavailable");
       }
       await mkdir(join(logsRoot, snapshot.primaryHostname), { recursive: true });
@@ -239,13 +221,13 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       });
       await writeFile(join(candidateRoot, "domains", `${domain.id}.conf`), rendered);
     }
-    await updateStep(db, deploymentId, 0, "succeeded", `Generated ${selected.length} Domain configs`);
-    await updateStep(db, deploymentId, 1, "running");
-    await updateStep(db, deploymentId, 1, "succeeded", "Schema, path, and candidate file validation passed");
-    await updateStep(db, deploymentId, 2, "running");
+    await updateDeploymentStep(db, deploymentId, 0, "succeeded", `Generated ${selected.length} Domain configs`);
+    await updateDeploymentStep(db, deploymentId, 1, "running");
+    await updateDeploymentStep(db, deploymentId, 1, "succeeded", "Schema, path, and candidate file validation passed");
+    await updateDeploymentStep(db, deploymentId, 2, "running");
     const result = await execFileAsync(process.env.NGINX_BIN || "nginx", ["-p", `${candidateRoot}/`, "-t", "-c", "nginx.conf"], { timeout: 10_000, maxBuffer: 128 * 1024 });
     const output = redactRuntimePath(`${result.stdout}\n${result.stderr}`.trim(), candidateRoot).slice(0, 8_000);
-    await updateStep(db, deploymentId, 2, "succeeded", "nginx -t passed", output);
+    await updateDeploymentStep(db, deploymentId, 2, "succeeded", "nginx -t passed", output);
     await db.update(deployments).set({ status: "succeeded", finishedAt: Date.now() }).where(eq(deployments.id, deploymentId));
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Config test failed";
@@ -255,7 +237,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
       const failedStep = steps.find((step) => step.status === "running")
         ?? steps.sort((left, right) => left.sequence - right.sequence).find((step) => step.status === "pending");
       if (failedStep) {
-        await retry(() => updateStep(db, deploymentId, failedStep.sequence, "failed", message, message.slice(0, 8_000)));
+        await retry(() => updateDeploymentStep(db, deploymentId, failedStep.sequence, "failed", message, message.slice(0, 8_000)));
       }
     } catch (persistenceError) {
       console.error(`[config-test] failed to persist step failure for ${deploymentId}`, persistenceError);

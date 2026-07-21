@@ -158,6 +158,16 @@ export const sslConfigSchema = z.object({
   ]),
 });
 
+/** Badge / list status for domain SSL config: bound cert → active, enabled without cert → pending. */
+export type SslConfigStatus = "active" | "pending" | "disabled";
+
+export function sslConfigStatus(ssl: {
+  certificateId?: string | null;
+  enabled: boolean;
+}): SslConfigStatus {
+  return ssl.certificateId ? "active" : ssl.enabled ? "pending" : "disabled";
+}
+
 export const domainConfigSchema = z
   .object({
     schemaVersion: z.literal(1),

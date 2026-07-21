@@ -133,7 +133,7 @@ export function Tabbar() {
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label={t("common:nav.primaryAriaLabel")}
       className="relative z-50 flex shrink-0 select-none items-stretch border-t border-border bg-background/95 backdrop-blur [touch-action:manipulation] md:hidden pb-[env(safe-area-inset-bottom)]"
     >
       {primaryItems.map((item) => {

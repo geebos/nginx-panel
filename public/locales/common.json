@@ -23,6 +23,10 @@
         "en": "Manage general preferences such as display language.",
         "zh-CN": "管理显示语言等通用偏好。"
       },
+      "breadcrumb": {
+        "en": "General",
+        "zh-CN": "通用"
+      },
       "language": {
         "title": {
           "en": "Language",
@@ -38,6 +42,12 @@
       "settings": {
         "en": "Settings",
         "zh-CN": "设置"
+      }
+    },
+    "tabs": {
+      "ariaLabel": {
+        "en": "Settings sections",
+        "zh-CN": "设置分区"
       }
     },
     "logs": {
@@ -80,7 +90,7 @@
       "accessFields": {
         "title": {
           "en": "Access log fields",
-          "zh-CN": "Access log 字段"
+          "zh-CN": "访问日志字段"
         },
         "description": {
           "en": "Core fields cannot be removed; optional fields are injected via a fixed Nginx variable whitelist and custom format strings are not accepted.",
@@ -97,47 +107,47 @@
         "fields": {
           "timestamp": {
             "en": "Timestamp",
-            "zh-CN": "Timestamp"
+            "zh-CN": "时间戳"
           },
           "domain": {
             "en": "Domain / Host",
-            "zh-CN": "Domain / Host"
+            "zh-CN": "域名 / Host"
           },
           "method": {
             "en": "HTTP Method",
-            "zh-CN": "HTTP Method"
+            "zh-CN": "HTTP 方法"
           },
           "path": {
             "en": "Path",
-            "zh-CN": "Path"
+            "zh-CN": "路径"
           },
           "request_uri": {
             "en": "Request URI",
-            "zh-CN": "Request URI"
+            "zh-CN": "请求 URI"
           },
           "status": {
             "en": "Status",
-            "zh-CN": "Status"
+            "zh-CN": "状态码"
           },
           "request_time": {
             "en": "Request time",
-            "zh-CN": "Request time"
+            "zh-CN": "请求耗时"
           },
           "client_ip": {
             "en": "Client IP",
-            "zh-CN": "Client IP"
+            "zh-CN": "客户端 IP"
           },
           "upstream_addr": {
             "en": "Upstream address",
-            "zh-CN": "Upstream address"
+            "zh-CN": "上游地址"
           },
           "upstream_status": {
             "en": "Upstream status",
-            "zh-CN": "Upstream status"
+            "zh-CN": "上游状态"
           },
           "upstream_time": {
             "en": "Upstream time",
-            "zh-CN": "Upstream time"
+            "zh-CN": "上游耗时"
           }
         }
       },
@@ -152,7 +162,7 @@
         },
         "errorLogLevel": {
           "en": "Error log level",
-          "zh-CN": "Error log level"
+          "zh-CN": "错误日志级别"
         },
         "maxFileSize": {
           "en": "Max file size (MiB)",
@@ -193,7 +203,7 @@
     "diagnostics": {
       "title": {
         "en": "Diagnostics",
-        "zh-CN": "Diagnostics"
+        "zh-CN": "诊断"
       },
       "description": {
         "en": "Check consistency between the active revision and the SQLite runtime projection.",
@@ -201,20 +211,20 @@
       },
       "breadcrumb": {
         "en": "Diagnostics",
-        "zh-CN": "Diagnostics"
+        "zh-CN": "诊断"
       },
       "loadFailed": {
         "en": "Failed to load diagnostics",
-        "zh-CN": "Diagnostics 加载失败"
+        "zh-CN": "诊断加载失败"
       },
       "operationFailed": {
         "en": "Diagnostics operation failed",
-        "zh-CN": "Diagnostics 操作失败"
+        "zh-CN": "诊断操作失败"
       },
       "consistency": {
         "title": {
           "en": "Runtime consistency",
-          "zh-CN": "Runtime consistency"
+          "zh-CN": "运行一致性"
         },
         "description": {
           "en": "On startup, validates consistency across the SQLite projection, manifest, config file set, checksums, and nginx -t.",
@@ -272,7 +282,7 @@
         },
         "notAvailable": {
           "en": "N/A",
-          "zh-CN": "N/A"
+          "zh-CN": "无"
         },
         "historicalTitle": {
           "en": "Historical log roots detected",
@@ -302,7 +312,7 @@
         },
         "domainLabel": {
           "en": "Domain",
-          "zh-CN": "Domain"
+          "zh-CN": "域名"
         },
         "emptyPublished": {
           "en": "No published Domain",
@@ -326,39 +336,39 @@
         },
         "revisionFile": {
           "en": "Revision file",
-          "zh-CN": "Revision file"
+          "zh-CN": "修订文件"
         },
         "sourceVersion": {
           "en": "Source version",
-          "zh-CN": "Source version"
+          "zh-CN": "源版本"
         },
         "sourceChecksum": {
           "en": "Source checksum",
-          "zh-CN": "Source checksum"
+          "zh-CN": "源校验和"
         },
         "configChecksum": {
           "en": "Config checksum",
-          "zh-CN": "Config checksum"
+          "zh-CN": "配置校验和"
         },
         "routesBadge": {
           "en": "{{count}} routes",
-          "zh-CN": "{{count}} routes"
+          "zh-CN": "{{count}} 条路由"
         },
         "headersBadge": {
           "en": "{{count}} headers",
-          "zh-CN": "{{count}} headers"
+          "zh-CN": "{{count}} 条 Header"
         },
         "logsBadge": {
           "en": "logs r{{revision}}",
-          "zh-CN": "logs r{{revision}}"
+          "zh-CN": "日志 r{{revision}}"
         },
         "enabled": {
           "en": "enabled",
-          "zh-CN": "enabled"
+          "zh-CN": "已启用"
         },
         "disabled": {
           "en": "disabled",
-          "zh-CN": "disabled"
+          "zh-CN": "已停用"
         },
         "selectHint": {
           "en": "Select a published Domain to view the current runtime config.",
@@ -380,7 +390,7 @@
         },
         "hostname": {
           "en": "Hostname",
-          "zh-CN": "Hostname"
+          "zh-CN": "主机名"
         },
         "san": {
           "en": "SAN",
@@ -498,7 +508,7 @@
         },
         "namePlaceholder": {
           "en": "Production DNS",
-          "zh-CN": "Production DNS"
+          "zh-CN": "生产环境 DNS"
         },
         "tokenLabel": {
           "en": "Cloudflare API Token",
@@ -746,7 +756,7 @@
       "artifacts": {
         "title": {
           "en": "Runtime artifacts",
-          "zh-CN": "Runtime artifacts"
+          "zh-CN": "运行时产物"
         },
         "description": {
           "en": "Retention cleanup runs immediately after saving; Nginx is not reloaded.",
@@ -1353,7 +1363,7 @@
           },
           "challengesTitle": {
             "en": "Challenges",
-            "zh-CN": "Challenges"
+            "zh-CN": "质询"
           },
           "challengesDescDns": {
             "en": "Add the corresponding TXT for each hostname; do not overwrite other records with the same name.",
@@ -1474,7 +1484,7 @@
   "nav": {
     "brand": {
       "en": "Nginx Manager",
-      "zh-CN": "Nginx Manager"
+      "zh-CN": "Nginx 管理器"
     },
     "dashboard": {
       "en": "Dashboard",
@@ -1517,6 +1527,10 @@
         "en": "unavailable",
         "zh-CN": "不可用"
       }
+    },
+    "primaryAriaLabel": {
+      "en": "Primary",
+      "zh-CN": "主要导航"
     }
   },
   "status": {

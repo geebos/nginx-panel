@@ -41,10 +41,9 @@ import {
 	rollbackManagerSettings,
 } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
+import { terminalOrderStatuses } from "@/shared/schemas";
 import { cn } from "@/lib/utils";
 import { validationMethodLabel } from "@/components/pages/settings/forms/manager-ssl-fields";
-
-const terminalOrders = ["succeeded", "failed", "expired", "cancelled"];
 
 function statusBadgeClass(status: string) {
 	switch (status) {
@@ -247,7 +246,7 @@ export function ManagerSettingsForm() {
 		(item) => item.status === "active",
 	);
 	const activeOrder = ordersQuery.data?.items.find(
-		(item) => !terminalOrders.includes(item.status),
+		(item) => !terminalOrderStatuses.includes(item.status),
 	);
 	const sslEnabled = Boolean(config?.bound && config.ssl.enabled);
 

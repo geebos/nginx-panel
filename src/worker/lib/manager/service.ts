@@ -7,16 +7,19 @@ import {
   configVersions,
   domainAliases,
   domains,
-  managerConfigSchema,
   type ManagerConfig,
   type UpdateManagerSettingsInput,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
+import { sameHostnames } from "@/worker/lib/hostnames";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain/validation";
 import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
 import { getBootstrapHosts } from "@/worker/lib/runtime/env";
+import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
+
+export { parseManagerSnapshot };
 
 type AppDb = AppEnv["Variables"]["db"];
 type AppTransaction = Parameters<Parameters<AppDb["transaction"]>[0]>[0];
@@ -25,16 +28,6 @@ export async function findManagerDomain(db: AppDb) {
   return db.query.domains.findFirst({
     where: and(eq(domains.type, "manager"), isNull(domains.deletedAt)),
   });
-}
-
-export function parseManagerSnapshot(json: string): ManagerConfig {
-  return managerConfigSchema.parse(JSON.parse(json));
-}
-
-function sameHostnameSet(left: string[], right: string[]) {
-  const normalize = (values: string[]) =>
-    [...new Set(values.map((value) => value.toLowerCase().replace(/\.$/, "")))].sort();
-  return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
 }
 
 async function loadManagerBaseConfig(
@@ -182,7 +175,7 @@ export async function upsertManagerDraft(
   const baseHostnames = baseConfig
     ? [baseConfig.primaryHostname, ...baseConfig.aliases]
     : [];
-  const hostnamesChanged = Boolean(baseConfig) && !sameHostnameSet(hostnames, baseHostnames);
+  const hostnamesChanged = Boolean(baseConfig) && !sameHostnames(hostnames, baseHostnames);
   // UI ssl subset has no certificateId; rebind must drop the previous ACME cert id (R3).
   const sslPatch: Partial<ManagerConfig["ssl"]> | undefined = hostnamesChanged
     ? { ...(input.ssl ?? {}), certificateId: undefined }
@@ -280,7 +273,7 @@ export function createManagerDraftFromSetupInTx(
     const base = loadManagerBaseConfigInTx(tx, existing);
     if (base?.config.bound) {
       const baseHostnames = [base.config.primaryHostname, ...base.config.aliases];
-      if (sameHostnameSet(nextHostnames, baseHostnames)) {
+      if (sameHostnames(nextHostnames, baseHostnames)) {
         // Same hostname set: keep seed SSL. Skip draft+publish when already active with no draft.
         if (existing.activeVersionId === base.versionId && !existing.draftVersionId) {
           return {
@@ -311,7 +304,7 @@ export function createManagerDraftFromSetupInTx(
     }
 
     const hostnamesChanged = Boolean(base?.config)
-      && !sameHostnameSet(nextHostnames, [base!.config.primaryHostname, ...base!.config.aliases]);
+      && !sameHostnames(nextHostnames, [base!.config.primaryHostname, ...base!.config.aliases]);
     const config = buildBoundManagerConfig({
       primaryHostname: input.primaryHostname,
       aliases: input.aliases ?? [],

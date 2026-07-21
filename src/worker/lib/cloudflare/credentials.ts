@@ -1,23 +1,19 @@
-import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { BusinessError } from "@/worker/lib/errors";
+import { deriveManagerKey, loadMasterKey } from "@/worker/lib/master-key";
 
-const MASTER_KEY_FILE = process.env.NGINX_MANAGER_MASTER_KEY_FILE ?? "/run/secrets/nginx_manager_master_key";
 const SCHEMA_VERSION = 1;
 
 async function credentialKey() {
   let master: Buffer;
   try {
-    master = await readFile(MASTER_KEY_FILE);
+    master = await loadMasterKey();
   } catch (error) {
-    if (process.env.APP_ENV !== "development") {
-      throw new BusinessError("errors:secretMasterKeyUnavailable", 503, "SECRET_MASTER_KEY_UNAVAILABLE", {
-        cause: error instanceof Error ? error : undefined,
-      });
-    }
-    master = Buffer.from(process.env.NGINX_MANAGER_DEV_MASTER_KEY ?? "nginx-manager-development-key");
+    throw new BusinessError("errors:secretMasterKeyUnavailable", 503, "SECRET_MASTER_KEY_UNAVAILABLE", {
+      cause: error instanceof Error ? error : undefined,
+    });
   }
-  return Buffer.from(hkdfSync("sha256", master, "nginx-domain-manager", "cloudflare-credentials-v1", 32));
+  return deriveManagerKey(master, "cloudflare-credentials-v1");
 }
 
 function aad(credentialId: string) {

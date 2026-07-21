@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { acmeOrders, changePasswordSchema, cloudflareCredentialInputSchema, cloudflareCredentials, deployments, nginxLogSettingsInputSchema, rebuildActiveSchema, replaceCloudflareCredentialTokenSchema, runtimeStorageSettingsSchema, sessionPolicySchema, sessions, settings, users } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
+import { parseStringArrayJson } from "@/worker/lib/json-array";
 import { createDiagnosticNginxTestDeployment, createLogSettingsDeployment, createRebuildActiveDeployment, createReloadManagerTlsDeployment, enqueueDiagnosticNginxTest, enqueueLogSettings, enqueueRebuildActive, enqueueReloadManagerTls } from "@/worker/lib/deployment/runner";
 import { getActiveLogSettings } from "@/worker/lib/log-settings";
 import { renderAccessLogFormat } from "@/worker/lib/nginx/config";
@@ -298,7 +299,7 @@ settingsRoute.get("/settings/diagnostics", async (c) => {
               hostname: active.config.primaryHostname,
               subject: cert.sansJson,
               issuer: cert.provider,
-              subjectAltName: (JSON.parse(cert.sansJson) as string[]).join(", "),
+              subjectAltName: parseStringArrayJson(cert.sansJson).join(", "),
               validFrom: cert.notBefore ?? 0,
               validTo: cert.notAfter,
               fingerprint256: cert.certFileChecksum,

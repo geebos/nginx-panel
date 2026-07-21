@@ -3,7 +3,8 @@ import { lstat, readFile, readdir, readlink } from "node:fs/promises";
 import { basename, isAbsolute, join, normalize, sep } from "node:path";
 import { promisify } from "node:util";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { configVersions, domainConfigSchema, domains } from "@/shared/schemas";
+import { configVersions, domains } from "@/shared/schemas";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 import type { AppEnv } from "@/worker/types";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { getActiveLogSettings, logSettingsChecksum } from "@/worker/lib/log-settings";
@@ -117,7 +118,7 @@ export async function verifyRuntime(
       if (!version) return degraded(activeRevision, "SOURCE_VERSION_MISSING", "Active Version missing");
       let snapshot;
       try {
-        const config = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
+        const config = parseDomainSnapshot(version.snapshotJson);
         snapshot = { ...createSnapshot(config), certificateId: config.ssl.certificateId ?? null };
       } catch {
         return degraded(activeRevision, "SOURCE_SNAPSHOT_INVALID", "Active Version snapshot verification failed");

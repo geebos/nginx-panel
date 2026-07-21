@@ -18,6 +18,7 @@ import { jsonValidator, validationError } from "@/worker/lib/validator";
 import { assertHostnamesAvailable, assertHostnamesMutable } from "@/worker/lib/domain/validation";
 import { rethrowWriteConflict } from "@/worker/lib/domain/constraint-conflict";
 import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 
 const updateDomainSchema = z.object({
   config: domainConfigSchema,
@@ -93,7 +94,7 @@ domainsRoute.get("/domains", async (c) => {
     : [];
   const sslStatusByVersion = new Map<string, "active" | "pending" | "disabled">();
   for (const version of versionRows) {
-    const config = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
+    const config = parseDomainSnapshot(version.snapshotJson);
     sslStatusByVersion.set(
       version.id,
       config.ssl.certificateId ? "active" : config.ssl.enabled ? "pending" : "disabled",
@@ -179,9 +180,9 @@ domainsRoute.get("/domains/:id", async (c) => {
   ]);
 
   const config = draftVersion
-    ? domainConfigSchema.parse(JSON.parse(draftVersion.snapshotJson))
+    ? parseDomainSnapshot(draftVersion.snapshotJson)
     : activeVersion
-      ? domainConfigSchema.parse(JSON.parse(activeVersion.snapshotJson))
+      ? parseDomainSnapshot(activeVersion.snapshotJson)
       : null;
 
   return c.json({

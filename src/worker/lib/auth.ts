@@ -1,10 +1,10 @@
-import { createHash, createHmac, hkdfSync, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { setCookie } from "hono/cookie";
 import { authAttempts, sessions, type User } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
+import { deriveManagerKey, loadMasterKey } from "@/worker/lib/master-key";
 import { getSessionPolicy } from "@/worker/lib/session-policy";
 import { effectiveRequestScheme } from "@/worker/lib/runtime/env";
 
@@ -14,7 +14,6 @@ const LOGIN_FAILURE_LIMIT = 5;
 const PASSWORD_CHANGE_WINDOW_MS = 30 * 60 * 1000;
 const PASSWORD_CHANGE_BLOCK_MS = 30 * 60 * 1000;
 const PASSWORD_CHANGE_FAILURE_LIMIT = 3;
-const MASTER_KEY_FILE = process.env.NGINX_MANAGER_MASTER_KEY_FILE ?? "/run/secrets/nginx_manager_master_key";
 
 export const SESSION_COOKIE = "nginx_manager_session";
 export const DUMMY_PASSWORD_HASH = `scrypt$16384$8$1$${Buffer.alloc(16).toString("base64url")}$${Buffer.alloc(64).toString("base64url")}`;
@@ -26,24 +25,17 @@ async function getAuthAttemptKey() {
 
   let master: Buffer;
   try {
-    master = await readFile(MASTER_KEY_FILE);
+    master = await loadMasterKey();
   } catch (error) {
-    if (process.env.APP_ENV !== "development") {
-      throw new BusinessError(
-        "errors:secretMasterKeyUnavailable",
-        503,
-        "SECRET_MASTER_KEY_UNAVAILABLE",
-        { cause: error instanceof Error ? error : undefined },
-      );
-    }
-    master = Buffer.from(
-      process.env.NGINX_MANAGER_DEV_MASTER_KEY ?? "nginx-manager-development-key",
+    throw new BusinessError(
+      "errors:secretMasterKeyUnavailable",
+      503,
+      "SECRET_MASTER_KEY_UNAVAILABLE",
+      { cause: error instanceof Error ? error : undefined },
     );
   }
 
-  authAttemptKey = Buffer.from(
-    hkdfSync("sha256", master, "nginx-domain-manager", "auth-attempts-v1", 32),
-  );
+  authAttemptKey = deriveManagerKey(master, "auth-attempts-v1");
   return authAttemptKey;
 }
 

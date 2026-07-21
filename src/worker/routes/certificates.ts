@@ -11,11 +11,14 @@ import {
   createCertificateOrderSchema,
   deployments,
   domainAliases,
-  domainConfigSchema,
   domains,
 } from "@/shared/schemas";
 import { retryCertificateActivation } from "@/worker/lib/acme/activation";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 import { cleanupCloudflareOrder } from "@/worker/lib/acme/cloudflare-cleanup";
+import { orderCleanupStatus } from "@/worker/lib/acme/order-cleanup-fields";
+import { RECHECK_DEBOUNCE_MS, recheckableOrderStatuses, terminalOrderStatuses } from "@/worker/lib/acme/order-status";
+import { publicCertificate, publicChallenge, publicOrder } from "@/worker/lib/acme/public";
 import { createRenewalOrder } from "@/worker/lib/acme/renewal";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
@@ -23,7 +26,6 @@ import { BusinessError } from "@/worker/lib/errors";
 import { jsonValidator } from "@/worker/lib/validator";
 import type { AppEnv } from "@/worker/types";
 
-const terminalOrderStatuses = ["succeeded", "failed", "expired", "cancelled"];
 const httpChallengeStatuses = ["pending", "presented", "propagating", "ready"];
 
 async function domainOrThrow(db: AppEnv["Variables"]["db"], id: string) {
@@ -31,50 +33,6 @@ async function domainOrThrow(db: AppEnv["Variables"]["db"], id: string) {
   // Manager is not exposed via domain certificate paths (use /api/settings/manager/certificate/*).
   if (!domain || domain.type === "manager") throw new BusinessError("errors:domainNotFound", 404, "DOMAIN_NOT_FOUND");
   return domain;
-}
-
-function publicOrder(order: typeof acmeOrders.$inferSelect) {
-  const { idempotencyKey: _idempotencyKey, identifiersJson, ...safe } = order;
-  void _idempotencyKey;
-  return { ...safe, identifiers: JSON.parse(identifiersJson) as string[] };
-}
-
-function publicChallenge(challenge: typeof acmeChallenges.$inferSelect) {
-  return {
-    id: challenge.id,
-    hostname: challenge.hostname,
-    type: challenge.type,
-    status: challenge.status,
-    dnsRecordName: challenge.dnsRecordName,
-    dnsRecordValue: challenge.type === "dns-01" ? challenge.dnsRecordValue : null,
-    expiresAt: challenge.expiresAt,
-    cleanedAt: challenge.cleanedAt,
-  };
-}
-
-function publicCertificate(
-  certificate: typeof certificates.$inferSelect,
-  domain: Pick<typeof domains.$inferSelect, "primaryHostname" | "enabled" | "activeVersionId">,
-) {
-  return {
-    id: certificate.id,
-    domainId: certificate.domainId,
-    acmeOrderId: certificate.acmeOrderId,
-    provider: certificate.provider,
-    environment: certificate.environment,
-    status: certificate.status,
-    sans: JSON.parse(certificate.sansJson) as string[],
-    notBefore: certificate.notBefore,
-    notAfter: certificate.notAfter,
-    autoRenew: certificate.autoRenew,
-    issuedAt: certificate.issuedAt,
-    activatedAt: certificate.activatedAt,
-    nextCheckAt: certificate.nextCheckAt,
-    lastErrorCode: certificate.lastErrorCode,
-    primaryHostname: domain.primaryHostname,
-    domainEnabled: domain.enabled,
-    activeVersionId: domain.activeVersionId,
-  };
 }
 
 export const certificatesRoute = new Hono<AppEnv>();
@@ -115,7 +73,7 @@ certificatesRoute.post("/domains/:id/certificate/orders", jsonValidator(createCe
   if (!currentVersionId) throw new BusinessError("errors:versionNotFound", 409, "VERSION_NOT_FOUND");
   const version = await db.query.configVersions.findFirst({ where: and(eq(configVersions.id, currentVersionId), eq(configVersions.domainId, domain.id)) });
   if (!version) throw new BusinessError("errors:versionNotFound", 409, "VERSION_NOT_FOUND");
-  const config = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
+  const config = parseDomainSnapshot(version.snapshotJson);
   const input = c.req.valid("json");
   if (!config.ssl.enabled) throw new BusinessError("errors:httpsNotEnabled", 409, "HTTPS_NOT_ENABLED");
   if (config.ssl.email.toLowerCase() !== input.accountEmail || config.ssl.environment !== input.environment || JSON.stringify(config.ssl.validation) !== JSON.stringify(input.validation)) {
@@ -203,9 +161,9 @@ certificatesRoute.post("/domains/:id/certificate/orders/:orderId/recheck", async
   const db = c.get("db");
   const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, c.req.param("orderId")), eq(acmeOrders.domainId, c.req.param("id"))) });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (!["waiting_http", "waiting_dns", "validating"].includes(order.status)) return c.json({ order: publicOrder(order) });
+  if (!recheckableOrderStatuses.includes(order.status)) return c.json({ order: publicOrder(order) });
   const now = Date.now();
-  if (order.lastPolledAt && now - order.lastPolledAt < 5_000) return c.json({ order: publicOrder(order), debounced: true });
+  if (order.lastPolledAt && now - order.lastPolledAt < RECHECK_DEBOUNCE_MS) return c.json({ order: publicOrder(order), debounced: true });
   await db.update(acmeOrders).set({ nextPollAt: now, updatedAt: now }).where(eq(acmeOrders.id, order.id));
   const scheduled = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
   return c.json({ order: publicOrder(scheduled!), debounced: false });
@@ -231,7 +189,7 @@ certificatesRoute.post("/domains/:id/certificate/orders/:orderId/cancel", async 
   if (terminalOrderStatuses.includes(order.status)) return c.json({ order: publicOrder(order) });
   const now = Date.now();
   db.transaction((tx) => {
-    tx.update(acmeOrders).set({ status: "cancelled", cleanupStatus: order.dnsProvider === "cloudflare" ? "pending" : "succeeded", nextPollAt: null, updatedAt: now }).where(eq(acmeOrders.id, order.id)).run();
+    tx.update(acmeOrders).set({ status: "cancelled", cleanupStatus: orderCleanupStatus(order.dnsProvider), nextPollAt: null, updatedAt: now }).where(eq(acmeOrders.id, order.id)).run();
     if (order.replacesCertificateId) {
       tx.update(certificates).set({ lastErrorCode: "RENEWAL_CANCELLED", nextCheckAt: now + 24 * 60 * 60 * 1000 }).where(and(eq(certificates.id, order.replacesCertificateId), eq(certificates.status, "active"))).run();
     }

@@ -11,9 +11,7 @@ import {
   configVersions,
   deploymentSteps,
   deployments,
-  domainConfigSchema,
   domains,
-  managerConfigSchema,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
@@ -25,6 +23,8 @@ import {
   renderRootConfig,
 } from "@/worker/lib/nginx/config";
 import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
+import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
 
 const execFileAsync = promisify(execFile);
 const activeConfigTests = new Set<Promise<void>>();
@@ -186,7 +186,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
     const versionsById = new Map(versionRows.map((version) => [version.id, version]));
     const snapshotsByVersionId = new Map(versionRows.map((version) => [
       version.id,
-      domainConfigSchema.parse(JSON.parse(version.snapshotJson)),
+      parseDomainSnapshot(version.snapshotJson),
     ]));
     const certificateIds = [...new Set([...snapshotsByVersionId.values()]
       .filter((snapshot) => snapshot.ssl.enabled)
@@ -202,7 +202,7 @@ async function executeConfigTest(db: AppEnv["Variables"]["db"], deploymentId: st
     let rootConfig: string;
     if (isManagerTarget || process.env.RUNTIME_MODE === "nginx-manager") {
       const targetManager = isManagerTarget
-        ? managerConfigSchema.parse(JSON.parse(targetVersion.snapshotJson))
+        ? parseManagerSnapshot(targetVersion.snapshotJson)
         : undefined;
       const rootInput = await buildManagerRootInput(db, { targetConfig: targetManager });
       const catchall = await ensureHttpsCatchallCerts(candidateRoot);

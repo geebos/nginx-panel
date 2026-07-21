@@ -3,13 +3,13 @@ import {
   certificates,
   configVersions,
   domains,
-  managerConfigSchema,
   managerUserHostnames,
   type ManagerConfig,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import type { RenderManagerRootInput } from "@/worker/lib/nginx/config";
 import { getBootstrapHosts } from "@/worker/lib/runtime/env";
+import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
 
 type AppDb = AppEnv["Variables"]["db"];
 
@@ -32,7 +32,7 @@ export async function loadActiveManagerConfig(db: AppDb): Promise<{
     return {
       domainId: manager.id,
       versionId: version.id,
-      config: managerConfigSchema.parse(JSON.parse(version.snapshotJson)),
+      config: parseManagerSnapshot(version.snapshotJson),
     };
   } catch {
     return { domainId: manager.id, versionId: version.id, config: null };

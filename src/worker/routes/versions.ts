@@ -5,7 +5,6 @@ import {
   configVersions,
   createConfigVersionSchema,
   deployVersionInputSchema,
-  domainConfigSchema,
   domains,
   testVersionInputSchema,
   type ConfigVersion,
@@ -14,6 +13,7 @@ import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { diffDomainConfigs } from "@/worker/lib/domain/diff";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 import { renderDomainPreview } from "@/worker/lib/nginx/config";
 import { createConfigTestDeployment, runConfigTest } from "@/worker/lib/deployment/config-test";
 import { jsonValidator } from "@/worker/lib/validator";
@@ -32,10 +32,6 @@ async function versionOrThrow(db: AppEnv["Variables"]["db"], domainId: string, v
   const version = await db.query.configVersions.findFirst({ where: and(eq(configVersions.id, versionId), eq(configVersions.domainId, domainId)) });
   if (!version) throw new BusinessError("errors:versionNotFound", 404, "VERSION_NOT_FOUND");
   return version;
-}
-
-function configFrom(version: { snapshotJson: string }) {
-  return domainConfigSchema.parse(JSON.parse(version.snapshotJson));
 }
 
 export const versionsRoute = new Hono<AppEnv>();
@@ -104,7 +100,7 @@ versionsRoute.get("/domains/:id/versions/:versionId", async (c) => {
   const db = c.get("db");
   await domainOrThrow(db, c.req.param("id"));
   const version = await versionOrThrow(db, c.req.param("id"), c.req.param("versionId"));
-  const config = configFrom(version);
+  const config = parseDomainSnapshot(version.snapshotJson);
   return c.json({ version, config, nginxPreview: renderDomainPreview(config) });
 });
 
@@ -115,8 +111,8 @@ versionsRoute.get("/domains/:id/versions/:versionId/diff", async (c) => {
   const baseId = c.req.query("base");
   if (!baseId) throw new BusinessError("errors:validationError", 400, "VALIDATION_ERROR");
   const base = await versionOrThrow(db, c.req.param("id"), baseId);
-  const baseConfig = configFrom(base);
-  const targetConfig = configFrom(target);
+  const baseConfig = parseDomainSnapshot(base.snapshotJson);
+  const targetConfig = parseDomainSnapshot(target.snapshotJson);
   return c.json({
     base,
     target,
@@ -135,11 +131,11 @@ versionsRoute.get("/domains/:id/versions/:versionId/publish-preview", async (c) 
   if (domain.draftVersionId !== target.id || target.status !== "draft") {
     throw new BusinessError("errors:draftChanged", 409, "DRAFT_CHANGED");
   }
-  const targetConfig = configFrom(target);
+  const targetConfig = parseDomainSnapshot(target.snapshotJson);
   const base = domain.activeVersionId
     ? await versionOrThrow(db, domain.id, domain.activeVersionId)
     : null;
-  const baseConfig = base ? configFrom(base) : null;
+  const baseConfig = base ? parseDomainSnapshot(base.snapshotJson) : null;
   return c.json({
     domainId: domain.id,
     baseVersion: base,

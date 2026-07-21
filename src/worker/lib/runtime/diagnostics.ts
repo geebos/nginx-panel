@@ -2,7 +2,8 @@ import { access, opendir, readFile, readdir, stat, statfs } from "node:fs/promis
 import { constants } from "node:fs";
 import { basename, join, normalize } from "node:path";
 import { eq } from "drizzle-orm";
-import { configVersions, domainConfigSchema, domains } from "@/shared/schemas";
+import { configVersions, domains } from "@/shared/schemas";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { checksum, runtimeManifestSchema } from "@/worker/lib/runtime/manifest";
@@ -177,7 +178,7 @@ export async function getActiveRuntimeConfig(db: AppEnv["Variables"]["db"], doma
     const manifest = runtimeManifestSchema.parse(JSON.parse(manifestRaw));
     const entry = manifest.domains[domain.id];
     if (!entry || !version || version.domainId !== domain.id) throw new Error("active_source_missing");
-    const snapshot = domainConfigSchema.parse(JSON.parse(version.snapshotJson));
+    const snapshot = parseDomainSnapshot(version.snapshotJson);
     if (
       entry.sourceVersionId !== version.id
       || entry.snapshotChecksum !== version.snapshotChecksum

@@ -19,6 +19,7 @@ import { DomainPageActions } from "@/components/pages/domains/page-actions";
 import { DomainTabs } from "@/components/pages/domains/tabs";
 import { HeaderForm } from "@/components/pages/domains/forms/header-form";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
+import { domainDisplayStatus } from "@/lib/domain-status";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createConfigVersion, getDomain } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
@@ -78,7 +79,7 @@ function DomainHeaders({ domainId }: { domainId: string }) {
   return (
     <>
       <PageHeader
-        title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : t("domains:headers.titleFallback")}
+        title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={domainDisplayStatus(data.domain)} /></span> : t("domains:headers.titleFallback")}
         description={t("domains:headers.description")}
         breadcrumbs={[{ label: t("domains:common.breadcrumbs.domains"), href: "/domains" }, { label: data?.domain.primaryHostname ?? t("domains:common.breadcrumbs.domain"), href: `/domains/overview?id=${domainId}` }, { label: t("domains:common.breadcrumbs.headers") }]}
         action={<><Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />{t("domains:common.actions.refresh")}</Button><DomainPageActions domainId={domainId} data={data} /><Button size="sm" onClick={() => openNew()} disabled={!config}><PlusIcon data-icon="inline-start" />{t("domains:headers.addHeader")}</Button></>}

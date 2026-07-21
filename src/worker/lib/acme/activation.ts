@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { acmeOrders, certificateActivations, certificates, configVersions, deploymentSteps, deployments, domainAliases, domainConfigSchema, domains, managerConfigSchema } from "@/shared/schemas";
 import { createCertificateDeployment, enqueuePublish } from "@/worker/lib/deployment/runner";
+import { sameHostnames } from "@/worker/lib/hostnames";
+import { safeErrorMessage } from "@/worker/lib/acme/safe-error";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
+import { parseStringArrayJson } from "@/worker/lib/json-array";
+import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import type { AppEnv } from "@/worker/types";
 
@@ -13,19 +18,6 @@ function scheduleActivationRun(db: AppEnv["Variables"]["db"]) {
   const run = coordinatorTail.then(() => runCertificateActivationOnce(db));
   coordinatorTail = run.catch((error) => console.error("[certificate-activation] coordinator failed", error instanceof Error ? error.name : "unknown"));
   return run;
-}
-
-function safeError(error: unknown) {
-  const message = error instanceof Error ? error.message : "Certificate activation creation failed";
-  return message.replace(/https?:\/\/\S+/g, "[URL]").slice(0, 500);
-}
-
-function normalized(values: string[]) {
-  return [...new Set(values.map((value) => value.toLowerCase().replace(/\.$/, "")))].sort();
-}
-
-function sameHostnames(left: string[], right: string[]) {
-  return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
 }
 
 async function ensureActivations(db: AppEnv["Variables"]["db"]) {
@@ -55,7 +47,7 @@ export async function processCertificateActivation(db: AppEnv["Variables"]["db"]
     const domain = await db.query.domains.findFirst({ where: and(eq(domains.id, certificate.domainId), isNull(domains.deletedAt)) });
     if (!order || !domain) throw new Error("Certificate source order or domain does not exist");
     const aliases = await db.select({ hostname: domainAliases.hostname }).from(domainAliases).where(eq(domainAliases.domainId, domain.id));
-    const certificateSans = JSON.parse(certificate.sansJson) as string[];
+    const certificateSans = parseStringArrayJson(certificate.sansJson);
     if (!sameHostnames([domain.primaryHostname, ...aliases.map((alias) => alias.hostname)], certificateSans)) throw new Error("Current domain hostnames do not match certificate SANs");
 
     // Prefer the version whose hostnames match the certificate SANs.
@@ -75,8 +67,8 @@ export async function processCertificateActivation(db: AppEnv["Variables"]["db"]
       if (!candidate) continue;
       try {
         const parsed = isManager
-          ? managerConfigSchema.parse(JSON.parse(candidate.snapshotJson))
-          : domainConfigSchema.parse(JSON.parse(candidate.snapshotJson));
+          ? parseManagerSnapshot(candidate.snapshotJson)
+          : parseDomainSnapshot(candidate.snapshotJson);
         if (sameHostnames([parsed.primaryHostname, ...parsed.aliases], certificateSans)) {
           baseVersion = candidate;
           baseConfig = parsed;
@@ -124,7 +116,7 @@ export async function processCertificateActivation(db: AppEnv["Variables"]["db"]
       .where(and(eq(certificateActivations.id, activation.id), inArray(certificateActivations.status, ["pending", "failed"])));
     if (deployment.status === "queued") void enqueue(db, deployment.id);
   } catch (error) {
-    await db.update(certificateActivations).set({ status: "failed", errorCode: "CERTIFICATE_ACTIVATION_FAILED", errorMessage: safeError(error), nextAttemptAt: null, updatedAt: Date.now() })
+    await db.update(certificateActivations).set({ status: "failed", errorCode: "CERTIFICATE_ACTIVATION_FAILED", errorMessage: safeErrorMessage(error, "Certificate activation creation failed"), nextAttemptAt: null, updatedAt: Date.now() })
       .where(eq(certificateActivations.id, activationId));
   } finally {
     running.delete(activationId);

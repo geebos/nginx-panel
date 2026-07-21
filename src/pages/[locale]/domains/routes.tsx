@@ -18,6 +18,7 @@ import { DomainPageActions } from "@/components/pages/domains/page-actions";
 import { DomainTabs } from "@/components/pages/domains/tabs";
 import { RouteForm } from "@/components/pages/domains/forms/route-form";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
+import { domainDisplayStatus } from "@/lib/domain-status";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createConfigVersion, getDomain } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
@@ -61,7 +62,7 @@ function DomainRoutes({ domainId }: { domainId: string }) {
   return (
     <>
       <PageHeader
-        title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : t("domains:routes.titleFallback")}
+        title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={domainDisplayStatus(data.domain)} /></span> : t("domains:routes.titleFallback")}
         description={t("domains:routes.description")}
         breadcrumbs={[
           { label: t("domains:common.breadcrumbs.domains"), href: "/domains" },

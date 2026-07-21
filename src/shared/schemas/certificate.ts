@@ -141,3 +141,14 @@ export type Certificate = typeof certificates.$inferSelect;
 export type AcmeOrder = typeof acmeOrders.$inferSelect;
 export type AcmeChallenge = typeof acmeChallenges.$inferSelect;
 export type CertificateActivation = typeof certificateActivations.$inferSelect;
+
+/** ACME order statuses that are no longer considered in-flight. */
+export const terminalOrderStatuses: string[] = ["succeeded", "failed", "expired", "cancelled"];
+
+/** Order statuses that accept manual recheck (advance nextPollAt / show recheck UI). */
+export const recheckableOrderStatuses: string[] = [
+  "waiting_http",
+  "waiting_dns",
+  "validating",
+];
+

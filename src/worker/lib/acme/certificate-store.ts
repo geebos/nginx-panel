@@ -2,6 +2,7 @@ import { createHash, createPublicKey, X509Certificate } from "node:crypto";
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import * as acme from "acme-client";
+import { normalizeHostnames } from "@/worker/lib/hostnames";
 
 export type PersistCertificateInput = {
   certificateId: string;
@@ -38,10 +39,6 @@ function checksum(value: string | Buffer) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function normalized(values: string[]) {
-  return [...new Set(values.map((value) => value.toLowerCase().replace(/\.$/, "")))].sort();
-}
-
 async function writeSynced(path: string, value: string | Buffer) {
   const handle = await open(path, "wx", 0o600);
   try {
@@ -58,8 +55,8 @@ export class FileCertificateStore implements CertificateStore {
     const chain = acme.crypto.splitPemChain(input.certificatePem);
     if (chain.length === 0) throw new Error("ACME did not return a certificate chain");
     const info = acme.crypto.readCertificateInfo(chain[0]);
-    const sans = normalized(info.domains.altNames);
-    if (JSON.stringify(sans) !== JSON.stringify(normalized(input.identifiers))) throw new Error("Certificate SANs do not match order hostnames");
+    const sans = normalizeHostnames(info.domains.altNames);
+    if (JSON.stringify(sans) !== JSON.stringify(normalizeHostnames(input.identifiers))) throw new Error("Certificate SANs do not match order hostnames");
 
     const leaf = new X509Certificate(chain[0]);
     const certificateSpki = leaf.publicKey.export({ type: "spki", format: "der" });

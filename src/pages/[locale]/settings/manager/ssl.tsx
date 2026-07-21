@@ -27,8 +27,7 @@ import {
 	retryManagerCertificateActivation,
 } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
-
-const terminalOrders = ["succeeded", "failed", "expired", "cancelled"];
+import { recheckableOrderStatuses, terminalOrderStatuses } from "@/shared/schemas";
 
 function ManagerSslOrderDetail({ orderId }: { orderId: string }) {
 	const { t } = useTranslation(["common"]);
@@ -55,7 +54,7 @@ function ManagerSslOrderDetail({ orderId }: { orderId: string }) {
 			(!detail.activation ||
 				detail.activation.status === "pending" ||
 				["queued", "running"].includes(detail.deployment?.status ?? ""));
-		if (terminalOrders.includes(detail.order.status) && !activationRunning)
+		if (terminalOrderStatuses.includes(detail.order.status) && !activationRunning)
 			return;
 		const timer = window.setInterval(() => void query.refresh(), 3000);
 		return () => window.clearInterval(timer);
@@ -195,9 +194,7 @@ function ManagerSslOrderDetail({ orderId }: { orderId: string }) {
 												)}
 											</CardDescription>
 										</div>
-										{["waiting_http", "waiting_dns", "validating"].includes(
-											detail.order.status,
-										) ? (
+										{recheckableOrderStatuses.includes(detail.order.status) ? (
 											<Button
 												size="sm"
 												variant="outline"

@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
+import { domainDisplayStatus } from "@/lib/domain-status";
 import { deleteDomain, getDomains, type DomainListItem } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
 import { useApiQuery } from "@/hooks/use-api-query";
@@ -277,7 +278,7 @@ function DomainList() {
                       </TableCell>
                       <TableCell><StatusBadge status={domain.sslStatus} /></TableCell>
                       <TableCell>
-                        <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
+                        <StatusBadge status={domainDisplayStatus(domain)} />
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {domain.activeVersionId ? domain.activeVersionId.slice(0, 8) : t("domains:common.status.notPublished")}
@@ -307,7 +308,7 @@ function DomainList() {
                     </CardAction>
                   </CardHeader>
                   <CardContent className="flex items-center justify-between gap-3">
-                    <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
+                    <StatusBadge status={domainDisplayStatus(domain)} />
                     <span className="font-mono text-xs text-muted-foreground">
                       {dateFormatter.format(domain.updatedAt)}
                     </span>

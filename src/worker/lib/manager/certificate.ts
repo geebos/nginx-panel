@@ -15,18 +15,19 @@ import {
 import type { AppEnv } from "@/worker/types";
 import { BusinessError } from "@/worker/lib/errors";
 import { findManagerDomain, parseManagerSnapshot } from "@/worker/lib/manager/service";
+import { orderCleanupStatus } from "@/worker/lib/acme/order-cleanup-fields";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { createRenewalOrder } from "@/worker/lib/acme/renewal";
 import { cleanupCloudflareOrder } from "@/worker/lib/acme/cloudflare-cleanup";
+import { RECHECK_DEBOUNCE_MS, recheckableOrderStatuses, terminalOrderStatuses } from "@/worker/lib/acme/order-status";
+import { publicCertificate, publicChallenge, publicOrder } from "@/worker/lib/acme/public";
 import { retryCertificateActivation } from "@/worker/lib/acme/activation";
 import { createSnapshot } from "@/worker/lib/snapshot";
 import { saveDraftVersion } from "@/worker/lib/domain/draft-version";
 import { z } from "zod";
 
 type AppDb = AppEnv["Variables"]["db"];
-
-const terminalOrderStatuses = ["succeeded", "failed", "expired", "cancelled"];
 
 export const createManagerCertificateOrderSchema = z.object({
   accountEmail: z.email("errors:validation.sslEmail").transform((value) => value.trim().toLowerCase()),
@@ -43,50 +44,6 @@ export async function requireManagerDomain(db: AppDb) {
     throw new BusinessError("errors:managerNotBound", 409, "MANAGER_NOT_BOUND");
   }
   return manager;
-}
-
-function publicOrder(order: typeof acmeOrders.$inferSelect) {
-  const { idempotencyKey: _idempotencyKey, identifiersJson, ...safe } = order;
-  void _idempotencyKey;
-  return { ...safe, identifiers: JSON.parse(identifiersJson) as string[] };
-}
-
-function publicChallenge(challenge: typeof acmeChallenges.$inferSelect) {
-  return {
-    id: challenge.id,
-    hostname: challenge.hostname,
-    type: challenge.type,
-    status: challenge.status,
-    dnsRecordName: challenge.dnsRecordName,
-    dnsRecordValue: challenge.type === "dns-01" ? challenge.dnsRecordValue : null,
-    expiresAt: challenge.expiresAt,
-    cleanedAt: challenge.cleanedAt,
-  };
-}
-
-function publicCertificate(
-  certificate: typeof certificates.$inferSelect,
-  domain: { primaryHostname: string; enabled: boolean; activeVersionId: string | null },
-) {
-  return {
-    id: certificate.id,
-    domainId: certificate.domainId,
-    acmeOrderId: certificate.acmeOrderId,
-    provider: certificate.provider,
-    environment: certificate.environment,
-    status: certificate.status,
-    sans: JSON.parse(certificate.sansJson) as string[],
-    notBefore: certificate.notBefore,
-    notAfter: certificate.notAfter,
-    autoRenew: certificate.autoRenew,
-    issuedAt: certificate.issuedAt,
-    activatedAt: certificate.activatedAt,
-    nextCheckAt: certificate.nextCheckAt,
-    lastErrorCode: certificate.lastErrorCode,
-    primaryHostname: domain.primaryHostname,
-    domainEnabled: domain.enabled,
-    activeVersionId: domain.activeVersionId,
-  };
 }
 
 async function loadCurrentManagerConfig(db: AppDb, manager: NonNullable<Awaited<ReturnType<typeof findManagerDomain>>>) {
@@ -282,9 +239,9 @@ export async function recheckManagerOrder(db: AppDb, orderId: string) {
     where: and(eq(acmeOrders.id, orderId), eq(acmeOrders.domainId, manager.id)),
   });
   if (!order) throw new BusinessError("errors:acmeOrderNotFound", 404, "ACME_ORDER_NOT_FOUND");
-  if (!["waiting_http", "waiting_dns", "validating"].includes(order.status)) return { order: publicOrder(order), debounced: false };
+  if (!recheckableOrderStatuses.includes(order.status)) return { order: publicOrder(order), debounced: false };
   const now = Date.now();
-  if (order.lastPolledAt && now - order.lastPolledAt < 5_000) return { order: publicOrder(order), debounced: true };
+  if (order.lastPolledAt && now - order.lastPolledAt < RECHECK_DEBOUNCE_MS) return { order: publicOrder(order), debounced: true };
   await db.update(acmeOrders).set({ nextPollAt: now, updatedAt: now }).where(eq(acmeOrders.id, order.id));
   const scheduled = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, order.id) });
   return { order: publicOrder(scheduled!), debounced: false };
@@ -301,7 +258,7 @@ export async function cancelManagerOrder(db: AppDb, orderId: string) {
   db.transaction((tx) => {
     tx.update(acmeOrders).set({
       status: "cancelled",
-      cleanupStatus: order.dnsProvider === "cloudflare" ? "pending" : "succeeded",
+      cleanupStatus: orderCleanupStatus(order.dnsProvider),
       nextPollAt: null,
       updatedAt: now,
     }).where(eq(acmeOrders.id, order.id)).run();

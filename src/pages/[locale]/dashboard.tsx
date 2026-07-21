@@ -11,6 +11,7 @@ import { LocalizedLink } from "@/components/i18n/localized-link";
 import { Page } from "@/components/layout/page";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
+import { domainDisplayStatus } from "@/lib/domain-status";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -257,7 +258,7 @@ function DashboardContent() {
                             </LocalizedLink>
                           </TableCell>
                           <TableCell>
-                            <StatusBadge status={domain.enabled ? domain.runtimeStatus : "disabled"} />
+                            <StatusBadge status={domainDisplayStatus(domain)} />
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             {domain.activeVersionId ? domain.activeVersionId.slice(0, 8) : t("dashboard:recentDomains.notPublished")}

@@ -5,12 +5,13 @@ import {
   configVersions,
   domainAliases,
   domains,
-  managerConfigSchema,
   managerUserHostnames,
 } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
+import { terminalOrderStatuses } from "@/worker/lib/acme/order-status";
 import { BusinessError } from "@/worker/lib/errors";
 import { getBootstrapHosts } from "@/worker/lib/runtime/env";
+import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
 
 export async function collectReservedHostnames(
   db: AppEnv["Variables"]["db"],
@@ -42,7 +43,7 @@ export async function collectReservedHostnames(
         const version = await db.query.configVersions.findFirst({ where: eq(configVersions.id, versionId) });
         if (!version) continue;
         try {
-          const snap = managerConfigSchema.parse(JSON.parse(version.snapshotJson));
+          const snap = parseManagerSnapshot(version.snapshotJson);
           for (const host of managerUserHostnames(snap)) reserved.add(host);
           if (snap.bound) {
             reserved.add(snap.primaryHostname);
@@ -113,7 +114,7 @@ export async function assertHostnamesMutable(
   const next = [...nextHostnames].sort();
   if (JSON.stringify(current) === JSON.stringify(next)) return;
   const activeOrder = await db.query.acmeOrders.findFirst({
-    where: and(eq(acmeOrders.domainId, domainId), notInArray(acmeOrders.status, ["succeeded", "failed", "expired", "cancelled"])),
+    where: and(eq(acmeOrders.domainId, domainId), notInArray(acmeOrders.status, terminalOrderStatuses)),
   });
   if (activeOrder) throw new BusinessError("errors:domainHasActiveOrder", 409, "DOMAIN_HAS_ACTIVE_ORDER");
 }

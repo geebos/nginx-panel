@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DomainPageActions } from "@/components/pages/domains/page-actions";
 import { DomainTabs } from "@/components/pages/domains/tabs";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
+import { domainDisplayStatus } from "@/lib/domain-status";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { createConfigVersion, getDomain } from "@/lib/api";
 import { formatErrorMessage } from "@/lib/i18n/error";
@@ -68,7 +69,7 @@ function DomainAdvanced({ domainId }: { domainId: string }) {
   return (
     <>
       <PageHeader
-        title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={data.domain.enabled ? data.domain.runtimeStatus : "disabled"} /></span> : t("domains:advanced.titleFallback")}
+        title={data ? <span className="flex flex-wrap items-center gap-3">{data.domain.primaryHostname}<StatusBadge status={domainDisplayStatus(data.domain)} /></span> : t("domains:advanced.titleFallback")}
         description={t("domains:advanced.description")}
         breadcrumbs={[{ label: t("domains:common.breadcrumbs.domains"), href: "/domains" }, { label: data?.domain.primaryHostname ?? t("domains:common.breadcrumbs.domain"), href: `/domains/overview?id=${domainId}` }, { label: t("domains:common.breadcrumbs.advanced") }]}
         action={<><Button size="sm" variant="outline" onClick={() => void query.refresh()} disabled={query.refreshing || dirty}><RefreshCwIcon data-icon="inline-start" className={query.refreshing ? "animate-spin" : undefined} />{t("domains:common.actions.refresh")}</Button><DomainPageActions domainId={domainId} data={data} dirty={dirty} /><Button size="sm" onClick={() => void save()} disabled={!dirty || submitting}><SaveIcon data-icon="inline-start" />{submitting ? t("domains:common.actions.saving") : t("domains:advanced.saveDraft")}</Button></>}

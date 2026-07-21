@@ -3,28 +3,28 @@ import { and, count, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm
 import { acmeOrders, certificates, cloudflareCredentials, domainAliases, domains } from "@/shared/schemas";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider, type CloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
+import { activeOrderStatuses } from "@/worker/lib/acme/order-status";
 import { BusinessError } from "@/worker/lib/errors";
+import { normalizeHostnames, sameHostnames } from "@/worker/lib/hostnames";
+import { parseStringArrayJson } from "@/worker/lib/json-array";
+import { createSerialQueue } from "@/worker/lib/serial-queue";
 import type { AppEnv } from "@/worker/types";
 
 const renewalWindow = 30 * 24 * 60 * 60 * 1000;
-const retryDelays = [60 * 60 * 1000, 6 * 60 * 60 * 1000, 24 * 60 * 60 * 1000];
+const RENEWAL_RETRY_DELAYS_MS = [60 * 60 * 1000, 6 * 60 * 60 * 1000, 24 * 60 * 60 * 1000] as const;
+
+/** 1-based failed attempt count → backoff delay; clamps to last ladder step. */
+export function renewalRetryDelayMs(failedAttemptCount: number): number {
+  const attempts = Math.max(1, failedAttemptCount);
+  return RENEWAL_RETRY_DELAYS_MS[Math.min(attempts - 1, RENEWAL_RETRY_DELAYS_MS.length - 1)]!;
+}
 const running = new Set<string>();
 let scheduler: ReturnType<typeof setInterval> | null = null;
 let retryScheduler: ReturnType<typeof setInterval> | null = null;
-let schedulerTail = Promise.resolve();
+const renewalQueue = createSerialQueue("[renewal] scheduler failed");
 
 function scheduleRenewalRun(operation: () => Promise<void>) {
-  const run = schedulerTail.then(operation);
-  schedulerTail = run.catch((error) => console.error("[renewal] scheduler failed", error instanceof Error ? error.name : "unknown"));
-  return run;
-}
-
-function normalized(values: string[]) {
-  return [...new Set(values.map((value) => value.toLowerCase().replace(/\.$/, "")))].sort();
-}
-
-function sameHostnames(left: string[], right: string[]) {
-  return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
+  return renewalQueue.enqueue(operation);
 }
 
 function errorCode(error: unknown) {
@@ -50,13 +50,13 @@ export async function createRenewalOrder(
     db.select({ hostname: domainAliases.hostname }).from(domainAliases).where(eq(domainAliases.domainId, certificate.domainId)),
   ]);
   if (!sourceOrder || sourceOrder.status !== "succeeded" || !domain) throw new BusinessError("errors:renewalSourceUnavailable", 409, "RENEWAL_SOURCE_UNAVAILABLE");
-  const identifiers = JSON.parse(certificate.sansJson) as string[];
+  const identifiers = parseStringArrayJson(certificate.sansJson);
   if (!sameHostnames([domain.primaryHostname, ...aliases.map((alias) => alias.hostname)], identifiers)) {
     throw new BusinessError("errors:certificateSanDrift", 409, "CERTIFICATE_SAN_DRIFT");
   }
   const existingOrder = await db.query.acmeOrders.findFirst({ where: and(
     eq(acmeOrders.domainId, certificate.domainId),
-    inArray(acmeOrders.status, ["preparing", "waiting_http", "waiting_dns", "validating", "validated", "downloading"]),
+    inArray(acmeOrders.status, activeOrderStatuses),
   ) });
   if (existingOrder) {
     if (existingOrder.replacesCertificateId === certificate.id) return { order: existingOrder, created: false };
@@ -84,7 +84,7 @@ export async function createRenewalOrder(
   return db.transaction((tx) => {
     const repeated = tx.select().from(acmeOrders).where(eq(acmeOrders.idempotencyKey, input.idempotencyKey)).get();
     if (repeated) return { order: repeated, created: false };
-    const active = tx.select().from(acmeOrders).where(and(eq(acmeOrders.domainId, certificate.domainId), inArray(acmeOrders.status, ["preparing", "waiting_http", "waiting_dns", "validating", "validated", "downloading"]))).get();
+    const active = tx.select().from(acmeOrders).where(and(eq(acmeOrders.domainId, certificate.domainId), inArray(acmeOrders.status, activeOrderStatuses))).get();
     if (active) {
       if (active.replacesCertificateId === certificate.id) return { order: active, created: false };
       throw new BusinessError("errors:domainHasActiveOrder", 409, "DOMAIN_HAS_ACTIVE_ORDER");
@@ -102,7 +102,7 @@ export async function createRenewalOrder(
       accountEmail: sourceOrder.accountEmail,
       environment: sourceOrder.environment,
       status: "preparing",
-      identifiersJson: JSON.stringify(normalized(identifiers)),
+      identifiersJson: JSON.stringify(normalizeHostnames(identifiers)),
       cleanupStatus: "pending",
       idempotencyKey: input.idempotencyKey,
       nextPollAt: now,
@@ -122,7 +122,7 @@ export async function recordRenewalOrderFailure(db: AppEnv["Variables"]["db"], o
     inArray(acmeOrders.status, ["failed", "expired"]),
   ));
   const attempts = Math.max(1, result[0]?.value ?? 1);
-  const delay = retryDelays[Math.min(attempts - 1, retryDelays.length - 1)];
+  const delay = renewalRetryDelayMs(attempts);
   await db.update(certificates).set({ lastErrorCode: code, nextCheckAt: Date.now() + delay }).where(and(
     eq(certificates.id, order.replacesCertificateId),
     eq(certificates.status, "active"),
@@ -144,7 +144,7 @@ async function processDueRenewals(
       const code = errorCode(error);
       await db.update(certificates).set({
         lastErrorCode: code === "DOMAIN_HAS_ACTIVE_ORDER" ? certificate.lastErrorCode : code,
-        nextCheckAt: now + retryDelays[0],
+        nextCheckAt: now + renewalRetryDelayMs(1),
       }).where(and(eq(certificates.id, certificate.id), eq(certificates.status, "active")));
     } finally {
       running.delete(certificate.id);
@@ -199,7 +199,7 @@ export function startRenewalScheduler(db: AppEnv["Variables"]["db"]) {
 }
 
 export function waitForRenewalScheduler() {
-  return schedulerTail;
+  return renewalQueue.wait();
 }
 
 export const certificateRenewalWindowMs = renewalWindow;

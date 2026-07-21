@@ -5,7 +5,13 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq } from "drizzle-orm";
 import * as schema from "@/shared/schemas";
-import { createRenewalOrder, recordRenewalOrderFailure, runRenewalRetryOnce, runRenewalSchedulerOnce } from "@/worker/lib/acme/renewal";
+import {
+  createRenewalOrder,
+  recordRenewalOrderFailure,
+  renewalRetryDelayMs,
+  runRenewalRetryOnce,
+  runRenewalSchedulerOnce,
+} from "@/worker/lib/acme/renewal";
 
 function fixture(input: { autoRenew?: boolean; enabled?: boolean } = {}) {
   const connection = new Database(":memory:");
@@ -70,4 +76,13 @@ test("daily scans and hourly failure retries use separate due queues", async () 
   await runRenewalRetryOnce(db, { now });
   assert.equal(db.select().from(schema.acmeOrders).where(eq(schema.acmeOrders.replacesCertificateId, "certificate-1")).get()?.status, "preparing");
   connection.close();
+});
+
+test("renewalRetryDelayMs maps failed attempt count onto the backoff ladder", () => {
+  assert.equal(renewalRetryDelayMs(0), 60 * 60 * 1000);
+  assert.equal(renewalRetryDelayMs(1), 60 * 60 * 1000);
+  assert.equal(renewalRetryDelayMs(2), 6 * 60 * 60 * 1000);
+  assert.equal(renewalRetryDelayMs(3), 24 * 60 * 60 * 1000);
+  assert.equal(renewalRetryDelayMs(4), 24 * 60 * 60 * 1000);
+  assert.equal(renewalRetryDelayMs(99), 24 * 60 * 60 * 1000);
 });

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm";
-import { acmeChallenges, acmeOrders, certificates, cloudflareCredentials, configVersions, domainConfigSchema, domains } from "@/shared/schemas";
+import { acmeChallenges, acmeOrders, certificates, cloudflareCredentials, configVersions, domains } from "@/shared/schemas";
 import type { AppEnv } from "@/worker/types";
 import { AcmeRecoveryError, getAcmeAdapter, type AcmeAdapter, type ExistingAcmeOrderInput } from "@/worker/lib/acme/client";
 import { getCertificateStore, type CertificateStore } from "@/worker/lib/acme/certificate-store";
@@ -9,20 +9,20 @@ import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider, type CloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
 import { cleanupCloudflareOrder } from "@/worker/lib/acme/cloudflare-cleanup";
 import { recordRenewalOrderFailure } from "@/worker/lib/acme/renewal";
+import { safeErrorMessage } from "@/worker/lib/acme/safe-error";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
+import { parseStringArrayJson } from "@/worker/lib/json-array";
+import { initialChallengeStatus, postPrepareNextPollAt, postPrepareOrderStatus } from "@/worker/lib/acme/prepare-status";
+import { orderCleanupNextPollAt, orderCleanupStatus } from "@/worker/lib/acme/order-cleanup-fields";
+import { createSerialQueue } from "@/worker/lib/serial-queue";
+import { activeOrderStatuses, downloadableOrderStatuses, terminalOrderStatuses } from "@/worker/lib/acme/order-status";
 
 const running = new Set<string>();
 let scheduler: ReturnType<typeof setInterval> | null = null;
-let schedulerTail = Promise.resolve();
+const acmeQueue = createSerialQueue("[acme] scheduler failed");
 
 function scheduleAcmeRun(db: AppEnv["Variables"]["db"]) {
-  const run = schedulerTail.then(() => runAcmeSchedulerOnce(db));
-  schedulerTail = run.catch((error) => console.error("[acme] scheduler failed", error instanceof Error ? error.name : "unknown"));
-  return run;
-}
-
-function safeError(error: unknown) {
-  const message = error instanceof Error ? error.message : "ACME order processing failed";
-  return message.replace(/https?:\/\/\S+/g, "[ACME URL]").slice(0, 500);
+  return acmeQueue.enqueue(() => runAcmeSchedulerOnce(db));
 }
 
 type SchedulerDependencies = {
@@ -38,7 +38,7 @@ function orderInput(order: typeof acmeOrders.$inferSelect): ExistingAcmeOrderInp
     orderUrl: order.orderUrl,
     accountEmail: order.accountEmail,
     environment: order.environment as "staging" | "production",
-    identifiers: JSON.parse(order.identifiersJson) as string[],
+    identifiers: parseStringArrayJson(order.identifiersJson),
     validationMethod: order.validationMethod as "http-01" | "dns-01",
   };
 }
@@ -68,7 +68,7 @@ async function endOrder(db: AppEnv["Variables"]["db"], orderId: string, status: 
   const cloudflare = order?.dnsProvider === "cloudflare";
   db.transaction((tx) => {
     if (!cloudflare) clearChallenges(tx as AppEnv["Variables"]["db"], orderId, status, now);
-    tx.update(acmeOrders).set({ status, errorCode, errorMessage, cleanupStatus: cloudflare ? "pending" : "succeeded", nextPollAt: cloudflare ? now : null, lastPolledAt: now, updatedAt: now })
+    tx.update(acmeOrders).set({ status, errorCode, errorMessage, cleanupStatus: orderCleanupStatus(order?.dnsProvider), nextPollAt: orderCleanupNextPollAt(order?.dnsProvider, now), lastPolledAt: now, updatedAt: now })
       .where(eq(acmeOrders.id, orderId)).run();
   });
   if (order?.replacesCertificateId) await recordRenewalOrderFailure(db, orderId, errorCode);
@@ -105,7 +105,7 @@ export async function prepareAcmeOrder(db: AppEnv["Variables"]["db"], orderId: s
   try {
     const order = await db.query.acmeOrders.findFirst({ where: and(eq(acmeOrders.id, orderId), eq(acmeOrders.status, "preparing")) });
     if (!order) return;
-    const identifiers = JSON.parse(order.identifiersJson) as string[];
+    const identifiers = parseStringArrayJson(order.identifiersJson);
     const existingChallenges = await db.select().from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id));
     if (order.orderUrl && existingChallenges.length === identifiers.length) {
       if (order.dnsProvider === "cloudflare") await presentCloudflareChallenges(db, order, cloudflare);
@@ -138,7 +138,7 @@ export async function prepareAcmeOrder(db: AppEnv["Variables"]["db"], orderId: s
           keyAuthorization: challenge.keyAuthorization,
           dnsRecordName: challenge.dnsRecordName,
           dnsRecordValue: challenge.dnsRecordValue,
-          status: challenge.type === "http-01" ? "presented" : order.dnsProvider === "cloudflare" ? "pending" : "propagating",
+          status: initialChallengeStatus({ challengeType: challenge.type, dnsProvider: order.dnsProvider }),
           expiresAt: challenge.expiresAt,
           createdAt: now,
           updatedAt: now,
@@ -147,8 +147,8 @@ export async function prepareAcmeOrder(db: AppEnv["Variables"]["db"], orderId: s
       tx.update(acmeOrders).set({
         orderUrl: prepared.orderUrl,
         expiresAt: prepared.expiresAt,
-        status: order.dnsProvider === "cloudflare" ? "preparing" : order.validationMethod === "http-01" ? "waiting_http" : "waiting_dns",
-        nextPollAt: order.dnsProvider === "cloudflare" ? now : now + (order.validationMethod === "http-01" ? 5_000 : 15_000),
+        status: postPrepareOrderStatus({ dnsProvider: order.dnsProvider, validationMethod: order.validationMethod }),
+        nextPollAt: postPrepareNextPollAt(now, { dnsProvider: order.dnsProvider, validationMethod: order.validationMethod }),
         lastPolledAt: now,
         updatedAt: now,
       }).where(eq(acmeOrders.id, order.id)).run();
@@ -165,7 +165,7 @@ export async function prepareAcmeOrder(db: AppEnv["Variables"]["db"], orderId: s
     await db.update(acmeOrders).set({
       status: recoverablePresentation ? "preparing" : "failed",
       errorCode: prepareCode,
-      errorMessage: safeError(error),
+      errorMessage: safeErrorMessage(error, "ACME order processing failed", "[ACME URL]"),
       cleanupStatus: recoverablePresentation ? "pending" : "succeeded",
       nextPollAt: recoverablePresentation ? now + 15_000 : null,
       updatedAt: now,
@@ -182,7 +182,7 @@ async function resolveAutoRenew(db: AppEnv["Variables"]["db"], order: typeof acm
   if (!versionId) return true;
   const version = await db.query.configVersions.findFirst({ where: eq(configVersions.id, versionId) });
   if (!version) return true;
-  return domainConfigSchema.parse(JSON.parse(version.snapshotJson)).ssl.autoRenew;
+  return parseDomainSnapshot(version.snapshotJson).ssl.autoRenew;
 }
 
 async function waitForDns(db: AppEnv["Variables"]["db"], order: typeof acmeOrders.$inferSelect, adapter: AcmeAdapter, dns: DnsPropagationChecker) {
@@ -255,7 +255,7 @@ async function downloadCertificate(db: AppEnv["Variables"]["db"], order: typeof 
     certificateId,
     domainId: order.domainId,
     orderId: order.id,
-    identifiers: JSON.parse(order.identifiersJson) as string[],
+    identifiers: parseStringArrayJson(order.identifiersJson),
     certificatePem: finalized.certificatePem,
   });
   const autoRenew = await resolveAutoRenew(db, order);
@@ -281,15 +281,15 @@ async function downloadCertificate(db: AppEnv["Variables"]["db"], order: typeof 
       issuedAt: now,
       nextCheckAt: persisted.notAfter - 30 * 24 * 60 * 60 * 1000 + Math.floor(Math.random() * 2 * 60 * 60 * 1000),
     }).run();
-    tx.update(acmeOrders).set({ status: "succeeded", cleanupStatus: order.dnsProvider === "cloudflare" ? "pending" : "succeeded", nextPollAt: order.dnsProvider === "cloudflare" ? now : null, lastPolledAt: now, errorCode: null, errorMessage: null, updatedAt: now })
-      .where(and(eq(acmeOrders.id, order.id), inArray(acmeOrders.status, ["validated", "downloading"]))).run();
+    tx.update(acmeOrders).set({ status: "succeeded", cleanupStatus: orderCleanupStatus(order.dnsProvider), nextPollAt: orderCleanupNextPollAt(order.dnsProvider, now), lastPolledAt: now, errorCode: null, errorMessage: null, updatedAt: now })
+      .where(and(eq(acmeOrders.id, order.id), inArray(acmeOrders.status, downloadableOrderStatuses))).run();
     if (order.replacesCertificateId) tx.update(certificates).set({ lastErrorCode: null, nextCheckAt: null }).where(eq(certificates.id, order.replacesCertificateId)).run();
   });
   if (order.dnsProvider === "cloudflare") await cleanupCloudflareOrder(db, order.id);
   try {
     await store.cleanupOrder(order.id);
   } catch (error) {
-    await db.update(acmeOrders).set({ cleanupStatus: "failed", errorMessage: safeError(error), updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
+    await db.update(acmeOrders).set({ cleanupStatus: "failed", errorMessage: safeErrorMessage(error, "ACME order processing failed", "[ACME URL]"), updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
   }
 }
 
@@ -298,7 +298,7 @@ async function progressAcmeOrder(db: AppEnv["Variables"]["db"], orderId: string,
   running.add(orderId);
   try {
     const order = await db.query.acmeOrders.findFirst({ where: eq(acmeOrders.id, orderId) });
-    if (!order || !["waiting_http", "waiting_dns", "validating", "validated", "downloading"].includes(order.status)) return;
+    if (!order || order.status === "preparing" || !activeOrderStatuses.includes(order.status)) return;
     const challenges = await db.select({ expiresAt: acmeChallenges.expiresAt }).from(acmeChallenges).where(eq(acmeChallenges.orderId, order.id));
     const expiresAt = Math.min(...[order.expiresAt, ...challenges.map((challenge) => challenge.expiresAt)].filter((value): value is number => value !== null));
     if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
@@ -308,14 +308,14 @@ async function progressAcmeOrder(db: AppEnv["Variables"]["db"], orderId: string,
     if (order.status === "waiting_dns") await waitForDns(db, order, adapter, dependencies.dns);
     if (order.status === "waiting_http") await acknowledgeHttp(db, order, adapter);
     if (order.status === "validating") await pollValidation(db, order, adapter);
-    if (["validated", "downloading"].includes(order.status)) await downloadCertificate(db, order, adapter, dependencies.certificates);
+    if (downloadableOrderStatuses.includes(order.status)) await downloadCertificate(db, order, adapter, dependencies.certificates);
   } catch (error) {
     if (error instanceof AcmeRecoveryError) {
-      await endOrder(db, orderId, "failed", error.code, safeError(error));
+      await endOrder(db, orderId, "failed", error.code, safeErrorMessage(error, "ACME order processing failed", "[ACME URL]"));
       return;
     }
     const now = Date.now();
-    await db.update(acmeOrders).set({ errorCode: "ACME_PROGRESS_FAILED", errorMessage: safeError(error), nextPollAt: nextPoll(15_000), lastPolledAt: now, updatedAt: now })
+    await db.update(acmeOrders).set({ errorCode: "ACME_PROGRESS_FAILED", errorMessage: safeErrorMessage(error, "ACME order processing failed", "[ACME URL]"), nextPollAt: nextPoll(15_000), lastPolledAt: now, updatedAt: now })
       .where(eq(acmeOrders.id, orderId));
   } finally {
     running.delete(orderId);
@@ -329,7 +329,7 @@ export async function runAcmeSchedulerOnce(
 ) {
   const now = Date.now();
   const orders = await db.select({ id: acmeOrders.id, status: acmeOrders.status }).from(acmeOrders).where(and(
-    inArray(acmeOrders.status, ["preparing", "waiting_http", "waiting_dns", "validating", "validated", "downloading"]),
+    inArray(acmeOrders.status, activeOrderStatuses),
     or(isNull(acmeOrders.nextPollAt), lte(acmeOrders.nextPollAt, now)),
   )).orderBy(asc(acmeOrders.createdAt)).limit(10);
   const resolvedDependencies: SchedulerDependencies = {
@@ -342,7 +342,7 @@ export async function runAcmeSchedulerOnce(
     : progressAcmeOrder(db, order.id, adapter, resolvedDependencies)));
   const cleanupOrders = await db.select({ id: acmeOrders.id }).from(acmeOrders).where(and(
     eq(acmeOrders.dnsProvider, "cloudflare"),
-    inArray(acmeOrders.status, ["succeeded", "failed", "expired", "cancelled"]),
+    inArray(acmeOrders.status, terminalOrderStatuses),
     inArray(acmeOrders.cleanupStatus, ["pending", "failed"]),
     or(isNull(acmeOrders.nextPollAt), lte(acmeOrders.nextPollAt, now)),
   )).limit(10);
@@ -361,13 +361,13 @@ export function startAcmeScheduler(db: AppEnv["Variables"]["db"]) {
 }
 
 export function waitForAcmeScheduler() {
-  return schedulerTail;
+  return acmeQueue.wait();
 }
 
 export async function persistAcmeShutdownState(db: AppEnv["Variables"]["db"]) {
   const now = Date.now();
   await db.update(acmeOrders).set({ nextPollAt: now, updatedAt: now }).where(inArray(
     acmeOrders.status,
-    ["preparing", "waiting_http", "waiting_dns", "validating", "validated", "downloading"],
+    activeOrderStatuses,
   ));
 }

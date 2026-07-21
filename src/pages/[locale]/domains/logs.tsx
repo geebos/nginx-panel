@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DomainTabs } from "@/components/pages/domains/tabs";
 import { LogViewer } from "@/components/pages/logs/viewer";
 import { StatusBadge } from "@/components/pages/shared/status-badge";
+import { domainDisplayStatus } from "@/lib/domain-status";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDomain } from "@/lib/api";
 
@@ -16,7 +17,7 @@ function DomainLogs({ domainId }: { domainId: string }) {
   const load = React.useCallback(() => getDomain(domainId), [domainId]);
   const query = useApiQuery(load);
   const hostname = query.data?.domain.primaryHostname ?? t("domains:common.breadcrumbs.domain");
-  return <><PageHeader title={query.data ? <span className="flex flex-wrap items-center gap-3">{query.data.domain.primaryHostname}<StatusBadge status={query.data.domain.enabled ? query.data.domain.runtimeStatus : "disabled"} /></span> : t("domains:logs.titleFallback")} description={t("domains:logs.description")} breadcrumbs={[{ label: t("domains:common.breadcrumbs.domains"), href: "/domains" }, { label: hostname, href: `/domains/overview?id=${domainId}` }, { label: t("domains:common.breadcrumbs.logs") }]} /><DomainTabs domainId={domainId} active="logs" /><div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-8"><LogViewer domainId={domainId} /></div></>;
+  return <><PageHeader title={query.data ? <span className="flex flex-wrap items-center gap-3">{query.data.domain.primaryHostname}<StatusBadge status={domainDisplayStatus(query.data.domain)} /></span> : t("domains:logs.titleFallback")} description={t("domains:logs.description")} breadcrumbs={[{ label: t("domains:common.breadcrumbs.domains"), href: "/domains" }, { label: hostname, href: `/domains/overview?id=${domainId}` }, { label: t("domains:common.breadcrumbs.logs") }]} /><DomainTabs domainId={domainId} active="logs" /><div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-8"><LogViewer domainId={domainId} /></div></>;
 }
 
 export const getStaticPaths = getLocaleStaticPaths;

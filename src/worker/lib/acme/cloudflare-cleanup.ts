@@ -3,10 +3,7 @@ import { acmeChallenges, acmeOrders, cloudflareCredentials } from "@/shared/sche
 import type { AppEnv } from "@/worker/types";
 import { decryptCloudflareToken } from "@/worker/lib/cloudflare/credentials";
 import { getCloudflareDnsProvider, type CloudflareDnsProvider } from "@/worker/lib/cloudflare/dns";
-
-function safeError(error: unknown) {
-  return (error instanceof Error ? error.message : "Cloudflare DNS cleanup failed").slice(0, 500);
-}
+import { safeErrorMessage } from "@/worker/lib/acme/safe-error";
 
 export async function cleanupCloudflareOrder(
   db: AppEnv["Variables"]["db"],
@@ -37,6 +34,11 @@ export async function cleanupCloudflareOrder(
     }
     await db.update(acmeOrders).set({ cleanupStatus: "succeeded", nextPollAt: null, updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
   } catch (error) {
-    await db.update(acmeOrders).set({ cleanupStatus: "failed", errorMessage: safeError(error), nextPollAt: Date.now() + 60_000, updatedAt: Date.now() }).where(eq(acmeOrders.id, order.id));
+    await db.update(acmeOrders).set({
+      cleanupStatus: "failed",
+      errorMessage: safeErrorMessage(error, "Cloudflare DNS cleanup failed"),
+      nextPollAt: Date.now() + 60_000,
+      updatedAt: Date.now(),
+    }).where(eq(acmeOrders.id, order.id));
   }
 }

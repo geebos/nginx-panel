@@ -11,7 +11,6 @@ import {
   configVersions,
   deploymentSteps,
   deployments,
-  domainConfigSchema,
   domains,
   nginxLogSettingsSchema,
   settings,
@@ -23,12 +22,14 @@ import { injectAccessLogFormat, renderDomainConfig, renderManagerRoot } from "@/
 import { checksum, createRuntimeManifest } from "@/worker/lib/runtime/manifest";
 import { assertRuntimeMutable, getRuntimeState, setRuntimeDegraded, setRuntimeHealthy } from "@/worker/lib/runtime/state";
 import { createSnapshot } from "@/worker/lib/snapshot";
+import { parseDomainSnapshot } from "@/worker/lib/domain/snapshot";
 import { BusinessError } from "@/worker/lib/errors";
 import { validateManagerTlsEnvironment } from "@/worker/lib/runtime/manager-tls";
 import { assertRuntimeStorageCapacity, cleanupRuntimeStorage } from "@/worker/lib/runtime/storage";
 import { touchJobRunnerHeartbeat } from "@/worker/lib/service-lifecycle";
 import { buildManagerRootInput } from "@/worker/lib/manager/root-input";
-import { managerConfigSchema, type ManagerConfig } from "@/shared/schemas";
+import { parseManagerSnapshot } from "@/worker/lib/manager/snapshot";
+import type { ManagerConfig } from "@/shared/schemas";
 
 const execFileAsync = promisify(execFile);
 const stepNames = ["Generate candidate config", "Validate files and targets", "Run nginx -t", "Activate revision", "Reload Nginx", "Run health checks", "Commit active version"];
@@ -433,7 +434,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
     let targetManagerConfig: ManagerConfig | undefined;
     if (managerTarget && deployment.configVersionId) {
       const managerVersion = await db.query.configVersions.findFirst({ where: eq(configVersions.id, deployment.configVersionId) });
-      if (managerVersion) targetManagerConfig = managerConfigSchema.parse(JSON.parse(managerVersion.snapshotJson));
+      if (managerVersion) targetManagerConfig = parseManagerSnapshot(managerVersion.snapshotJson);
     }
     const selected = businessRows.map((domain) => ({
       ...domain,
@@ -443,7 +444,7 @@ async function runPublish(db: AppEnv["Variables"]["db"], deploymentId: string) {
       ? await db.select().from(configVersions).where(inArray(configVersions.id, selected.map((item) => item.sourceVersionId)))
       : [];
     const byId = new Map(versions.map((version) => [version.id, version]));
-    const snapshots = new Map(versions.map((version) => [version.id, domainConfigSchema.parse(JSON.parse(version.snapshotJson))]));
+    const snapshots = new Map(versions.map((version) => [version.id, parseDomainSnapshot(version.snapshotJson)]));
     const certificateIds = [...new Set([...snapshots.values()].map((snapshot) => snapshot.ssl.certificateId).filter((value): value is string => Boolean(value)))];
     const certificateRows = certificateIds.length ? await db.select().from(certificates).where(inArray(certificates.id, certificateIds)) : [];
     const certificatesById = new Map(certificateRows.map((certificate) => [certificate.id, certificate]));
